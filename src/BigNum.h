@@ -345,29 +345,17 @@ namespace BigNum
 			if (r >= d)
 			{
 				unsigned int lo = 1u, hi = 255u;
-				val = (hi + lo) / 2u;
-				for (;;)
+				Num<N> current;
+				for (int i = 7; i >= 0; --i)
 				{
-					Num<N> test = d * static_cast<unsigned char>(val);
-					if (test > r)
+					Num<N> test = current + (d << i);
+					if (test <= r)
 					{
-						hi = val;	
+						val += 1 << i;
+						current = test;
 					}
-					else
-					{
-						Num<N> rest = r - test;
-						if (rest < d)
-						{
-							r = rest;
-							break;
-						}
-						else
-						{
-							lo = val+1u;
-						}
-					}
-					val = (hi + lo) / 2u;
-				}	
+				}
+				r = r - current;
 			}
 			q[i] = static_cast<unsigned char>(val);
 		}
