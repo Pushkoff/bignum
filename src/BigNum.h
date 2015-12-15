@@ -344,7 +344,6 @@ namespace BigNum
 			unsigned int val = 0;
 			if (r >= d)
 			{
-				unsigned int lo = 1u, hi = 255u;
 				Num<N> current;
 				for (int i = 7; i >= 0; --i)
 				{
@@ -362,6 +361,20 @@ namespace BigNum
 	}
 
 	template<int N>
+	void div(const Num<N>& n, unsigned char d, Num<N>& q, unsigned char& r)
+	{
+		unsigned short rest = 0;
+		for (int i = Num<N>::Size - 1; i >= 0; i--)
+		{
+			rest = rest<<8;
+			rest+= n[i];
+			q[i] = rest / d;
+			rest = rest % d;
+		}
+		r = rest;
+	}
+
+	template<int N>
 	const Num<N> operator / (const Num<N>& v1, const Num<N>& v2)
 	{
 		Num<N> q, r;
@@ -370,9 +383,27 @@ namespace BigNum
 	}
 
 	template<int N>
+	const Num<N> operator / (const Num<N>& v1, const unsigned char v2)
+	{
+		Num<N> q;
+		unsigned char r = 0;
+		div(v1, v2, q, r);
+		return q;
+	}
+
+	template<int N>
 	const Num<N> operator % (const Num<N>& v1, const Num<N>& v2)
 	{
 		Num<N> q, r;
+		div(v1, v2, q, r);
+		return r;
+	}
+
+	template<int N>
+	const unsigned char operator % (const Num<N>& v1, const unsigned char v2)
+	{
+		Num<N> q;
+		unsigned char r = 0;
 		div(v1, v2, q, r);
 		return r;
 	}
