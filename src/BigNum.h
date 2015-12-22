@@ -42,7 +42,7 @@ namespace BigNum
 		Num& operator = (const Num<M>& other) noexcept
 		{
 			for (int i = 0; i < std::min<int>(Size, Num<M>::Size); i++)
-				data[i] = other.value(i);
+				data[i] = other[i];
 
 			for (int i = std::min<int>(Size, Num<M>::Size); i < Size; i++)
 				data[i] = 0;
@@ -422,6 +422,19 @@ namespace BigNum
 	}
 
 	template<int N>
+	const Num<N> operator & (const Num<N>& v1, Num<N>&& v2)
+	{
+		Num<N> rez;
+
+		for (int i = 0; i < Num<N>::Size; i++)
+		{
+			rez[i] = v1[i] & v2[i];
+		}
+
+		return rez;
+	}
+
+	template<int N>
 	const Num<N> operator | (const Num<N>& v1, const Num<N>& v2)
 	{
 		Num<N> rez;
@@ -463,5 +476,25 @@ namespace BigNum
 	bool operator !(const Num<N>& v)
 	{
 		return v == 0;
+	}
+
+	template<int N>
+	const Num<N> modExp(const Num<N>& base, const Num<N>& exp, const Num<N>& mod)
+	{
+		if (mod == 1)
+			return Num<N>(0);
+
+		Num<2 * N> result = 1;
+		Num<2 * N> temp = base % mod;
+		Num<2 * N> mod2N = mod;
+		Num<N> texp = exp;
+		while (texp > Num<N>(0))
+		{
+			if ((texp & Num<N>(1)) == 1)
+				result = (temp*result) % mod2N;
+			texp = texp >> 1;
+			temp = (temp * temp) % mod2N;
+		}
+		return Num<N>(result);
 	}
 };
