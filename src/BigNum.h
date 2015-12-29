@@ -71,19 +71,17 @@ namespace BigNum
 	}
 
 	template<int N>
-	const Num<N> operator + (const Num<N>& v1, unsigned char v2)
+	const Num<N> operator + (Num<N> v1, unsigned char v2)
 	{
-		Num<N> rez;
-
 		unsigned int carry = v2;
 		for (int i = 0; i < Num<N>::Size && carry != 0; i++)
 		{
 			unsigned int sum = carry + v1[i];
-			rez[i] = sum & 0xFF;
+			v1[i] = sum & 0xFF;
 			carry = sum >> 8;
 		}
 
-		return rez;
+		return v1;
 	}
 
 	template<int N>
@@ -109,32 +107,30 @@ namespace BigNum
 	}
 
 	template<int N>
-	const Num<N> operator - (const Num<N>& v1, unsigned char v2)
+	const Num<N> operator - (Num<N> v1, unsigned char v2)
 	{
-		Num<N> rez;
-
 		int carry = -v2;
 		for (int i = 0; i < Num<N>::Size && carry != 0; i++)
 		{
 			int sum = v1[i] + carry;
-			rez[i] = static_cast<unsigned char>(sum & 0xFF);
+			v1[i] = static_cast<unsigned char>(sum & 0xFF);
 			carry = sum >> 8;
 		}
 
-		return rez;
+		return v1;
 	}
 
 	template<int N>
 	const Num<N> operator * (const Num<N>& v1, const Num<N>& v2)
 	{
-		int poly[Num<N>::Size * 2] = { 0 };
+		unsigned int poly[Num<N>::Size * 2] = { 0 };
 
 		for (int i = 0; i < Num<N>::Size; i++)
 			for (int j = 0; j < Num<N>::Size; j++)
 				poly[i + j] += v1[i] * v2[j];
 
 		Num<N> rez;
-		int carry = 0;
+		unsigned int carry = 0;
 		for (int i = 0; i < Num<N>::Size; i++)
 		{
 			int sum = carry + poly[i];
@@ -371,12 +367,15 @@ namespace BigNum
 			q[i] = rest / d;
 			rest = rest % d;
 		}
-		r = rest;
+		r = (unsigned char)rest;
 	}
 
 	template<int N>
 	const Num<N> operator / (const Num<N>& v1, const Num<N>& v2)
 	{
+		if (v1 < v2)
+			return Num<N>(0);
+
 		Num<N> q, r;
 		div(v1, v2, q, r);
 		return q;
@@ -394,6 +393,9 @@ namespace BigNum
 	template<int N>
 	const Num<N> operator % (const Num<N>& v1, const Num<N>& v2)
 	{
+		if (v1 < v2)
+			return v1;
+
 		Num<N> q, r;
 		div(v1, v2, q, r);
 		return r;
@@ -485,16 +487,17 @@ namespace BigNum
 			return Num<N>(0);
 
 		Num<2 * N> result = 1;
-		Num<2 * N> temp = base % mod;
+		Num<2 * N> base2N = base;
 		Num<2 * N> mod2N = mod;
-		Num<N> texp = exp;
-		while (texp > Num<N>(0))
-		{
-			if ((texp & Num<N>(1)) == 1)
-				result = (temp*result) % mod2N;
-			texp = texp >> 1;
-			temp = (temp * temp) % mod2N;
-		}
+
+		for (int i = Num<N>::Size - 1; i >= 0; --i)
+			for (int bit = 7; bit >= 0; --bit)
+			{
+				result = (result * result) % mod2N;
+				if ((exp[i] & (1u << bit)) != 0)
+					result = (result * base2N) % mod2N;
+			}
+
 		return Num<N>(result);
 	}
 };
