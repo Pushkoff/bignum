@@ -52,6 +52,19 @@ namespace BigNum
 
 		unsigned char& operator[](int i) noexcept { return data[i]; }
 		const unsigned char& operator[](int i) const noexcept { return data[i]; }
+
+		bool bit(int i) const noexcept
+		{
+			//assert(i >= 0 && i < Size);
+			bool ret = false;
+			if (i >= 0 && i < Size)
+			{
+				const int byte = i / 8;
+				const int bit = i % 8;
+				ret = ((*this)[byte] & (1 << bit)) != 0;
+			}
+			return ret;
+		}
 	};
 
 	template<int N>
@@ -312,11 +325,12 @@ namespace BigNum
 			else
 			{
 				unsigned int carry = v[bytes];
-				for (int i = bytes+1; i < Num<N>::Size; i++)
+				for (int i = 0; i < Num<N>::Size - bytes; i++)
 				{
-					unsigned int val = static_cast<unsigned int>(v[i]) << 8;
-					ret[i - bytes - 1] = static_cast<unsigned char>((val | carry) >> bits);
-					carry = val >> 8;
+					unsigned int val = (static_cast<unsigned int>(((i + bytes + 1) < Num<N>::Size) ? v[i + bytes + 1] : 0) << 8 );
+					val = (val | carry);
+					ret[i] = static_cast<unsigned char>(val >> bits);
+					carry = val >> (8);
 				}
 			}
 		}
@@ -437,6 +451,13 @@ namespace BigNum
 	}
 
 	template<int N>
+	const Num<N> operator & (const Num<N>& v1, const unsigned char v2)
+	{
+		Num<N> rez(v1[0] & v2);
+		return rez;
+	}
+
+	template<int N>
 	const Num<N> operator | (const Num<N>& v1, const Num<N>& v2)
 	{
 		Num<N> rez;
@@ -446,6 +467,14 @@ namespace BigNum
 			rez[i] = v1[i] | v2[i];
 		}
 
+		return rez;
+	}
+
+	template<int N>
+	const Num<N> operator | (const Num<N>& v1, const unsigned char v2)
+	{
+		Num<N> rez = v1;
+		rez[0] = v1[0] | v2;
 		return rez;
 	}
 
