@@ -194,6 +194,7 @@ int main()
 	assert((BigNum::Num<64>(135056 >> 12) == BigNum::shift_right(BigNum::Num<64>(135056), 12)));
 	assert((BigNum::Num<64>(13505675 >> 15) == BigNum::shift_right(BigNum::Num<64>(13505675), 15)));
 	assert((BigNum::Num<64>(13505675 >> 22) == BigNum::shift_right(BigNum::Num<64>(13505675), 22)));
+	assert(BigNum::Num<1024>(1) << 1023 == fromString<1024>("89884656743115795386465259539451236680898848947115328636715040578866337902750481566354238661203768010560056939935696678829394884407208311246423715319737062188883946712432742638151109800623047059726541476042502884419075341171231440736956555270413618581675255342293149119973622969239858152417678164812112068608"));
 
 	//{
 	//	unsigned int num = 58369;
@@ -233,28 +234,63 @@ int main()
 		auto prime = findPrime<64>(BigNum::Num<64>(1) << 63);
 		auto stop = std::chrono::high_resolution_clock::now();
 		auto elapsed = stop - start;
-		printf("Prime = %s\n   duration - %lld ms\n", toString(prime).c_str(), std::chrono::duration_cast<std::chrono::milliseconds>(elapsed).count());
+		printf("Prime (64)= %s\n   duration - %lld ms\n", toString(prime).c_str(), std::chrono::duration_cast<std::chrono::milliseconds>(elapsed).count());
+	}
+	{
+		auto start = std::chrono::high_resolution_clock::now();
+		auto prime = findPrime<128>(BigNum::Num<128>(1) << 63);
+		auto stop = std::chrono::high_resolution_clock::now();
+		auto elapsed = stop - start;
+		printf("Prime (128)= %s\n   duration - %lld ms\n", toString(prime).c_str(), std::chrono::duration_cast<std::chrono::milliseconds>(elapsed).count());
+	}
+	{
+		auto start = std::chrono::high_resolution_clock::now();
+		auto prime = findPrime<256>(BigNum::Num<256>(1) << 63);
+		auto stop = std::chrono::high_resolution_clock::now();
+		auto elapsed = stop - start;
+		printf("Prime (256)= %s\n   duration - %lld ms\n", toString(prime).c_str(), std::chrono::duration_cast<std::chrono::milliseconds>(elapsed).count());
+	}
+	{
+		auto start = std::chrono::high_resolution_clock::now();
+		auto prime = findPrime<512>(BigNum::Num<512>(1) << 63);
+		auto stop = std::chrono::high_resolution_clock::now();
+		auto elapsed = stop - start;
+		printf("Prime (512)= %s\n   duration - %lld ms\n", toString(prime).c_str(), std::chrono::duration_cast<std::chrono::milliseconds>(elapsed).count());
+	}
+		{
+		auto start = std::chrono::high_resolution_clock::now();
+		auto prime = findPrime<1024>(BigNum::Num<1024>(1) << 63);
+		auto stop = std::chrono::high_resolution_clock::now();
+		auto elapsed = stop - start;
+		printf("Prime (1024)= %s\n   duration - %lld ms\n", toString(prime).c_str(), std::chrono::duration_cast<std::chrono::milliseconds>(elapsed).count());
 	}
 	{
 		auto start = std::chrono::high_resolution_clock::now();
 		auto prime = findPrime<128>(BigNum::Num<128>(1) << 127);
 		auto stop = std::chrono::high_resolution_clock::now();
 		auto elapsed = stop - start;
-		printf("Prime = %s\n   duration - %lld ms\n", toString(prime).c_str(), std::chrono::duration_cast<std::chrono::milliseconds>(elapsed).count());
+		printf("Prime (128)= %s\n   duration - %lld ms\n", toString(prime).c_str(), std::chrono::duration_cast<std::chrono::milliseconds>(elapsed).count());
 	}
 	{
 		auto start = std::chrono::high_resolution_clock::now();
 		auto prime = findPrime<256>(BigNum::Num<256>(1) << 255);
 		auto stop = std::chrono::high_resolution_clock::now();
 		auto elapsed = stop - start;
-		printf("Prime = %s\n   duration - %lld ms\n", toString(prime).c_str(), std::chrono::duration_cast<std::chrono::milliseconds>(elapsed).count());
+		printf("Prime (256)= %s\n   duration - %lld ms\n", toString(prime).c_str(), std::chrono::duration_cast<std::chrono::milliseconds>(elapsed).count());
 	}
 	{
 		auto start = std::chrono::high_resolution_clock::now();
 		auto prime = findPrime<512>(BigNum::Num<512>(1) << 511);
 		auto stop = std::chrono::high_resolution_clock::now();
 		auto elapsed = stop - start;
-		printf("Prime = %s\n   duration - %lld ms\n", toString(prime).c_str(), std::chrono::duration_cast<std::chrono::milliseconds>(elapsed).count());
+		printf("Prime (512)= %s\n   duration - %lld ms\n", toString(prime).c_str(), std::chrono::duration_cast<std::chrono::milliseconds>(elapsed).count());
+	}
+	{
+		auto start = std::chrono::high_resolution_clock::now();
+		auto prime = findPrime<1024>(BigNum::Num<1024>(1) << 1023);
+		auto stop = std::chrono::high_resolution_clock::now();
+		auto elapsed = stop - start;
+		printf("Prime (1024)= %s\n   duration - %lld ms\n", toString(prime).c_str(), std::chrono::duration_cast<std::chrono::milliseconds>(elapsed).count());
 	}
 	printf("Press any key...");
 	getchar();
