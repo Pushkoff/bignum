@@ -141,6 +141,8 @@ const BigNum::Num<N> randPrime()
 
 int main()
 {
+	//auto prime = findPrime<512>(BigNum::Num<512>(1) << 511);
+
 	//srand(time(nullptr));
 	assert(BigNum::Num<256>(fromString<128>("118802731")) == fromString<256>("118802731"));
 

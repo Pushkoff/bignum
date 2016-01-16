@@ -373,6 +373,34 @@ namespace BigNum
 	}
 
 	template<int N>
+	void div(const Num<2*N>& n, const Num<N>& d, Num<2*N>& q, Num<N>& r)
+	{
+		Num<N + 8> rest(0), divider = d;
+		for (int i = Num<2*N>::Size - 1; i >= 0; i--)
+		{
+			rest = shift_left_bytes(rest, 1u);
+			rest[0] = n[i];
+			unsigned int val = 0;
+			if (rest >= divider)
+			{
+				Num<N+8> current(0);
+				for (int i = 7; i >= 0; --i)
+				{
+					Num<N+8> test = current + (divider << i);
+					if (test <= rest)
+					{
+						val += 1 << i;
+						current = test;
+					}
+				}
+				rest = rest - current;
+			}
+			q[i] = static_cast<unsigned char>(val);
+		}
+		r = rest;
+	}
+
+	template<int N>
 	void div(const Num<N>& n, unsigned char d, Num<N>& q, unsigned char& r)
 	{
 		unsigned short rest = 0;
@@ -519,14 +547,21 @@ namespace BigNum
 
 		Num<2 * N> result = 1;
 		Num<2 * N> base2N = base;
-		Num<2 * N> mod2N = mod;
 
 		for (int i = Num<N>::Size - 1; i >= 0; --i)
 			for (int bit = 7; bit >= 0; --bit)
 			{
-				result = (result * result) % mod2N;
+				{
+					Num<N> remainder;
+					div(result*result, mod, Num<2 * N>(), remainder);
+					result = remainder;
+				}
 				if ((exp[i] & (1u << bit)) != 0)
-					result = (result * base2N) % mod2N;
+				{
+					Num<N> remainder;
+					div(result*base2N, mod, Num<2 * N>(), remainder);
+					result = remainder;
+				}
 			}
 
 		return Num<N>(result);
