@@ -553,13 +553,15 @@ namespace BigNum
 			{
 				{
 					Num<N> remainder;
-					div(result*result, mod, Num<2 * N>(), remainder);
+					Num<2 * N> q;
+					div(result*result, mod, q, remainder);
 					result = remainder;
 				}
 				if ((exp[i] & (1u << bit)) != 0)
 				{
 					Num<N> remainder;
-					div(result*base2N, mod, Num<2 * N>(), remainder);
+					Num<2 * N> q;
+					div(result*base2N, mod, q, remainder);
 					result = remainder;
 				}
 			}
