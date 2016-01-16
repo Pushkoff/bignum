@@ -136,6 +136,26 @@ namespace BigNum
 	}
 
 	template<int N>
+	const Num<2*N> mul2N (const Num<N>& v1, const Num<N>& v2)
+	{
+		unsigned int poly[Num<N>::Size * 2] = { 0 };
+
+		for (int i = 0; i < Num<N>::Size; i++)
+			for (int j = 0; j < Num<N>::Size; j++)
+				poly[i + j] += v1[i] * v2[j];
+
+		Num<2*N> rez;
+		unsigned int carry = 0;
+		for (int i = 0; i < Num<2*N>::Size; i++)
+		{
+			int sum = carry + poly[i];
+			rez[i] = static_cast<unsigned char>(sum & 0xFF);
+			carry = sum >> 8;
+		}
+		return rez;
+	}
+
+	template<int N>
 	const Num<N> operator * (const Num<N>& v1, const Num<N>& v2)
 	{
 		unsigned int poly[Num<N>::Size * 2] = { 0 };
@@ -545,24 +565,19 @@ namespace BigNum
 		if (mod == 1)
 			return Num<N>(0);
 
-		Num<2 * N> result = 1;
-		Num<2 * N> base2N = base;
+		Num<N> result = 1;
 
 		for (int i = Num<N>::Size - 1; i >= 0; --i)
 			for (int bit = 7; bit >= 0; --bit)
 			{
 				{
-					Num<N> remainder;
 					Num<2 * N> q;
-					div(result*result, mod, q, remainder);
-					result = remainder;
+					div(mul2N(result,result), mod, q, result);
 				}
 				if ((exp[i] & (1u << bit)) != 0)
 				{
-					Num<N> remainder;
 					Num<2 * N> q;
-					div(result*base2N, mod, q, remainder);
-					result = remainder;
+					div(mul2N(result,base), mod, q, result);
 				}
 			}
 
