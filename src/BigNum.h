@@ -368,45 +368,50 @@ namespace BigNum
 	template<int N>
 	void div(const Num<N>& n, const Num<N>& d, Num<N>& q, Num<N>& r)
 	{
-		r = Num<N>(0);
+		Num<N + 8> rest;
+
+		const Num<N+8> shiftedD[8] = { Num<N + 8>(d), Num<N + 8>(d) << 1, Num<N + 8>(d) << 2, Num<N + 8>(d) << 3, Num<N + 8>(d) << 4, Num<N + 8>(d) << 5, Num<N + 8>(d) << 6, Num<N + 8>(d) << 7 };
+
 		for (int i = Num<N>::Size - 1; i >= 0; i--)
 		{
-			r = shift_left_bytes(r, 1u);
-			r[0] = n[i];
+			rest = shift_left_bytes(rest, 1u);
+			rest[0] = n[i];
 			unsigned int val = 0;
-			if (r >= d)
+			if (rest >= shiftedD[0])
 			{
-				Num<N> current;
+				Num<N+8> current;
 				for (int j = 7; j >= 0; --j)
 				{
-					Num<N> test = current + (d << j);
-					if (test <= r)
+					Num<N+8> test = current + shiftedD[j];
+					if (test <= rest)
 					{
 						val += 1 << j;
 						current = test;
 					}
 				}
-				r = r - current;
+				rest = rest - current;
 			}
 			q[i] = static_cast<unsigned char>(val);
 		}
+		r = rest;
 	}
 
 	template<int N>
 	void div(const Num<2*N>& n, const Num<N>& d, Num<2*N>& q, Num<N>& r)
 	{
-		Num<N + 8> rest(0), divider = d;
+		const Num<N + 8> shiftedD[8] = { Num<N + 8>(d), Num<N + 8>(d) << 1, Num<N + 8>(d) << 2, Num<N + 8>(d) << 3, Num<N + 8>(d) << 4, Num<N + 8>(d) << 5, Num<N + 8>(d) << 6, Num<N + 8>(d) << 7 };
+		Num<N + 8> rest(0);
 		for (int i = Num<2*N>::Size - 1; i >= 0; i--)
 		{
 			rest = shift_left_bytes(rest, 1u);
 			rest[0] = n[i];
 			unsigned int val = 0;
-			if (rest >= divider)
+			if (rest >= shiftedD[0])
 			{
 				Num<N+8> current(0);
 				for (int j = 7; j >= 0; --j)
 				{
-					Num<N+8> test = current + (divider << j);
+					Num<N+8> test = current + shiftedD[j];
 					if (test <= rest)
 					{
 						val += 1 << j;
