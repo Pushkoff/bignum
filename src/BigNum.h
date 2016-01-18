@@ -377,12 +377,12 @@ namespace BigNum
 			if (r >= d)
 			{
 				Num<N> current;
-				for (int i = 7; i >= 0; --i)
+				for (int j = 7; j >= 0; --j)
 				{
-					Num<N> test = current + (d << i);
+					Num<N> test = current + (d << j);
 					if (test <= r)
 					{
-						val += 1 << i;
+						val += 1 << j;
 						current = test;
 					}
 				}
@@ -404,12 +404,12 @@ namespace BigNum
 			if (rest >= divider)
 			{
 				Num<N+8> current(0);
-				for (int i = 7; i >= 0; --i)
+				for (int j = 7; j >= 0; --j)
 				{
-					Num<N+8> test = current + (divider << i);
+					Num<N+8> test = current + (divider << j);
 					if (test <= rest)
 					{
-						val += 1 << i;
+						val += 1 << j;
 						current = test;
 					}
 				}
@@ -428,10 +428,38 @@ namespace BigNum
 		{
 			rest = rest<<8;
 			rest+= n[i];
-			q[i] = rest / d;
+			q[i] = (unsigned char)(rest / d);
 			rest = rest % d;
 		}
 		r = (unsigned char)rest;
+	}
+
+	template<int N>
+	void div(const Num<N>& n, unsigned short d, Num<N>& q, unsigned short& r)
+	{
+		unsigned int rest = 0;
+		for (int i = Num<N>::Size - 1; i >= 0; i--)
+		{
+			rest = rest << 8;
+			rest += n[i];
+			q[i] = (unsigned char)(rest / d);
+			rest = rest % d;
+		}
+		r = (unsigned short)rest;
+	}
+
+	template<int N>
+	void div(const Num<N>& n, unsigned int d, Num<N>& q, unsigned int& r)
+	{
+		unsigned long long int rest = 0;
+		for (int i = Num<N>::Size - 1; i >= 0; i--)
+		{
+			rest = rest << 8;
+			rest += n[i];
+			q[i] = (unsigned char)(rest / d);
+			rest = rest % d;
+		}
+		r = (unsigned int)rest;
 	}
 
 	template<int N>
@@ -455,6 +483,24 @@ namespace BigNum
 	}
 
 	template<int N>
+	const Num<N> operator / (const Num<N>& v1, const unsigned short v2)
+	{
+		Num<N> q;
+		unsigned short r = 0;
+		div(v1, v2, q, r);
+		return q;
+	}
+
+	template<int N>
+	const Num<N> operator / (const Num<N>& v1, const unsigned int v2)
+	{
+		Num<N> q;
+		unsigned int r = 0;
+		div(v1, v2, q, r);
+		return q;
+	}
+
+	template<int N>
 	const Num<N> operator % (const Num<N>& v1, const Num<N>& v2)
 	{
 		if (v1 < v2)
@@ -470,6 +516,24 @@ namespace BigNum
 	{
 		Num<N> q;
 		unsigned char r = 0;
+		div(v1, v2, q, r);
+		return r;
+	}
+
+	template<int N>
+	const unsigned short operator % (const Num<N>& v1, const unsigned short v2)
+	{
+		Num<N> q;
+		unsigned short r = 0;
+		div(v1, v2, q, r);
+		return r;
+	}
+
+	template<int N>
+	const unsigned short operator % (const Num<N>& v1, const unsigned int v2)
+	{
+		Num<N> q;
+		unsigned int r = 0;
 		div(v1, v2, q, r);
 		return r;
 	}

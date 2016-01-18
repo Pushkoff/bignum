@@ -81,7 +81,7 @@ bool millerRabinPass(const BigNum::Num<N>& num, const BigNum::Num<N>& a)
 template<int N>
 bool millerRabinTest(const BigNum::Num<N>& num)
 {
-	for (int i = 0; i < 20; i++)
+	for (int i = 0; i < 10; i++)
 	{
 		BigNum::Num<N> a;
 		do {
@@ -101,9 +101,20 @@ const BigNum::Num<N> findPrime(const BigNum::Num<N>& from)
 {
 	BigNum::Num<N> prime = from | 1;
 	
-
-	const unsigned char primes[] = { 3, 5, 7, 11, 13,  17, 19, 23 , 29, 31, 37, 41, 43, 47, 53, 59, 61, 67, 71, 73, 79, 83, 89, 97, 101, 103, 107, 109, 113, 127, 131, 137, 139, 149, 151, 157, 163, 167, 173, 179, 181, 191, 193, 197, 199, 211, 223, 227, 229, 233, 239, 241, 251 };
-	unsigned short rests[sizeof(primes) / sizeof(primes[0])] = { 0 };
+	const unsigned int primes[] = { 3, 5, 7, 11, 13,  17, 19, 23 , 29, 31, 37, 41, 43, 47, 53, 59, 61, 67, 71, 73, 79, 83, 89, 97, 101, 103, 107, 109, 113, 127, 131, 137, 139, 149, 151, 157, 163, 167, 173, 179, 181, 191, 193, 197, 199, 211, 223, 227, 229, 233, 239, 241, 251,
+		257,    263,    269,    271,    277,    281,
+		283,    293,    307,    311,    313,    317,    331,    337,    347,    349,
+		353,    359,    367,    373,    379,    383,    389,    397,    401,    409,
+		419,    421,    431,    433,    439,    443,    449,    457,    461,    463,
+		467,    479,    487,    491,    499,    503,    509,    521,    523,    541,
+		547,    557,    563,    569,    571,    577,    587,    593,    599,    601,
+		607,    613,    617,    619,    631,    641,    643,    647,    653,    659,
+		661,    673,    677,    683,    691,    701,    709,    719,    727,    733,
+		739,    743,    751,    757,    761,    769,    773,    787,    797,    809,
+		811,    821,    823,    827,    829,    839,    853,    857,    859,    863,
+		877,    881,    883,    887,    907,    911,    919,    929,    937,    941,
+		947,    953,    967,    971,    977,    983,    991,    997, };
+	unsigned int rests[sizeof(primes) / sizeof(primes[0])] = { 0 };
 
 	for (int i = 0; i < sizeof(rests) / sizeof(rests[0]);i++)
 		rests[i] = prime % primes[i];
@@ -138,11 +149,13 @@ const BigNum::Num<N> randPrime()
 	return findPrime(num);
 }
 
+#define PROFILING 0
 
 int main()
 {
-	//auto prime = findPrime<512>(BigNum::Num<512>(1) << 511);
-
+#if PROFILING
+	auto prime = findPrime<512>(BigNum::Num<512>(1) << 511);
+#else
 	//srand(time(nullptr));
 	assert(BigNum::Num<256>(fromString<128>("118802731")) == fromString<256>("118802731"));
 
@@ -213,7 +226,8 @@ int main()
 	assert(BigNum::Num<64>(524568123) % BigNum::Num<64>(45654) == BigNum::Num<64>(524568123 % 45654));
 
 	assert(BigNum::Num<64>(524568123) / 10 == BigNum::Num<64>(524568123 / 10));
-	assert(BigNum::Num<64>(524568123) % 10 == 524568123 % 10);
+	assert(BigNum::Num<64>(524568123) % static_cast<unsigned char>(10) == 524568123 % 10);
+	assert(BigNum::Num<64>(524568123) % static_cast<unsigned short>(10) == 524568123 % 10);
 
 	printf("BigNum::Num<128>(1025445861) = %s\n", toString(BigNum::Num<128>(1025445861ull)).c_str());
 
@@ -296,5 +310,6 @@ int main()
 	}
 	printf("Press any key...");
 	getchar();
+#endif
 	return 0;
 }
