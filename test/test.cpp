@@ -71,7 +71,6 @@ bool millerRabinPass(const BigNum::Num<N>& num, const BigNum::Num<N>& a)
 
 		BigNum::Num<N * 2> q;
 		BigNum::div(temp, num, q, a_to_power);
-		//a_to_power = BigNum::Num<N>(temp % BigNum::Num<N * 2>(num));
 	}
 
 	if (a_to_power == num - 1)
@@ -103,7 +102,8 @@ const BigNum::Num<N> findPrime(const BigNum::Num<N>& from)
 {
 	BigNum::Num<N> prime = from | 1;
 	
-	const unsigned int primes[] = { 3, 5, 7, 11, 13,  17, 19, 23 , 29, 31, 37, 41, 43, 47, 53, 59, 61, 67, 71, 73, 79, 83, 89, 97, 101, 103, 107, 109, 113, 127, 131, 137, 139, 149, 151, 157, 163, 167, 173, 179, 181, 191, 193, 197, 199, 211, 223, 227, 229, 233, 239, 241, 251, };
+	const unsigned int primes[] = { 3, 5, 7, 11, 13,  17, 19, 23 , 29, 31, 37, 41, 43, 47, 53, 59, 61, 67, 71, 73, 79, 83, 89, 97 , 101, 103, 107, 109, 113, 127, 131, 137, 139, 149, 151, 157, 163, 167, 173, 179, 181, 191, 193, 197, 199, 211, 223, 227, 229, 233, 239, 241, 251,
+};
 		//257,    263,    269,    271,    277,    281,
 		//283,    293,    307,    311,    313,    317,    331,    337,    347,    349,
 		//353,    359,    367,    373,    379,    383,    389,    397,    401,    409,
@@ -118,26 +118,31 @@ const BigNum::Num<N> findPrime(const BigNum::Num<N>& from)
 		//947,    953,    967,    971,    977,    983,    991,    997, };
 	unsigned int rests[sizeof(primes) / sizeof(primes[0])] = { 0 };
 
-	for (int i = 0; i < sizeof(rests) / sizeof(rests[0]);i++)
-		rests[i] = prime % primes[i];
-
-	bool found = false;
-	while (found == false)
+	bool simpleTest = true;
+	for (int i = 0; i < sizeof(rests) / sizeof(rests[0]); i++)
 	{
-		bool simpleTest = false;
-		for (int i = 0; i < sizeof(rests) / sizeof(rests[0]);i++)
-		{
-			if (rests[i] == 0)
-				simpleTest = true;
-			
-			rests[i] += 2;
-			if (rests[i] >= primes[i])
-				rests[i] -= primes[i];
-		}
+		rests[i] = prime % primes[i];
+		simpleTest &= (rests[i] != 0);
+	}
 
-		if (simpleTest == false && millerRabinTest(prime))
-			break;
+	while (!(simpleTest && millerRabinTest(prime)))
+	{
+		//unsigned char addToNum = 0;
+		//do{
+		//	addToNum += 2;
+			simpleTest = true;
+			for (int i = 0; i < sizeof(rests) / sizeof(rests[0]); i++)
+			{
+				rests[i] += 2;
+				if (rests[i] >= primes[i])
+				{
+					rests[i] -= primes[i];
+					simpleTest &= (rests[i] != 0);
+				}
+			}
+		//} while (simpleTest == false && addToNum < 200);
 				
+		//prime = prime + addToNum;
 		prime = prime + 2;
 	}
 
@@ -156,7 +161,7 @@ const BigNum::Num<N> randPrime()
 int main()
 {
 #if PROFILING
-	auto prime = findPrime<1024>(BigNum::Num<1024>(1) << 511);
+	auto prime = findPrime<1024>(BigNum::Num<1024>(1) << 767);
 #else
 	//srand(time(nullptr));
 	assert(BigNum::Num<256>(fromString<128>("118802731")) == fromString<256>("118802731"));

@@ -99,6 +99,20 @@ namespace BigNum
 		return v1;
 	}
 
+	//template<int N>
+	//const Num<N> operator + (Num<N> v1, unsigned int v2)
+	//{
+	//	unsigned long long int carry = v2;
+	//	for (int i = 0; i < Num<N>::Size && carry != 0; i++)
+	//	{
+	//		unsigned long long int sum = carry + v1[i];
+	//		v1[i] = sum & 0xFF;
+	//		carry = sum >> 8;
+	//	}
+
+	//	return v1;
+	//}
+
 	template<int N>
 	const Num<N> operator - (const Num<N>& v)
 	{
