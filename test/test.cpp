@@ -323,6 +323,13 @@ int main()
 		auto elapsed = stop - start;
 		printf("Prime (1024)= %s\n   duration - %lld ms\n", toString(prime).c_str(), (long long)std::chrono::duration_cast<std::chrono::milliseconds>(elapsed).count());
 	}
+	{
+		auto start = std::chrono::high_resolution_clock::now();
+		auto prime = findPrime<2048>(BigNum::Num<2048>(1) << 2047);
+		auto stop = std::chrono::high_resolution_clock::now();
+		auto elapsed = stop - start;
+		printf("Prime (2048)= %s\n   duration - %lld ms\n", toString(prime).c_str(), (long long)std::chrono::duration_cast<std::chrono::milliseconds>(elapsed).count());
+	}
 	printf("Press any key...");
 	getchar();
 #endif
