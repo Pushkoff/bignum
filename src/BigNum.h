@@ -649,21 +649,29 @@ namespace BigNum
 			return Num<N>(0);
 
 		Num<N> result = 1;
+		Num<N> power = base;
 
-		for (int i = Num<N>::Size - 1; i >= 0; --i)
-			for (int bit = 7; bit >= 0; --bit)
+		int realExpSize = Num<N>::Size;
+		// skip leading zeros
+		while (realExpSize >= 0 && exp[realExpSize - 1] == 0)
+			realExpSize--;
+
+		for (int i = 0; i < realExpSize; ++i)
+		{
+			for (int bit = 0; bit < 8; bit++)
 			{
-				{
-					Num<2 * N> q;
-					div(mul2N(result,result), mod, q, result);
-				}
 				if ((exp[i] & (1u << bit)) != 0)
 				{
 					Num<2 * N> q;
-					div(mul2N(result,base), mod, q, result);
+					div(mul2N(result, power), mod, q, result);
+				}
+				{
+					Num<2 * N> q;
+					div(mul2N(power, power), mod, q, power);
 				}
 			}
+		}
 
-		return Num<N>(result);
+		return result;
 	}
 };
