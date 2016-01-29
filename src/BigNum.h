@@ -230,6 +230,12 @@ namespace BigNum
 	{
 		return !(v1 == v2);
 	}
+	
+	template<int N>
+	const bool operator != (const Num<N>& v1, unsigned char v2)
+	{
+		return !(v1 == v2);
+	}
 
 	template<int N>
 	const bool operator > (const Num<N>& v1, const Num<N>& v2)
@@ -640,6 +646,24 @@ namespace BigNum
 	bool operator !(const Num<N>& v)
 	{
 		return v == 0;
+	}
+	
+	template<int N>
+	const Num<N> gcd(const Num<N>& v1, const Num<N>& v2)
+	{
+		if (v1 == v2)
+			return v1;
+			
+		Num<N> a = (v1 > v2) ? v1 : v2;
+		Num<N> b = (v1 > v2) ? v2 : v1; 
+		
+		while(b != 0)
+		{
+			Num<N> t = b;
+			b = a % b;
+			a = t;
+		}
+		return a;
 	}
 
 	template<int N>

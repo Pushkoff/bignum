@@ -155,6 +155,8 @@ const BigNum::Num<N> randPrime()
 	return findPrime(num);
 }
 
+#define test(a) do{ bool ret = (a); printf("%s\n - %s\n\n", #a, (ret) ? "Ok" : "Fail" ); assert(ret); }while(false);
+
 #define PROFILING 0
 
 int main()
@@ -163,59 +165,59 @@ int main()
 	auto prime = findPrime<1024>(BigNum::Num<1024>(1) << 511);
 #else
 	//srand(time(nullptr));
-	assert(BigNum::Num<256>(fromString<128>("118802731")) == fromString<256>("118802731"));
+	test(BigNum::Num<256>(fromString<128>("118802731")) == fromString<256>("118802731"));
 
-	assert(BigNum::Num<64>(0) == BigNum::Num<64>(0));
-	assert(BigNum::Num<64>(0) != BigNum::Num<64>(1));
+	test(BigNum::Num<64>(0) == BigNum::Num<64>(0));
+	test(BigNum::Num<64>(0) != BigNum::Num<64>(1));
 
-	assert(BigNum::Num<64>(1) + BigNum::Num<64>(1) == BigNum::Num<64>(2));
-	assert(BigNum::Num<64>(2) - BigNum::Num<64>(1) == BigNum::Num<64>(1));
+	test(BigNum::Num<64>(1) + BigNum::Num<64>(1) == BigNum::Num<64>(2));
+	test(BigNum::Num<64>(2) - BigNum::Num<64>(1) == BigNum::Num<64>(1));
 
-	assert(BigNum::Num<64>(256) - BigNum::Num<64>(1) == BigNum::Num<64>(255));
-	assert(BigNum::Num<16>(255<<8) - BigNum::Num<16>(1) == BigNum::Num<16>((255 << 8) -1));
+	test(BigNum::Num<64>(256) - BigNum::Num<64>(1) == BigNum::Num<64>(255));
+	test(BigNum::Num<16>(255<<8) - BigNum::Num<16>(1) == BigNum::Num<16>((255 << 8) -1));
 
-	assert(BigNum::Num<64>(256) - 1 == BigNum::Num<64>(255));
-	assert(BigNum::Num<16>(255 << 8) - 1 == BigNum::Num<16>((255 << 8) - 1));
+	test(BigNum::Num<64>(256) - 1 == BigNum::Num<64>(255));
+	test(BigNum::Num<16>(255 << 8) - 1 == BigNum::Num<16>((255 << 8) - 1));
 
-	assert(BigNum::Num<64>(20) * BigNum::Num<64>(45) == BigNum::Num<64>(20 * 45));
+	test(BigNum::Num<64>(20) * BigNum::Num<64>(45) == BigNum::Num<64>(20 * 45));
 
 	BigNum::Num<1024> fact(1);
 	for (unsigned char i = 2; i <= 100; i++)
 	{
 		fact = fact * i;
 	}
-	assert(fact == fromString<1024>("93326215443944152681699238856266700490715968264381621468592963895217599993229915608941463976156518286253697920827223758251185210916864000000000000000000000000"));
+	test(fact == fromString<1024>("93326215443944152681699238856266700490715968264381621468592963895217599993229915608941463976156518286253697920827223758251185210916864000000000000000000000000"));
 	printf("100!=%s\n", toString(fact).c_str());
 
 
-	assert((BigNum::Num<64>(1) > BigNum::Num<64>(0)));
-	assert((BigNum::Num<64>(1) < BigNum::Num<64>(0)) == false);
+	test((BigNum::Num<64>(1) > BigNum::Num<64>(0)));
+	test((BigNum::Num<64>(1) < BigNum::Num<64>(0)) == false);
 
-	assert((BigNum::Num<64>(0) < BigNum::Num<64>(1)));
-	assert((BigNum::Num<64>(1) < BigNum::Num<64>(0)) == false);
+	test((BigNum::Num<64>(0) < BigNum::Num<64>(1)));
+	test((BigNum::Num<64>(1) < BigNum::Num<64>(0)) == false);
 
-	assert((BigNum::Num<64>(0) >= BigNum::Num<64>(0)));
-	assert((BigNum::Num<64>(1) >= BigNum::Num<64>(0)));
-	assert((BigNum::Num<64>(0) >= BigNum::Num<64>(1)) == false);
+	test((BigNum::Num<64>(0) >= BigNum::Num<64>(0)));
+	test((BigNum::Num<64>(1) >= BigNum::Num<64>(0)));
+	test((BigNum::Num<64>(0) >= BigNum::Num<64>(1)) == false);
 
-	assert((BigNum::Num<64>(0) <= BigNum::Num<64>(0)));
-	assert((BigNum::Num<64>(0) <= BigNum::Num<64>(1)));
-	assert((BigNum::Num<64>(1) <= BigNum::Num<64>(0)) == false);
+	test((BigNum::Num<64>(0) <= BigNum::Num<64>(0)));
+	test((BigNum::Num<64>(0) <= BigNum::Num<64>(1)));
+	test((BigNum::Num<64>(1) <= BigNum::Num<64>(0)) == false);
 
-	assert((BigNum::Num<64>(1 << 8) == BigNum::shift_left(BigNum::Num<64>(1), 8)));
-	assert((BigNum::Num<64>(1 << 7) == BigNum::shift_left(BigNum::Num<64>(1), 7)));
-	assert((BigNum::Num<64>(135 << 12) == BigNum::shift_left(BigNum::Num<64>(135), 12)));
-	assert((BigNum::Num<64>(135056 << 12) == BigNum::shift_left(BigNum::Num<64>(135056), 12)));
-	assert((BigNum::Num<64>(135056 << 7) == BigNum::shift_left(BigNum::Num<64>(135056), 7)));
-	assert((BigNum::Num<64>(13056 << 15) == BigNum::shift_left(BigNum::Num<64>(13056), 15)));
+	test((BigNum::Num<64>(1 << 8) == BigNum::shift_left(BigNum::Num<64>(1), 8)));
+	test((BigNum::Num<64>(1 << 7) == BigNum::shift_left(BigNum::Num<64>(1), 7)));
+	test((BigNum::Num<64>(135 << 12) == BigNum::shift_left(BigNum::Num<64>(135), 12)));
+	test((BigNum::Num<64>(135056 << 12) == BigNum::shift_left(BigNum::Num<64>(135056), 12)));
+	test((BigNum::Num<64>(135056 << 7) == BigNum::shift_left(BigNum::Num<64>(135056), 7)));
+	test((BigNum::Num<64>(13056 << 15) == BigNum::shift_left(BigNum::Num<64>(13056), 15)));
 
-	assert((BigNum::Num<64>(1) == BigNum::shift_right(BigNum::Num<64>(1<<8), 8)));
-	assert((BigNum::Num<64>(135056 >> 1) == BigNum::shift_right(BigNum::Num<64>(135056), 1)));
-	assert((BigNum::Num<64>(135056 >> 4) == BigNum::shift_right(BigNum::Num<64>(135056), 4)));
-	assert((BigNum::Num<64>(135056 >> 12) == BigNum::shift_right(BigNum::Num<64>(135056), 12)));
-	assert((BigNum::Num<64>(13505675 >> 15) == BigNum::shift_right(BigNum::Num<64>(13505675), 15)));
-	assert((BigNum::Num<64>(13505675 >> 22) == BigNum::shift_right(BigNum::Num<64>(13505675), 22)));
-	assert(BigNum::Num<1024>(1) << 1023 == fromString<1024>("89884656743115795386465259539451236680898848947115328636715040578866337902750481566354238661203768010560056939935696678829394884407208311246423715319737062188883946712432742638151109800623047059726541476042502884419075341171231440736956555270413618581675255342293149119973622969239858152417678164812112068608"));
+	test((BigNum::Num<64>(1) == BigNum::shift_right(BigNum::Num<64>(1<<8), 8)));
+	test((BigNum::Num<64>(135056 >> 1) == BigNum::shift_right(BigNum::Num<64>(135056), 1)));
+	test((BigNum::Num<64>(135056 >> 4) == BigNum::shift_right(BigNum::Num<64>(135056), 4)));
+	test((BigNum::Num<64>(135056 >> 12) == BigNum::shift_right(BigNum::Num<64>(135056), 12)));
+	test((BigNum::Num<64>(13505675 >> 15) == BigNum::shift_right(BigNum::Num<64>(13505675), 15)));
+	test((BigNum::Num<64>(13505675 >> 22) == BigNum::shift_right(BigNum::Num<64>(13505675), 22)));
+	test(BigNum::Num<1024>(1) << 1023 == fromString<1024>("89884656743115795386465259539451236680898848947115328636715040578866337902750481566354238661203768010560056939935696678829394884407208311246423715319737062188883946712432742638151109800623047059726541476042502884419075341171231440736956555270413618581675255342293149119973622969239858152417678164812112068608"));
 
 	//{
 	//	unsigned int num = 58369;
@@ -224,39 +226,44 @@ int main()
 	//	{
 	//		bn = bn >> 1;
 	//		num = num >> 1;
-	//		assert(bn == num);
+	//		test(bn == num);
 	//	}
 	//}
 
-	assert(((BigNum::Num<64>(1) << 63) + 1) / (BigNum::Num<64>(1) << 63) == 1);
-	assert(((BigNum::Num<64>(1) << 63) + 1) % (BigNum::Num<64>(1) << 63) == 1);
-	assert(((BigNum::Num<64>(1) << 63) - 1) / (BigNum::Num<64>(1) << 63) == 0);
-	assert(((BigNum::Num<64>(1) << 63) - 1) % (BigNum::Num<64>(1) << 63) == ((BigNum::Num<64>(1) << 63) - 1));
+	test(((BigNum::Num<64>(1) << 63) + 1) / (BigNum::Num<64>(1) << 63) == 1);
+	test(((BigNum::Num<64>(1) << 63) + 1) % (BigNum::Num<64>(1) << 63) == 1);
+	test(((BigNum::Num<64>(1) << 63) - 1) / (BigNum::Num<64>(1) << 63) == 0);
+	test(((BigNum::Num<64>(1) << 63) - 1) % (BigNum::Num<64>(1) << 63) == ((BigNum::Num<64>(1) << 63) - 1));
 
-	assert(BigNum::Num<64>(524568123) / BigNum::Num<64>(45654) == BigNum::Num<64>(524568123 / 45654));
-	assert(BigNum::Num<64>(524568123) % BigNum::Num<64>(45654) == BigNum::Num<64>(524568123 % 45654));
+	test(BigNum::Num<64>(524568123) / BigNum::Num<64>(45654) == BigNum::Num<64>(524568123 / 45654));
+	test(BigNum::Num<64>(524568123) % BigNum::Num<64>(45654) == BigNum::Num<64>(524568123 % 45654));
 
-	assert(BigNum::Num<64>(524568123) / static_cast<unsigned char>(10) == BigNum::Num<64>(524568123 / 10));
-	assert(BigNum::Num<64>(524568123) / static_cast<unsigned short>(10) == BigNum::Num<64>(524568123 / 10));
-	assert(BigNum::Num<64>(524568123) / 10u == BigNum::Num<64>(524568123 / 10));
-	assert(BigNum::Num<64>(524568123) % static_cast<unsigned char>(10) == 524568123 % 10);
-	assert(BigNum::Num<64>(524568123) % static_cast<unsigned short>(10) == 524568123 % 10);
-	assert(BigNum::Num<64>(524568123) % 10u == 524568123 % 10);
+	test(BigNum::Num<64>(524568123) / static_cast<unsigned char>(10) == BigNum::Num<64>(524568123 / 10));
+	test(BigNum::Num<64>(524568123) / static_cast<unsigned short>(10) == BigNum::Num<64>(524568123 / 10));
+	test(BigNum::Num<64>(524568123) / 10u == BigNum::Num<64>(524568123 / 10));
+	test(BigNum::Num<64>(524568123) % static_cast<unsigned char>(10) == 524568123 % 10);
+	test(BigNum::Num<64>(524568123) % static_cast<unsigned short>(10) == 524568123 % 10);
+	test(BigNum::Num<64>(524568123) % 10u == 524568123 % 10);
 
 	printf("BigNum::Num<128>(1025445861) = %s\n", toString(BigNum::Num<128>(1025445861ull)).c_str());
 
 	printf("BigNum::Num<128>(125632587586954854585354458654754812345678908765678765467543456765678) = %s\n", toString(fromString<1024>("125632587586954854585354458654754812345678908765678765467543456765678")).c_str());
 
-	assert(BigNum::modExp<32>(BigNum::Num<32>(4), BigNum::Num<32>(13), BigNum::Num<32>(497)) == BigNum::Num<32>(445));
+	test(BigNum::modExp<32>(BigNum::Num<32>(4), BigNum::Num<32>(13), BigNum::Num<32>(497)) == BigNum::Num<32>(445));
 
-	millerRabinPass(fromString<128>("118802731"), fromString<128>("74812"));
+	//millerRabinPass(fromString<128>("118802731"), fromString<128>("74812"));
 
 	srand(0);
 		
-	assert(millerRabinTest(fromString<128>("961748941")) == true);
-	assert(millerRabinTest(fromString<128>("982451653")) == true);
-	assert(millerRabinTest(fromString<128>("89685068870671644428994813094690803553")) == true);
-	assert(millerRabinTest(fromString<128>("982451655")) == false);
+	test(millerRabinTest(fromString<128>("961748941")) == true);
+	test(millerRabinTest(fromString<128>("982451653")) == true);
+	test(millerRabinTest(fromString<128>("89685068870671644428994813094690803553")) == true);
+	test(millerRabinTest(fromString<128>("982451655")) == false);
+	
+	test(BigNum::gcd(fromString<128>("12"), fromString<128>("9")) == fromString<128>("3"));
+	test(BigNum::gcd(fromString<128>("12"), fromString<128>("12")) == fromString<128>("12"));
+	test(BigNum::gcd(fromString<128>("12"), fromString<128>("24")) == fromString<128>("12"));
+	test(BigNum::gcd(fromString<128>("961748941"), fromString<128>("982451653")) == fromString<128>("1"));
 
 
 	{
