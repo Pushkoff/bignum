@@ -667,6 +667,32 @@ namespace BigNum
 	}
 
 	template<int N>
+	const Num<N> modInv(const Num<N>& a, const Num<N>& n)
+	{
+	    Num<N> t(0), newt(1);    
+	    Num<N> r = n, newr = a;    
+	    while (newr != 0)
+	    {
+	        Num<N> quotient = r / newr;
+	        {
+	        	//(t, newt) := (newt, t - quotient * newt) 
+	        	Num<N> tmp = newt;
+	        	newt = t - quotient * newt;
+	        	t = tmp;
+	        }
+	        {
+	        	//(r, newr) := (newr, r - quotient * newr)
+	        	Num<N> tmp = newr;
+	        	newr = r - quotient * newr;
+	        	r = tmp;
+	        }
+	    }
+	    if (r > Num<N>(1)) return 0;
+	    if (t > n) t = t + n;
+	    return t;
+	}
+
+	template<int N>
 	const Num<N> modExp(const Num<N>& base, const Num<N>& exp, const Num<N>& mod)
 	{
 		if (mod == 1)
@@ -698,4 +724,20 @@ namespace BigNum
 
 		return result;
 	}
+	
+	template<int N>
+	struct REDC
+	{
+		const Num<N>& n;
+		
+		REDC(const Num<N>& _n) : n(_n)
+		{
+		
+		}
+		
+		const Num<N> operator()(const Num<N>& a)
+		{
+			
+		}
+	};
 };
