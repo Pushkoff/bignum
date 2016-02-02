@@ -688,9 +688,63 @@ namespace BigNum
 	        }
 	    }
 	    if (r > Num<N>(1)) return 0;
-	    if (t > n) t = t + n;
+		if (t > n)
+		{
+			// signed < 0
+			t = t + n;
+		}
 	    return t;
 	}
+
+	template<typename T>
+	const T modInv(const T& a, const T& n)
+	{
+		T t(0), newt(1);
+		T r = n, newr = a;
+		while (newr != T(0))
+		{
+			T quotient = r / newr;
+			{
+				//(t, newt) := (newt, t - quotient * newt) 
+				T tmp = newt;
+				newt = t - quotient * newt;
+				t = tmp;
+			}
+			{
+				//(r, newr) := (newr, r - quotient * newr)
+				T tmp = newr;
+				newr = r - quotient * newr;
+				r = tmp;
+			}
+		}
+		if (r > T(1)) return 0;
+		if (t < 0) t = t + n;
+		return t;
+	}
+
+	template<int N>
+	struct BarretReducer
+	{
+		const Num<N>& n;
+		Num<N> x;
+		
+		BarretReducer(const Num<N>& _n) : n(_n)
+		{
+			Num<2 * N> q;
+			Num<N> r;
+			div(Num<2 * N>(1) << N, n, q, r);
+			x = Num<N>(q);
+		}
+		
+		const Num<N> operator()(Num<N> a)
+		{
+			Num<N> q = Num<N>(mul2N(a, x) >> N);
+			Num<N> m = a - q * n;
+			while (m >= n)
+				m = m - n;
+			return m;
+		}
+	};
 
 	template<int N>
 	const Num<N> modExp(const Num<N>& base, const Num<N>& exp, const Num<N>& mod)
@@ -706,6 +760,8 @@ namespace BigNum
 		while (realExpSize >= 0 && exp[realExpSize - 1] == 0)
 			realExpSize--;
 
+		//BarretReducer<2 * N> modRed(mod);
+
 		for (int i = 0; i < realExpSize; ++i)
 		{
 			for (int bit = 0; bit < 8; bit++)
@@ -714,30 +770,16 @@ namespace BigNum
 				{
 					Num<2 * N> q;
 					div(mul2N(result, power), mod, q, result);
+					//result = modRed(mul2N(result, power));
 				}
 				{
 					Num<2 * N> q;
 					div(mul2N(power, power), mod, q, power);
+					//result = modRed(mul2N(power, power));
 				}
 			}
 		}
 
-		return result;
+		return Num<N>(result);
 	}
-	
-	template<int N>
-	struct REDC
-	{
-		const Num<N>& n;
-		
-		REDC(const Num<N>& _n) : n(_n)
-		{
-		
-		}
-		
-		const Num<N> operator()(const Num<N>& a)
-		{
-			
-		}
-	};
 };

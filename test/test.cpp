@@ -1,9 +1,9 @@
-#include "BigNum.h"
 #include <assert.h>
 #include <string>
 #include <algorithm>
 #include <chrono>
 #include <time.h>
+#include "BigNum.h"
 
 template<int N>
 std::string toString(const BigNum::Num<N>& num)
@@ -165,7 +165,11 @@ int main()
 	auto prime = findPrime<1024>(BigNum::Num<1024>(1) << 511);
 #else
 	//srand(time(nullptr));
+	
 	test(BigNum::Num<256>(fromString<128>("118802731")) == fromString<256>("118802731"));
+	test(fromString<128>(toString(fromString<128>("118802731")).c_str()) == fromString<128>("118802731"));
+
+	printf("%s\n", toString(fromString<128>("118802731")).c_str());
 
 	test(BigNum::Num<64>(0) == BigNum::Num<64>(0));
 	test(BigNum::Num<64>(0) != BigNum::Num<64>(1));
@@ -271,6 +275,17 @@ int main()
 	test((BigNum::modInv(BigNum::Num<128>(7), BigNum::Num<128>(11)) * BigNum::Num<128>(7))% BigNum::Num<128>(11) == BigNum::Num<128>(1));
 	test((BigNum::modInv(BigNum::Num<128>(961748941), BigNum::Num<128>(982451653)) * BigNum::Num<128>(961748941))% BigNum::Num<128>(982451653) == BigNum::Num<128>(1));
 
+	BigNum::BarretReducer<128> redc10(10);
+	test(redc10(fromString<128>("10")) == BigNum::Num<128>(0));
+	test(redc10(fromString<128>("11")) == BigNum::Num<128>(1));
+	test(redc10(fromString<128>("100")) == BigNum::Num<128>(0));
+	test(redc10(fromString<128>("101")) == BigNum::Num<128>(1));
+	test(redc10(fromString<128>("1000")) == BigNum::Num<128>(0));
+	test(redc10(fromString<128>("1001")) == BigNum::Num<128>(1));
+	test(redc10(fromString<128>("10000")) == BigNum::Num<128>(0));
+	test(redc10(fromString<128>("10001")) == BigNum::Num<128>(1));
+	test(redc10(fromString<128>("10000000000")) == BigNum::Num<128>(0));
+	test(redc10(fromString<128>("10000000001")) == BigNum::Num<128>(1));
 
 	{
 		auto start = std::chrono::high_resolution_clock::now();
