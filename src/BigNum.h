@@ -723,30 +723,6 @@ namespace BigNum
 	}
 
 	template<int N>
-	struct BarretReducer
-	{
-		const Num<N>& n;
-		Num<N> x;
-		
-		BarretReducer(const Num<N>& _n) : n(_n)
-		{
-			Num<2 * N> q;
-			Num<N> r;
-			div(Num<2 * N>(1) << N, n, q, r);
-			x = Num<N>(q);
-		}
-		
-		const Num<N> operator()(Num<N> a)
-		{
-			Num<N> q = Num<N>(mul2N(a, x) >> N);
-			Num<N> m = a - q * n;
-			while (m >= n)
-				m = m - n;
-			return m;
-		}
-	};
-
-	template<int N>
 	const Num<N> modExp(const Num<N>& base, const Num<N>& exp, const Num<N>& mod)
 	{
 		if (mod == 1)
@@ -760,8 +736,6 @@ namespace BigNum
 		while (realExpSize >= 0 && exp[realExpSize - 1] == 0)
 			realExpSize--;
 
-		//BarretReducer<2 * N> modRed(mod);
-
 		for (int i = 0; i < realExpSize; ++i)
 		{
 			for (int bit = 0; bit < 8; bit++)
@@ -770,16 +744,84 @@ namespace BigNum
 				{
 					Num<2 * N> q;
 					div(mul2N(result, power), mod, q, result);
-					//result = modRed(mul2N(result, power));
 				}
 				{
 					Num<2 * N> q;
 					div(mul2N(power, power), mod, q, power);
-					//result = modRed(mul2N(power, power));
 				}
 			}
 		}
 
 		return Num<N>(result);
+	}
+
+	template<int N>
+	struct MonMul
+	{
+		const Num<N> n;
+		const Num<2 * N> r;
+		const Num<N> rinv;
+		Num<2 * N> k;
+
+		MonMul(const Num<N>& _n) : n(_n), r(Num<2 * N>(1) << N), rinv(Num<N>(modInv<2 * N>(r, n)))
+		{
+			assert(gcd(Num<2 * N>(n), r) == 1);
+
+			Num<N> tempr;
+			Num<2 * N> q;
+			div((Num<2 * N>(rinv)<<N) - 1, n, q, tempr);
+			k = Num<2 * N>(q);
+		}
+
+		const Num<N> In(const Num<N>& x) const
+		{
+			Num<2 * N> ret(x);
+			ret << N;
+
+			Num<N> tempr;
+			Num<2 * N> q;
+			div(ret, n, q, tempr);
+			return tempr;
+		}
+
+		const Num<N> Out(const Num<N>& x) const
+		{
+			Num<2 * N> ret = mul2N(x, rinv);
+
+			Num<N> tempr;
+			Num<2 * N> q;
+			div(ret, n, q, tempr);
+			return Num<N>(tempr);
+		}
+
+		const Num<N> operator()(const Num<N>& a, const Num<N>& b) const
+		{
+			Num<2 * N> t = mul2N(a, b) & (r - 1);
+			Num<2 * N> m = Num<2 * N>(mul2N(t, k) & Num<4 * N>(r - 1));
+			Num<2 * N> u = (Num<4 * N>(t) + mul2N(m, Num<2 * N>(n))) >> (N);
+			if (u >= Num<2 * N>(n))
+				u = u - Num<2 * N>(n);
+			return Num<N>(u);
+		}
+	};
+
+	template<int N>
+	const Num<N> monModExp(const Num<N>& base, const Num<N>& exp, const Num<N>& mod)
+	{
+		MonMul<N> monMod((mod));
+		Num<N> ret = monMod.In(Num<N>(1));
+		Num<N> power = monMod.In(base);
+
+		int realExpSize = Num<N>::Size;
+		while (realExpSize >= 0 && exp[realExpSize - 1] == 0)
+			realExpSize--;
+
+		for (int i = 0; i < realExpSize*8; i++)
+		{
+			if (exp.bit(i))
+				ret = monMod(ret, power);
+			power = monMod(power, power);
+		}
+		return monMod.Out(ret);
 	}
 };

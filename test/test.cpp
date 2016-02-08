@@ -57,7 +57,7 @@ bool millerRabinPass(const BigNum::Num<N>& num, const BigNum::Num<N>& a)
 		s++;
 
 	d = d >> s;
-	BigNum::Num<N> a_to_power = BigNum::modExp(a, d, num);
+	BigNum::Num<N> a_to_power = BigNum::modExp<N>(a, d, num);
 
 	if (a_to_power == 1)
 		return true;
@@ -255,6 +255,10 @@ int main()
 
 	test(BigNum::modExp<32>(BigNum::Num<32>(4), BigNum::Num<32>(13), BigNum::Num<32>(497)) == BigNum::Num<32>(445));
 
+	BigNum::MonMul<16> mod11(BigNum::Num<16>(121));
+	//test(mod11(BigNum::Num<16>(100), BigNum::Num<16>(100)) == BigNum::Num<16>(78));
+	//test(BigNum::monModExp<32>(BigNum::Num<32>(4), BigNum::Num<32>(13), BigNum::Num<32>(497)) == BigNum::Num<32>(445));
+
 	//millerRabinPass(fromString<128>("118802731"), fromString<128>("74812"));
 
 	srand(0);
@@ -274,18 +278,6 @@ int main()
 	
 	test((BigNum::modInv(BigNum::Num<128>(7), BigNum::Num<128>(11)) * BigNum::Num<128>(7))% BigNum::Num<128>(11) == BigNum::Num<128>(1));
 	test((BigNum::modInv(BigNum::Num<128>(961748941), BigNum::Num<128>(982451653)) * BigNum::Num<128>(961748941))% BigNum::Num<128>(982451653) == BigNum::Num<128>(1));
-
-	BigNum::BarretReducer<128> redc10(10);
-	test(redc10(fromString<128>("10")) == BigNum::Num<128>(0));
-	test(redc10(fromString<128>("11")) == BigNum::Num<128>(1));
-	test(redc10(fromString<128>("100")) == BigNum::Num<128>(0));
-	test(redc10(fromString<128>("101")) == BigNum::Num<128>(1));
-	test(redc10(fromString<128>("1000")) == BigNum::Num<128>(0));
-	test(redc10(fromString<128>("1001")) == BigNum::Num<128>(1));
-	test(redc10(fromString<128>("10000")) == BigNum::Num<128>(0));
-	test(redc10(fromString<128>("10001")) == BigNum::Num<128>(1));
-	test(redc10(fromString<128>("10000000000")) == BigNum::Num<128>(0));
-	test(redc10(fromString<128>("10000000001")) == BigNum::Num<128>(1));
 
 	{
 		auto start = std::chrono::high_resolution_clock::now();
@@ -358,7 +350,7 @@ int main()
 	//	printf("Prime (2048)= %s\n   duration - %lld ms\n", toString(prime).c_str(), (long long)std::chrono::duration_cast<std::chrono::milliseconds>(elapsed).count());
 	//}
 	printf("Press any key...");
-	getchar();
+	int ret = getchar();
 #endif
 	return 0;
 }
