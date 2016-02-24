@@ -399,17 +399,14 @@ namespace BigNum
 			unsigned int val = 0;
 			if (rest >= shiftedD[0])
 			{
-				Num<N+8> current;
 				for (int j = 7; j >= 0; --j)
 				{
-					Num<N+8> test = current + shiftedD[j];
-					if (test <= rest)
+					if (rest >= shiftedD[j])
 					{
+						rest = rest - shiftedD[j];
 						val += 1 << j;
-						current = test;
 					}
 				}
-				rest = rest - current;
 			}
 			q[i] = static_cast<unsigned char>(val);
 		}
@@ -428,17 +425,14 @@ namespace BigNum
 			unsigned int val = 0;
 			if (rest >= shiftedD[0])
 			{
-				Num<N+8> current(0);
 				for (int j = 7; j >= 0; --j)
 				{
-					Num<N+8> test = current + shiftedD[j];
-					if (test <= rest)
+					if (rest >= shiftedD[j])
 					{
+						rest = rest - shiftedD[j];
 						val += 1 << j;
-						current = test;
 					}
 				}
-				rest = rest - current;
 			}
 			q[i] = static_cast<unsigned char>(val);
 		}
