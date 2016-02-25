@@ -349,6 +349,50 @@ int main()
 	//	auto elapsed = stop - start;
 	//	printf("Prime (2048)= %s\n   duration - %lld ms\n", toString(prime).c_str(), (long long)std::chrono::duration_cast<std::chrono::milliseconds>(elapsed).count());
 	//}
+
+	{
+		
+		printf("Generate RSA keys.");
+		auto start = std::chrono::high_resolution_clock::now();
+
+		auto p = findPrime<512>(BigNum::Num<512>(1) << 511);
+		auto q = findPrime<512>((BigNum::Num<512>(1) << 511) + (BigNum::Num<512>(1) << 32));
+
+		auto N = BigNum::mul2N(p, q);
+		auto t = BigNum::mul2N(p - 1, q - 1);
+		auto e = BigNum::Num<1024>(65537);
+		auto d = BigNum::modInv(e, t);
+
+		auto stop = std::chrono::high_resolution_clock::now();
+		auto elapsed = stop - start;
+		printf(" duration - %lld ms\n", (long long)std::chrono::duration_cast<std::chrono::milliseconds>(elapsed).count());
+
+		const char *text = "RSA encryption text";
+
+		BigNum::Num<1024> data(0);
+		for (int i = 0; i < strlen(text); ++i)
+			data[i] = text[i];
+
+		printf("Encrypt");
+		start = std::chrono::high_resolution_clock::now();
+
+		BigNum::Num<1024> cipper = BigNum::modExp(data, e, N);
+
+		stop = std::chrono::high_resolution_clock::now();
+		elapsed = stop - start;
+		printf(" duration - %lld ms\n", (long long)std::chrono::duration_cast<std::chrono::milliseconds>(elapsed).count());	
+
+		printf("Decrypt");
+		start = std::chrono::high_resolution_clock::now();
+
+		data = BigNum::modExp(cipper, d, N);
+
+		stop = std::chrono::high_resolution_clock::now();
+		elapsed = stop - start;
+		printf(" duration - %lld ms\n", (long long)std::chrono::duration_cast<std::chrono::milliseconds>(elapsed).count());
+
+		printf("%s\n", (strcmp((char*)&(data[0]), text) == 0) ? "Ok" : "Fail");
+	}
 	printf("Press any key...");
 	int ret = getchar();
 #endif
