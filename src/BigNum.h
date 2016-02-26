@@ -4,6 +4,26 @@
 
 namespace BigNum
 {
+	namespace Core
+	{
+		template<typename It1, typename It2>
+		int cmp(It1 v1begin, It1 v1end, It2 v2begin, It2 v2end)
+		{
+			const int v1len = v1end - v1begin;
+			const int v2len = v2end - v2begin;
+			const int vmax = (v1len > v2len)? v1len : v2len;
+
+			for(int i = vmax; i-->0;)
+			{
+				const auto v1 = (i < v1len) ? v1begin[i] : 0;
+				const auto v2 = (i < v2len) ? v2begin[i] : 0;
+				if (v1 != v2)
+					return v1 > v2 ? 1 : -1;
+			}
+			return 0;
+		}
+	}
+	
 	template<int N>
 	class Num
 	{
@@ -206,23 +226,13 @@ namespace BigNum
 	template<int N>
 	const bool operator == (const Num<N>& v1, const Num<N>& v2)
 	{
-		bool ret = true;
-		for (int i = 0; (i < Num<N>::Size) && (ret); i++)
-		{
-			ret = (v1[i] == v2[i]);
-		}
-		return ret;
+		return Core::cmp(&v1[0], &v1[v1.Size], &v2[0], &v2[v1.Size]) == 0;
 	}
 
 	template<int N>
 	const bool operator == (const Num<N>& v1, unsigned char v2)
 	{
-		bool ret = v1[0] == v2;
-		for (int i = 1; (i < Num<N>::Size) && (ret); i++)
-		{
-			ret = (v1[i] == 0);
-		}
-		return ret;
+		return Core::cmp(&v1[0], &v1[v1.Size], &v2, (&v2) + sizeof(v2)) == 0;
 	}
 
 	template<int N>
@@ -240,54 +250,25 @@ namespace BigNum
 	template<int N>
 	const bool operator > (const Num<N>& v1, const Num<N>& v2)
 	{
-		for (int i = Num<N>::Size - 1; (i >=0 ); i--)
-		{
-			if (v1[i] != v2[i])
-			{
-				return v1[i] > v2[i];
-			}
-		}
-
-		return false;
+		return Core::cmp(&v1[0], &v1[v1.Size], &v2[0], &v2[v1.Size]) > 0;
 	}
 
 	template<int N>
 	const bool operator >= (const Num<N>& v1, const Num<N>& v2)
 	{
-		for (int i = Num<N>::Size - 1; (i >= 0); i--)
-		{
-			if (v1[i] != v2[i])
-			{
-				return v1[i] > v2[i];
-			}
-		}
-		return true;
+		return Core::cmp(&v1[0], &v1[v1.Size], &v2[0], &v2[v1.Size]) >= 0;
 	}
 
 	template<int N>
 	const bool operator < (const Num<N>& v1, const Num<N>& v2)
 	{
-		for (int i = Num<N>::Size - 1; (i >= 0); i--)
-		{
-			if (v1[i] != v2[i])
-			{
-				return v1[i] < v2[i];
-			}
-		}
-		return false;
+		return Core::cmp(&v1[0], &v1[v1.Size], &v2[0], &v2[v1.Size]) < 0;
 	}
 
 	template<int N>
 	const bool operator <= (const Num<N>& v1, const Num<N>& v2)
 	{
-		for (int i = Num<N>::Size - 1; (i >= 0); i--)
-		{
-			if (v1[i] != v2[i])
-			{
-				return v1[i] <= v2[i];
-			}
-		}
-		return true;
+		return Core::cmp(&v1[0], &v1[v1.Size], &v2[0], &v2[v1.Size]) <= 0;
 	}
 
 	template<int N>
