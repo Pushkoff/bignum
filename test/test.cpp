@@ -1,5 +1,6 @@
 #include <assert.h>
 #include <string>
+#include <string.h>
 #include <algorithm>
 #include <chrono>
 #include <time.h>
