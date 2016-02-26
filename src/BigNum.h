@@ -324,9 +324,9 @@ namespace BigNum
 	const Num<N> shift_right_bytes(const Num<N>& v, int count)
 	{
 		Num<N> ret;
-		for (int i = count; i < Num<N>::Size - 1; i++)
+		for (int i = 0; i < Num<N>::Size - count; i++)
 		{
-			ret[i - count] = v[i];
+			ret[i] = v[i + count];
 		}
 		return ret;
 	}

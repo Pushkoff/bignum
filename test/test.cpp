@@ -224,16 +224,34 @@ int main()
 	test((BigNum::Num<64>(13505675 >> 22) == BigNum::shift_right(BigNum::Num<64>(13505675), 22)));
 	test(BigNum::Num<1024>(1) << 1023 == fromString<1024>("89884656743115795386465259539451236680898848947115328636715040578866337902750481566354238661203768010560056939935696678829394884407208311246423715319737062188883946712432742638151109800623047059726541476042502884419075341171231440736956555270413618581675255342293149119973622969239858152417678164812112068608"));
 
-	//{
-	//	unsigned int num = 58369;
-	//	BigNum::Num<16> bn(num);
-	//	for (int i = 0; i < 16; i++)
-	//	{
-	//		bn = bn >> 1;
-	//		num = num >> 1;
-	//		test(bn == num);
-	//	}
-	//}
+	{
+		BigNum::Num<64> bn(1);
+		for (int i = 0; i < 64; i++)
+		{
+			BigNum::Num<64> testbn = bn << i;
+			test(testbn[i/8] == (1 << i%8));
+		}
+	}
+	
+	{
+		BigNum::Num<64> bn = BigNum::Num<64>(1) << 63;
+		for (int i = 0; i < 64; i++)
+		{
+			BigNum::Num<64> testbn = bn >> i;
+			test(testbn[(63 - i)/8] == (1 << (7 - i%8)));
+		}
+	}
+	
+	{
+		BigNum::Num<64> bn1 = BigNum::Num<64>(255);
+		BigNum::Num<64> bn2 = BigNum::Num<64>(255) << 56;
+		for (int i = 0; i < 56; i++)
+		{
+			BigNum::Num<64> testbn1 = bn1 << i;
+			BigNum::Num<64> testbn2 = bn2 >> (56-i);
+			test(testbn1 == testbn2);
+		}
+	}
 
 	test(((BigNum::Num<64>(1) << 63) + 1) / (BigNum::Num<64>(1) << 63) == 1);
 	test(((BigNum::Num<64>(1) << 63) + 1) % (BigNum::Num<64>(1) << 63) == 1);
