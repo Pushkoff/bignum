@@ -68,6 +68,8 @@ namespace BigNum
 
 			for (int i = std::min<int>(Size, Num<M>::Size); i < Size; i++)
 				data[i] = 0;
+				
+			assert(std::none_of(&other[std::min<int>(Size, Num<M>::Size)],&other[Num<M>::Size], [](unsigned char x){ return x != 0; }));
 
 			return *this;
 		}
