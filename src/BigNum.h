@@ -9,11 +9,11 @@ namespace BigNum
 		template<typename It1, typename It2>
 		int cmp(It1 v1begin, It1 v1end, It2 v2begin, It2 v2end)
 		{
-			const int v1len = v1end - v1begin;
-			const int v2len = v2end - v2begin;
-			const int vmax = (v1len > v2len)? v1len : v2len;
+			const ptrdiff_t v1len = v1end - v1begin;
+			const ptrdiff_t v2len = v2end - v2begin;
+			const ptrdiff_t vmax = (v1len > v2len)? v1len : v2len;
 
-			for(int i = vmax; i-->0;)
+			for(ptrdiff_t i = vmax; i-->0;)
 			{
 				const auto v1 = (i < v1len) ? v1begin[i] : 0;
 				const auto v2 = (i < v2len) ? v2begin[i] : 0;
@@ -225,10 +225,10 @@ namespace BigNum
 		return rez;
 	}
 
-	template<int N>
-	const bool operator == (const Num<N>& v1, const Num<N>& v2)
+	template<int N, int M>
+	const bool operator == (const Num<N>& v1, const Num<M>& v2)
 	{
-		return Core::cmp(&v1[0], &v1[v1.Size], &v2[0], &v2[v1.Size]) == 0;
+		return Core::cmp(&v1[0], &v1[v1.Size], &v2[0], &v2[v2.Size]) == 0;
 	}
 
 	template<int N>
@@ -237,8 +237,8 @@ namespace BigNum
 		return Core::cmp(&v1[0], &v1[v1.Size], &v2, (&v2) + sizeof(v2)) == 0;
 	}
 
-	template<int N>
-	const bool operator != (const Num<N>& v1, const Num<N>& v2)
+	template<int N, int M>
+	const bool operator != (const Num<N>& v1, const Num<M>& v2)
 	{
 		return !(v1 == v2);
 	}
@@ -249,28 +249,28 @@ namespace BigNum
 		return !(v1 == v2);
 	}
 
-	template<int N>
-	const bool operator > (const Num<N>& v1, const Num<N>& v2)
+	template<int N, int M>
+	const bool operator > (const Num<N>& v1, const Num<M>& v2)
 	{
-		return Core::cmp(&v1[0], &v1[v1.Size], &v2[0], &v2[v1.Size]) > 0;
+		return Core::cmp(&v1[0], &v1[v1.Size], &v2[0], &v2[v2.Size]) > 0;
 	}
 
-	template<int N>
-	const bool operator >= (const Num<N>& v1, const Num<N>& v2)
+	template<int N, int M>
+	const bool operator >= (const Num<N>& v1, const Num<M>& v2)
 	{
-		return Core::cmp(&v1[0], &v1[v1.Size], &v2[0], &v2[v1.Size]) >= 0;
+		return Core::cmp(&v1[0], &v1[v1.Size], &v2[0], &v2[v2.Size]) >= 0;
 	}
 
-	template<int N>
-	const bool operator < (const Num<N>& v1, const Num<N>& v2)
+	template<int N, int M>
+	const bool operator < (const Num<N>& v1, const Num<M>& v2)
 	{
-		return Core::cmp(&v1[0], &v1[v1.Size], &v2[0], &v2[v1.Size]) < 0;
+		return Core::cmp(&v1[0], &v1[v1.Size], &v2[0], &v2[v2.Size]) < 0;
 	}
 
-	template<int N>
-	const bool operator <= (const Num<N>& v1, const Num<N>& v2)
+	template<int N, int M>
+	const bool operator <= (const Num<N>& v1, const Num<M>& v2)
 	{
-		return Core::cmp(&v1[0], &v1[v1.Size], &v2[0], &v2[v1.Size]) <= 0;
+		return Core::cmp(&v1[0], &v1[v1.Size], &v2[0], &v2[v2.Size]) <= 0;
 	}
 
 	template<int N>
@@ -532,7 +532,7 @@ namespace BigNum
 	}
 
 	template<int N>
-	const unsigned short operator % (const Num<N>& v1, const unsigned int v2)
+	const unsigned int operator % (const Num<N>& v1, const unsigned int v2)
 	{
 		Num<N> q;
 		unsigned int r = 0;
@@ -641,6 +641,17 @@ namespace BigNum
 			a = t;
 		}
 		return a;
+	}
+
+	template<int N>
+	const Num<2*N> lcm(const Num<N>& v1, const Num<N>& v2)
+	{
+		Num<2 * N> m = mul2N(v1, v2);
+		Num<N> g = gcd(v1, v2);
+		Num<2 * N> ret;
+		Num<N> rest;
+		div(m, g, ret, rest);
+		return ret;
 	}
 
 	template<int N>

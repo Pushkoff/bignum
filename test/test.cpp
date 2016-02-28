@@ -3,6 +3,7 @@
 #include <string.h>
 #include <algorithm>
 #include <chrono>
+#include <vector>
 #include <time.h>
 #include "BigNum.h"
 
@@ -292,6 +293,9 @@ int main()
 	test(BigNum::gcd(fromString<128>("12"), fromString<128>("24")) == fromString<128>("12"));
 	test(BigNum::gcd(fromString<128>("961748941"), fromString<128>("982451653")) == fromString<128>("1"));
 	
+	test(BigNum::lcm(fromString<128>("3"), fromString<128>("4")) == fromString<256>("12"));
+	test(BigNum::lcm(fromString<128>("6"), fromString<128>("4")) == fromString<64>("12"));
+
 	BigNum::Num<128> inv = BigNum::modInv(BigNum::Num<128>(7), BigNum::Num<128>(11));
 	printf("inv of 7 mod 11 = %s\n", toString(inv).c_str());
 	
@@ -386,17 +390,26 @@ int main()
 		auto elapsed = stop - start;
 		printf(" duration - %lld ms\n", (long long)std::chrono::duration_cast<std::chrono::milliseconds>(elapsed).count());
 
-		const char *text = "RSA encryption text";
+		std::vector<char> testdata(10240);
+		std::generate(std::begin(testdata), std::end(testdata), []() {return rand() % 256; });
 
-		BigNum::Num<1024> data(0);
-		for (int i = 0; i < strlen(text); ++i)
-			data[i] = text[i];
+		std::vector<char> decrypted;
+
+		std::vector<char> cipperdata;
 
 		printf("Encrypt");
 		start = std::chrono::high_resolution_clock::now();
+		for (int block = 0; block < (testdata.size() / (BigNum::Num<1024>::Size / 2)); block++)
+		{
+			BigNum::Num<1024> data(0);
+			for (int i = 0; i < BigNum::Num<1024>::Size/2; ++i)
+				data[i] = testdata[block * BigNum::Num<1024>::Size / 2 + i];
 
-		BigNum::Num<1024> cipper = BigNum::modExp(data, e, N);
+			BigNum::Num<1024> cipper = BigNum::modExp(data, e, N);
 
+			for (int i = 0; i < BigNum::Num<1024>::Size; ++i)
+				cipperdata.push_back(cipper[i]);
+		}
 		stop = std::chrono::high_resolution_clock::now();
 		elapsed = stop - start;
 		printf(" duration - %lld ms\n", (long long)std::chrono::duration_cast<std::chrono::milliseconds>(elapsed).count());	
@@ -404,13 +417,22 @@ int main()
 		printf("Decrypt");
 		start = std::chrono::high_resolution_clock::now();
 
-		data = BigNum::modExp(cipper, d, N);
+		for (int block = 0; block < (cipperdata.size() / BigNum::Num<1024>::Size); block++)
+		{
+			BigNum::Num<1024> cipper(0);
+			for (int i = 0; i < BigNum::Num<1024>::Size; ++i)
+				cipper[i] = cipperdata[block * BigNum::Num<1024>::Size + i];
+
+			BigNum::Num<1024> data = BigNum::modExp(cipper, d, N);
+			for (int i = 0; i < BigNum::Num<1024>::Size/2; ++i)
+				decrypted.push_back(data[i]);
+		}
 
 		stop = std::chrono::high_resolution_clock::now();
 		elapsed = stop - start;
 		printf(" duration - %lld ms\n", (long long)std::chrono::duration_cast<std::chrono::milliseconds>(elapsed).count());
 
-		printf("%s\n", (strcmp((char*)&(data[0]), text) == 0) ? "Ok" : "Fail");
+		printf("%s\n", (decrypted == testdata) ? "Ok" : "Fail");
 	}
 	printf("Press any key...");
 	int ret = getchar();
