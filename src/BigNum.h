@@ -9,11 +9,11 @@ namespace BigNum
 		template<typename It1, typename It2>
 		int cmp(It1 v1begin, It1 v1end, It2 v2begin, It2 v2end)
 		{
-			const ptrdiff_t v1len = v1end - v1begin;
-			const ptrdiff_t v2len = v2end - v2begin;
-			const ptrdiff_t vmax = (v1len > v2len)? v1len : v2len;
+			const std::ptrdiff_t v1len = v1end - v1begin;
+			const std::ptrdiff_t v2len = v2end - v2begin;
+			const std::ptrdiff_t vmax = (v1len > v2len)? v1len : v2len;
 
-			for(ptrdiff_t i = vmax; i-->0;)
+			for(std::ptrdiff_t i = vmax; i-->0;)
 			{
 				const auto v1 = (i < v1len) ? v1begin[i] : 0;
 				const auto v2 = (i < v2len) ? v2begin[i] : 0;
