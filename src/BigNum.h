@@ -81,7 +81,7 @@ namespace BigNum
 		{
 			//assert(i >= 0 && i < Size);
 			bool ret = false;
-			if (i >= 0 && i < Size)
+			if (i >= 0 && i < N)
 			{
 				const int byte = i / 8;
 				const int bit = i % 8;
@@ -724,19 +724,16 @@ namespace BigNum
 		while (realExpSize >= 0 && exp[realExpSize - 1] == 0)
 			realExpSize--;
 
-		for (int i = 0; i < realExpSize; ++i)
+		for (int i = realExpSize * 8; i-->0;)
 		{
-			for (int bit = 0; bit < 8; bit++)
 			{
-				if ((exp[i] & (1u << bit)) != 0)
-				{
-					Num<2 * N> q;
-					div(mul2N(result, power), mod, q, result);
-				}
-				{
-					Num<2 * N> q;
-					div(mul2N(power, power), mod, q, power);
-				}
+				Num<2 * N> q;
+				div(mul2N(result, result), mod, q, result);
+			}
+			if (exp.bit(i))
+			{
+				Num<2 * N> q;
+				div(mul2N(result, power), mod, q, result);
 			}
 		}
 
@@ -748,23 +745,29 @@ namespace BigNum
 	{
 		const Num<N> n;
 		const Num<2 * N> r;
-		const Num<N> rinv;
-		Num<2 * N> k;
+		Num<N> rinv;
+		Num<N> ninv;
 
-		MonMul(const Num<N>& _n) : n(_n), r(Num<2 * N>(1) << N), rinv(Num<N>(modInv<2 * N>(r, n)))
+		MonMul(const Num<N>& _n) : n(_n), r(Num<2 * N>(1) << N)
 		{
 			assert(gcd(Num<2 * N>(n), r) == 1);
+
+			rinv = Num<N>(modInv<2 * N>(r, n));
+
+			assert((Num<2 * N>(rinv) << N) % Num<2 * N>(n) == 1);
 
 			Num<N> tempr;
 			Num<2 * N> q;
 			div((Num<2 * N>(rinv)<<N) - 1, n, q, tempr);
-			k = Num<2 * N>(q);
+			ninv = Num<N>(q);
+
+			assert((Num<2 * N>(rinv) << N) - mul2N(ninv,n) == 1);
 		}
 
 		const Num<N> In(const Num<N>& x) const
 		{
 			Num<2 * N> ret(x);
-			ret << N;
+			ret = ret << N;
 
 			Num<N> tempr;
 			Num<2 * N> q;
@@ -784,14 +787,24 @@ namespace BigNum
 
 		const Num<N> operator()(const Num<N>& a, const Num<N>& b) const
 		{
-			Num<2 * N> t = mul2N(a, b) & (r - 1);
-			Num<2 * N> m = Num<2 * N>(mul2N(t, k) & Num<4 * N>(r - 1));
-			Num<2 * N> u = (Num<4 * N>(t) + mul2N(m, Num<2 * N>(n))) >> (N);
-			if (u >= Num<2 * N>(n))
-				u = u - Num<2 * N>(n);
+			Num<2*N> t = mul2N(a, b);
+			Num<N> m = mul2N(Num<N>(t & (r - 1)), ninv) & (r - 1);
+			Num<N> u = (t + mul2N(m, n)) >> N;
+			while (u >= n)
+				u = u - n;
 			return Num<N>(u);
 		}
 	};
+
+	template<int N>
+	const Num<N> monModMul(const Num<N>& a, const Num<N>& b, const Num<N>& mod)
+	{
+		MonMul<N> monMod((mod));
+		Num<N> xa = monMod.In(a);
+		Num<N> xb = monMod.In(b);
+		Num<N> ret = monMod(xa, xb);
+		return monMod.Out(ret);
+	}
 
 	template<int N>
 	const Num<N> monModExp(const Num<N>& base, const Num<N>& exp, const Num<N>& mod)
@@ -804,11 +817,11 @@ namespace BigNum
 		while (realExpSize >= 0 && exp[realExpSize - 1] == 0)
 			realExpSize--;
 
-		for (int i = 0; i < realExpSize*8; i++)
+		for (int i = realExpSize * 8; i -->0 ;)
 		{
+			ret = monMod(ret, ret);
 			if (exp.bit(i))
 				ret = monMod(ret, power);
-			power = monMod(power, power);
 		}
 		return monMod.Out(ret);
 	}

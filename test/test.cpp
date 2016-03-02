@@ -59,7 +59,7 @@ bool millerRabinPass(const BigNum::Num<N>& num, const BigNum::Num<N>& a)
 		s++;
 
 	d = d >> s;
-	BigNum::Num<N> a_to_power = BigNum::modExp<N>(a, d, num);
+	BigNum::Num<N> a_to_power = BigNum::monModExp<N>(a, d, num);
 
 	if (a_to_power == 1)
 		return true;
@@ -274,33 +274,41 @@ int main()
 	printf("BigNum::Num<128>(125632587586954854585354458654754812345678908765678765467543456765678) = %s\n", toString(fromString<1024>("125632587586954854585354458654754812345678908765678765467543456765678")).c_str());
 
 	test(BigNum::modExp<32>(BigNum::Num<32>(4), BigNum::Num<32>(13), BigNum::Num<32>(497)) == BigNum::Num<32>(445));
+	test(BigNum::modExp<32>(BigNum::Num<32>(4), BigNum::Num<32>(0), BigNum::Num<32>(497)) == BigNum::Num<32>(1));
+	test(BigNum::modExp<32>(BigNum::Num<32>(4), BigNum::Num<32>(1), BigNum::Num<32>(497)) == BigNum::Num<32>(4));
 
-	BigNum::MonMul<16> mod11(BigNum::Num<16>(121));
-	//test(mod11(BigNum::Num<16>(100), BigNum::Num<16>(100)) == BigNum::Num<16>(78));
-	//test(BigNum::monModExp<32>(BigNum::Num<32>(4), BigNum::Num<32>(13), BigNum::Num<32>(497)) == BigNum::Num<32>(445));
-
-	//millerRabinPass(fromString<128>("118802731"), fromString<128>("74812"));
-
-	srand(0);
-		
-	test(millerRabinTest(fromString<128>("961748941")) == true);
-	test(millerRabinTest(fromString<128>("982451653")) == true);
-	test(millerRabinTest(fromString<128>("89685068870671644428994813094690803553")) == true);
-	test(millerRabinTest(fromString<128>("982451655")) == false);
-	
 	test(BigNum::gcd(fromString<128>("12"), fromString<128>("9")) == fromString<128>("3"));
 	test(BigNum::gcd(fromString<128>("12"), fromString<128>("12")) == fromString<128>("12"));
 	test(BigNum::gcd(fromString<128>("12"), fromString<128>("24")) == fromString<128>("12"));
 	test(BigNum::gcd(fromString<128>("961748941"), fromString<128>("982451653")) == fromString<128>("1"));
-	
+
 	test(BigNum::lcm(fromString<128>("3"), fromString<128>("4")) == fromString<256>("12"));
 	test(BigNum::lcm(fromString<128>("6"), fromString<128>("4")) == fromString<64>("12"));
 
 	BigNum::Num<128> inv = BigNum::modInv(BigNum::Num<128>(7), BigNum::Num<128>(11));
 	printf("inv of 7 mod 11 = %s\n", toString(inv).c_str());
+
+	test((BigNum::modInv(BigNum::Num<128>(7), BigNum::Num<128>(11)) * BigNum::Num<128>(7)) % BigNum::Num<128>(11) == BigNum::Num<128>(1));
+	test((BigNum::modInv(BigNum::Num<128>(961748941), BigNum::Num<128>(982451653)) * BigNum::Num<128>(961748941)) % BigNum::Num<128>(982451653) == BigNum::Num<128>(1));
+
+	//BigNum::MonMul<16> mod11(BigNum::Num<16>(121));
+	//test(mod11(BigNum::Num<16>(100), BigNum::Num<16>(100)) == BigNum::Num<16>(78));
+	test(BigNum::monModMul<32>(BigNum::Num<32>(43), BigNum::Num<32>(56), BigNum::Num<32>(97)) == BigNum::Num<32>(80));
+	test(BigNum::monModExp<32>(BigNum::Num<32>(4), BigNum::Num<32>(13), BigNum::Num<32>(497)) == BigNum::Num<32>(445));
+	test(BigNum::monModExp<32>(BigNum::Num<32>(4), BigNum::Num<32>(0), BigNum::Num<32>(497)) == BigNum::Num<32>(1));
+	test(BigNum::monModExp<32>(BigNum::Num<32>(4), BigNum::Num<32>(1), BigNum::Num<32>(497)) == BigNum::Num<32>(4));
+	test(BigNum::monModExp<64>(fromString<64>("8814054284918744181"), fromString<64>("1152921504606846977"), fromString<64>("9223372036854775817")) == fromString<64>("4724919961687496308"));
+
+	//millerRabinPass(fromString<128>("118802731"), fromString<128>("74812"));
+
+	srand(0);
 	
-	test((BigNum::modInv(BigNum::Num<128>(7), BigNum::Num<128>(11)) * BigNum::Num<128>(7))% BigNum::Num<128>(11) == BigNum::Num<128>(1));
-	test((BigNum::modInv(BigNum::Num<128>(961748941), BigNum::Num<128>(982451653)) * BigNum::Num<128>(961748941))% BigNum::Num<128>(982451653) == BigNum::Num<128>(1));
+	test(millerRabinTest(fromString<32>("17")) == true);
+
+	test(millerRabinTest(fromString<128>("961748941")) == true);
+	test(millerRabinTest(fromString<128>("982451653")) == true);
+	test(millerRabinTest(fromString<256>("89685068870671644428994813094690803553")) == true);
+	test(millerRabinTest(fromString<128>("982451655")) == false);
 
 	{
 		auto start = std::chrono::high_resolution_clock::now();
@@ -390,7 +398,7 @@ int main()
 		auto elapsed = stop - start;
 		printf(" duration - %lld ms\n", (long long)std::chrono::duration_cast<std::chrono::milliseconds>(elapsed).count());
 
-		std::vector<char> testdata(10240);
+		std::vector<char> testdata(1024);
 		std::generate(std::begin(testdata), std::end(testdata), []() {return rand() % 256; });
 
 		std::vector<char> decrypted;
@@ -405,7 +413,7 @@ int main()
 			for (int i = 0; i < BigNum::Num<1024>::Size/2; ++i)
 				data[i] = testdata[block * BigNum::Num<1024>::Size / 2 + i];
 
-			BigNum::Num<1024> cipper = BigNum::modExp(data, e, N);
+			BigNum::Num<1024> cipper = BigNum::monModExp(data, e, N);
 
 			for (int i = 0; i < BigNum::Num<1024>::Size; ++i)
 				cipperdata.push_back(cipper[i]);
@@ -423,7 +431,7 @@ int main()
 			for (int i = 0; i < BigNum::Num<1024>::Size; ++i)
 				cipper[i] = cipperdata[block * BigNum::Num<1024>::Size + i];
 
-			BigNum::Num<1024> data = BigNum::modExp(cipper, d, N);
+			BigNum::Num<1024> data = BigNum::monModExp(cipper, d, N);
 			for (int i = 0; i < BigNum::Num<1024>::Size/2; ++i)
 				decrypted.push_back(data[i]);
 		}
