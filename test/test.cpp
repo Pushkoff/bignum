@@ -164,7 +164,7 @@ const BigNum::Num<N> randPrime()
 int main()
 {
 #if PROFILING
-	auto prime = findPrime<1024>(BigNum::Num<1024>(1) << 511);
+	auto prime = findPrime<2048>(BigNum::Num<2048>(1) << 2047);
 #else
 	//srand(time(nullptr));
 	

@@ -823,6 +823,7 @@ namespace BigNum
 			if (exp.bit(i))
 				ret = monMod(ret, power);
 		}
-		return monMod.Out(ret);
+		//return monMod.Out(ret);
+		return monMod(ret, 1);
 	}
 };
