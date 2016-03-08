@@ -22,6 +22,32 @@ namespace BigNum
 			}
 			return 0;
 		}
+
+		template<typename ItRez, typename It1, typename It2>
+		int add(ItRez rezbegin, ItRez rezend, It1 v1begin, It1 v1end, It2 v2begin, It2 v2end)
+		{
+			const std::ptrdiff_t rezlen = rezend - rezbegin;
+			const std::ptrdiff_t v1len = v1end - v1begin;
+			const std::ptrdiff_t v2len = v2end - v2begin;
+
+			//assert(rezlen >= v1len && rezlen >= v2len);
+
+			static_assert(sizeof(*rezbegin) == sizeof(*v1begin), "type have to be the same");
+			static_assert(sizeof(*rezbegin) == sizeof(*v2begin), "type have to be the same");
+
+			static_assert(sizeof(int) > sizeof(*rezbegin), "cant detect overflow");
+
+			int carry = 0;
+			for (std::ptrdiff_t i = 0; i < rezlen; i++)
+			{
+				const auto v1 = (i < v1len) ? v1begin[i] : 0;
+				const auto v2 = (i < v2len) ? v2begin[i] : 0;
+				carry += v1 + v2;
+				rezbegin[i] = carry;
+				carry >>= (sizeof(*v1begin) * 8);
+			}
+			return carry;
+		}
 	}
 	
 	template<int N>
@@ -89,49 +115,33 @@ namespace BigNum
 			}
 			return ret;
 		}
+
+		unsigned char* begin() { return &data[0]; }
+		unsigned char* end() { return &data[Size]; }
+
+		const unsigned char* begin() const { return &data[0]; }
+		const unsigned char* end() const { return &data[Size]; }
 	};
 
-	template<int N>
-	const Num<N> operator + (const Num<N>& v1, const Num<N>& v2)
+	template<int N, int M>
+	const Num<N> operator + (const Num<N>& v1, const Num<M>& v2)
 	{
 		Num<N> rez;
-
-		unsigned int carry = 0;
-		for (int i = 0; i < Num<N>::Size; i++)
-		{
-			unsigned int sum = carry + v1[i] + v2[i];
-			rez[i] = sum & 0xFF;
-			carry = sum >> 8;
-		}
-
+		Core::add(rez.begin(), rez.end(), v1.begin(), v1.end(), v2.begin(), v2.end());
 		return rez;
 	}
 
 	template<int N>
 	const Num<N> operator + (Num<N> v1, unsigned char v2)
 	{
-		unsigned int carry = v2;
-		for (int i = 0; i < Num<N>::Size && carry != 0; i++)
-		{
-			unsigned int sum = carry + v1[i];
-			v1[i] = sum & 0xFF;
-			carry = sum >> 8;
-		}
-
+		Core::add(v1.begin(), v1.end(), v1.begin(), v1.end(), &v2, (&v2)+sizeof(v2));
 		return v1;
 	}
 
 	//template<int N>
 	//const Num<N> operator + (Num<N> v1, unsigned int v2)
 	//{
-	//	unsigned long long int carry = v2;
-	//	for (int i = 0; i < Num<N>::Size && carry != 0; i++)
-	//	{
-	//		unsigned long long int sum = carry + v1[i];
-	//		v1[i] = sum & 0xFF;
-	//		carry = sum >> 8;
-	//	}
-
+	//	Core::add(v1.begin(), v1.end(), v1.begin(), v1.end(), &v2, static_cast<unsigned char*>(&v2) + sizeof(v2));
 	//	return v1;
 	//}
 
@@ -777,12 +787,7 @@ namespace BigNum
 
 		const Num<N> Out(const Num<N>& x) const
 		{
-			Num<2 * N> ret = mul2N(x, rinv);
-
-			Num<N> tempr;
-			Num<2 * N> q;
-			div(ret, n, q, tempr);
-			return Num<N>(tempr);
+			return (*this)(x, 1);
 		}
 
 		const Num<N> operator()(const Num<N>& a, const Num<N>& b) const
@@ -806,14 +811,14 @@ namespace BigNum
 		return monMod.Out(ret);
 	}
 
-	template<int N>
-	const Num<N> monModExp(const Num<N>& base, const Num<N>& exp, const Num<N>& mod)
+	template<int N, int M>
+	const Num<N> monModExp(const Num<N>& base, const Num<M>& exp, const Num<N>& mod)
 	{
 		MonMul<N> monMod((mod));
 		Num<N> ret = monMod.In(Num<N>(1));
 		Num<N> power = monMod.In(base);
 
-		int realExpSize = Num<N>::Size;
+		int realExpSize = Num<M>::Size;
 		while (realExpSize >= 0 && exp[realExpSize - 1] == 0)
 			realExpSize--;
 
@@ -823,7 +828,127 @@ namespace BigNum
 			if (exp.bit(i))
 				ret = monMod(ret, power);
 		}
-		//return monMod.Out(ret);
-		return monMod(ret, 1);
+		return monMod.Out(ret);
+	}
+
+	template<int N>
+	const Num<N> rand()
+	{
+		BigNum::Num<N> ret;
+		for (int i = 0; i < BigNum::Num<N>::Size; ++i)
+		{
+			ret[i] = std::rand() % 256;
+		}
+		return ret;
+	}
+
+	// http://en.literateprograms.org/index.php?title=Special:DownloadCode/Miller-Rabin_primality_test_(C)&oldid=18973
+
+	template<int N>
+	bool millerRabinPass(const BigNum::Num<N>& num, const BigNum::Num<N>& a)
+	{
+		BigNum::Num<N> d = num - 1;
+
+		int s = 0;
+		while (d.bit(s) == false)
+			s++;
+
+		d = d >> s;
+		BigNum::Num<N> a_to_power = BigNum::monModExp<N>(a, d, num);
+
+		if (a_to_power == 1)
+			return true;
+
+		for (int i = 0; i < s - 1; i++)
+		{
+			if (a_to_power == num - 1)
+				return true;
+
+			BigNum::Num<N * 2> temp = BigNum::mul2N(a_to_power, a_to_power);
+
+			BigNum::Num<N * 2> q;
+			BigNum::div(temp, num, q, a_to_power);
+		}
+
+		if (a_to_power == num - 1)
+			return true;
+
+		return false;
+	}
+
+
+	template<int N>
+	bool millerRabinTest(const BigNum::Num<N>& num)
+	{
+		constexpr int times = 3;
+		for (int i = 0; i < times; i++)
+		{
+			BigNum::Num<N> a = (rand<N>() % (num - 2)) + 2;
+			if (millerRabinPass(num, a) == false)
+				return false;
+		}
+		return true;
+	}
+
+	constexpr unsigned short primes[] = { 3, 5, 7, 11, 13,  17, 19, 23, 29,
+		31,     37,     41,     43,     47,     53,     59,     61,     67,     71,
+		73,     79,     83,     89,     97,     101,    103,    107,    109,    113,
+		127,    131,    137,    139,    149,    151,    157,    163,    167,    173,
+		179,    181,    191,    193,    197,    199,    211,    223,	227,    229,
+		233,    239,    241,    251,    257,    263,    269,    271,    277,    281,
+		283,    293,    307,    311,    313,    317,    331,    337,    347,    349,
+		353,    359,    367,    373,    379,    383,    389,    397,    401,    409,
+		419,    421,    431,    433,    439,    443,    449,    457,    461,    463,
+		467,    479,    487,    491,    499,    503,    509,    521,    523,    541,
+		547,    557,    563,    569,    571,    577,    587,    593,    599,    601,
+		607,    613,    617,    619,    631,    641,    643,    647,    653,    659,
+		661,    673,    677,    683,    691,    701,    709,    719,    727,    733,
+		739,    743,    751,    757,    761,    769,    773,    787,    797,    809,
+		811,    821,    823,    827,    829,    839,    853,    857,    859,    863,
+		877,    881,    883,    887,    907,    911,    919,    929,    937,    941,
+		947,    953,    967,    971,    977,    983,    991,    997, };
+
+	constexpr int simplechecks(int size)
+	{
+		return (size <= 256) ? 30 : ((size <= 512) ? 50 : ((size <= 1024) ? 80 : ((size <= 2048) ? 128 : (sizeof(primes) / sizeof(primes[0])))));
+	}
+
+	template<int N>
+	const Num<N> findPrime(const BigNum::Num<N>& from)
+	{
+		BigNum::Num<N> prime = from | 1;
+
+		unsigned short rests[simplechecks(N)] = { 0 };
+
+		bool simpleTest = true;
+		for (int i = 0; i < sizeof(rests) / sizeof(rests[0]); i++)
+		{
+			rests[i] = prime % primes[i];
+			simpleTest &= (rests[i] != 0);
+		}
+
+		while (!(simpleTest && millerRabinTest(prime)))
+		{
+			simpleTest = true;
+			for (int i = 0; i < sizeof(rests) / sizeof(rests[0]); i++)
+			{
+				rests[i] += 2;
+				if (rests[i] >= primes[i])
+				{
+					rests[i] -= primes[i];
+					simpleTest &= (rests[i] != 0);
+				}
+			}
+			prime = prime + 2;
+		}
+
+		return prime;
+	}
+
+	template<int N>
+	const Num<N> randPrime()
+	{
+		BigNum::Num<N> num = rand<N>() | (BigNum::Num<N>(1) | (BigNum::Num<N>(1) << (N - 1)));
+		return findPrime(num);
 	}
 };
