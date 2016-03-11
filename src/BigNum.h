@@ -406,12 +406,14 @@ namespace BigNum
 		r = rest;
 	}
 
-	template<int N>
-	void div(const Num<2*N>& n, const Num<N>& d, Num<2*N>& q, Num<N>& r)
+	template<int N, int M>
+	void div(const Num<N>& n, const Num<M>& d, Num<N>& q, Num<M>& r)
 	{
-		const Num<N + 8> shiftedD[8] = { Num<N + 8>(d), Num<N + 8>(d) << 1, Num<N + 8>(d) << 2, Num<N + 8>(d) << 3, Num<N + 8>(d) << 4, Num<N + 8>(d) << 5, Num<N + 8>(d) << 6, Num<N + 8>(d) << 7 };
-		Num<N + 8> rest(0);
-		for (int i = Num<2*N>::Size - 1; i >= 0; i--)
+		Num<M + 8> rest;
+
+		const Num<M + 8> shiftedD[8] = { Num<M + 8>(d), Num<M + 8>(d) << 1, Num<M + 8>(d) << 2, Num<M + 8>(d) << 3, Num<M + 8>(d) << 4, Num<M + 8>(d) << 5, Num<M + 8>(d) << 6, Num<M + 8>(d) << 7 };
+
+		for (int i = Num<N>::Size - 1; i >= 0; i--)
 		{
 			rest = shift_left_bytes(rest, 1u);
 			rest[0] = n[i];
@@ -474,13 +476,14 @@ namespace BigNum
 		r = (unsigned int)rest;
 	}
 
-	template<int N>
-	const Num<N> operator / (const Num<N>& v1, const Num<N>& v2)
+	template<int N, int M>
+	const Num<N> operator / (const Num<N>& v1, const Num<M>& v2)
 	{
 		if (v1 < v2)
 			return Num<N>(0);
 
-		Num<N> q, r;
+		Num<N> q;
+		Num<M> r;
 		div(v1, v2, q, r);
 		return q;
 	}
@@ -512,13 +515,14 @@ namespace BigNum
 		return q;
 	}
 
-	template<int N>
-	const Num<N> operator % (const Num<N>& v1, const Num<N>& v2)
+	template<int N, int M>
+	const Num<M> operator % (const Num<N>& v1, const Num<M>& v2)
 	{
 		if (v1 < v2)
 			return v1;
 
-		Num<N> q, r;
+		Num<N> q;
+		Num<M> r;
 		div(v1, v2, q, r);
 		return r;
 	}
@@ -785,6 +789,18 @@ namespace BigNum
 			return tempr;
 		}
 
+		template<int M>
+		const Num<N> In(const Num<M>& x) const
+		{
+			Num<N+M> ret(x);
+			ret = ret << N;
+
+			Num<N> tempr;
+			Num<N+M> q;
+			div(ret, n, q, tempr);
+			return tempr;
+		}
+
 		const Num<N> Out(const Num<N>& x) const
 		{
 			return (*this)(x, 1);
@@ -811,8 +827,8 @@ namespace BigNum
 		return monMod.Out(ret);
 	}
 
-	template<int N, int M>
-	const Num<N> monModExp(const Num<N>& base, const Num<M>& exp, const Num<N>& mod)
+	template<int N, int M, int K>
+	const Num<N> monModExp(const Num<K>& base, const Num<M>& exp, const Num<N>& mod)
 	{
 		MonMul<N> monMod((mod));
 		Num<N> ret = monMod.In(Num<N>(1));
