@@ -105,32 +105,38 @@ int main()
 	test(BigNum::Num<1024>(1) << 1023 == fromString<1024>("89884656743115795386465259539451236680898848947115328636715040578866337902750481566354238661203768010560056939935696678829394884407208311246423715319737062188883946712432742638151109800623047059726541476042502884419075341171231440736956555270413618581675255342293149119973622969239858152417678164812112068608"));
 
 	{
+		bool passed = true;
 		BigNum::Num<64> bn(1);
 		for (int i = 0; i < 64; i++)
 		{
 			BigNum::Num<64> testbn = bn << i;
-			assert(testbn[i/8] == (1 << i%8));
+			passed = passed && (testbn[i/8] == (1 << i%8));
 		}
+		test(passed == true);
 	}
 	
 	{
+		bool passed = true;
 		BigNum::Num<64> bn = BigNum::Num<64>(1) << 63;
 		for (int i = 0; i < 64; i++)
 		{
 			BigNum::Num<64> testbn = bn >> i;
-			assert(testbn[(63 - i)/8] == (1 << (7 - i%8)));
+			passed = passed && (testbn[(63 - i)/8] == (1 << (7 - i%8)));
 		}
+		test(passed == true && "Rignt shift");
 	}
 	
 	{
+		bool passed = true;
 		BigNum::Num<64> bn1 = BigNum::Num<64>(255);
 		BigNum::Num<64> bn2 = BigNum::Num<64>(255) << 56;
 		for (int i = 0; i < 56; i++)
 		{
 			BigNum::Num<64> testbn1 = bn1 << i;
 			BigNum::Num<64> testbn2 = bn2 >> (56-i);
-			assert(testbn1 == testbn2);
+			passed = passed && (testbn1 == testbn2);
 		}
+		test(passed == true && "shifts");
 	}
 
 	test(((BigNum::Num<64>(1) << 63) + 1) / (BigNum::Num<64>(1) << 63) == 1);
@@ -286,7 +292,7 @@ int main()
 
 		printf("Encrypt");
 		start = std::chrono::high_resolution_clock::now();
-		for (int block = 0; block < (testdata.size() / (BigNum::Num<1024>::Size / 2)); block++)
+		for (std::size_t block = 0; block < (testdata.size() / (BigNum::Num<1024>::Size / 2)); block++)
 		{
 			BigNum::Num<1024> data(0);
 			for (int i = 0; i < BigNum::Num<1024>::Size/2; ++i)
@@ -304,7 +310,7 @@ int main()
 		printf("Decrypt");
 		start = std::chrono::high_resolution_clock::now();
 
-		for (int block = 0; block < (cipperdata.size() / BigNum::Num<1024>::Size); block++)
+		for (std::size_t block = 0; block < (cipperdata.size() / BigNum::Num<1024>::Size); block++)
 		{
 			BigNum::Num<1024> cipper(0);
 			for (int i = 0; i < BigNum::Num<1024>::Size; ++i)
@@ -323,6 +329,7 @@ int main()
 	}
 	printf("Press any key...");
 	int ret = getchar();
+	(void)ret;
 #endif
 	return 0;
 }

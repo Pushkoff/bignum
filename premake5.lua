@@ -40,22 +40,5 @@ project "BigInt"
         buildoptions 
         { 
             -- Pragma warnings caused by OpenMP support not being enabled.
-            "-Wno-unknown-pragmas", 
-            -- Comparison between an unsigned and a signed integer.
-            "-Wno-sign-compare", 
-            -- Conversion between an unsigned and a signed integer.
-            "-Wno-sign-conversion",
-            -- Unused variables.
-            "-Wno-unused-variable",
-            -- Unused values.
-            "-Wno-unused-value",
-            -- Unused but set variable.
-            "-Wno-unused-but-set-variable",
-            -- Unused functions.
-            "-Wno-unused-function",
-            -- Breaking strict aliasing rules.
-            "-Wno-strict-aliasing",
-            -- Compiler warns that it optimizes code based on the 
-            -- assumption that signed integer overflows do not occur.
-            "-Wno-strict-overflow"
+            "-Wno-unknown-pragmas"
         }
