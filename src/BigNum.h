@@ -822,9 +822,7 @@ namespace BigNum
 	{
 		MonMul<N> monMod((mod));
 		Num<N> xa = monMod.In(a);
-		Num<N> xb = monMod.In(b);
-		Num<N> ret = monMod(xa, xb);
-		return monMod.Out(ret);
+		return monMod(xa, b);
 	}
 
 	template<int N, int M, int K>

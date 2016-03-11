@@ -287,7 +287,7 @@ int main()
 		auto elapsed = stop - start;
 		printf(" duration - %lld ms\n", (long long)std::chrono::duration_cast<std::chrono::milliseconds>(elapsed).count());
 
-		std::vector<char> testdata(1024);
+		std::vector<char> testdata(10240);
 		std::generate(std::begin(testdata), std::end(testdata), []() {return rand() % 256; });
 
 		std::vector<char> decrypted;
