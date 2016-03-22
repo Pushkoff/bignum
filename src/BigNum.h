@@ -23,6 +23,20 @@ namespace BigNum
 			return 0;
 		}
 
+		bool adc(unsigned char& ret, const unsigned char v1, const unsigned char v2, bool carry)
+		{
+			unsigned short sum = v1 + v2 + (carry ? 1 : 0);
+			ret = sum & 0xFF;
+			return (sum >> 8) > 0;
+		}
+
+		bool sbc(unsigned char& ret, const unsigned char v1, const unsigned char v2, bool carry)
+		{
+			unsigned short sum = v1 - (v2 + (carry ? 1 : 0));
+			ret = sum & 0xFF;
+			return (sum >> 8) > 0;
+		}
+
 		template<typename ItRez, typename It1, typename It2>
 		int add(ItRez rezbegin, ItRez rezend, It1 v1begin, It1 v1end, It2 v2begin, It2 v2end)
 		{
@@ -37,14 +51,36 @@ namespace BigNum
 
 			static_assert(sizeof(int) > sizeof(*rezbegin), "cant detect overflow");
 
-			int carry = 0;
+			bool carry = false;
 			for (std::ptrdiff_t i = 0; i < rezlen; i++)
 			{
 				const auto v1 = (i < v1len) ? v1begin[i] : 0;
 				const auto v2 = (i < v2len) ? v2begin[i] : 0;
-				carry += v1 + v2;
-				rezbegin[i] = carry;
-				carry >>= (sizeof(*v1begin) * 8);
+				carry = adc(rezbegin[i], v1, v2, carry);
+			}
+			return carry;
+		}
+
+		template<typename ItRez, typename It1, typename It2>
+		int sub(ItRez rezbegin, ItRez rezend, It1 v1begin, It1 v1end, It2 v2begin, It2 v2end)
+		{
+			const std::ptrdiff_t rezlen = rezend - rezbegin;
+			const std::ptrdiff_t v1len = v1end - v1begin;
+			const std::ptrdiff_t v2len = v2end - v2begin;
+
+			//assert(rezlen >= v1len && rezlen >= v2len);
+
+			static_assert(sizeof(*rezbegin) == sizeof(*v1begin), "type have to be the same");
+			static_assert(sizeof(*rezbegin) == sizeof(*v2begin), "type have to be the same");
+
+			static_assert(sizeof(int) > sizeof(*rezbegin), "cant detect overflow");
+
+			bool carry = false;
+			for (std::ptrdiff_t i = 0; i < rezlen; i++)
+			{
+				const auto v1 = (i < v1len) ? v1begin[i] : 0;
+				const auto v2 = (i < v2len) ? v2begin[i] : 0;
+				carry = sbc(rezbegin[i], v1, v2, carry);
 			}
 			return carry;
 		}
@@ -138,13 +174,6 @@ namespace BigNum
 		return v1;
 	}
 
-	//template<int N>
-	//const Num<N> operator + (Num<N> v1, unsigned int v2)
-	//{
-	//	Core::add(v1.begin(), v1.end(), v1.begin(), v1.end(), &v2, static_cast<unsigned char*>(&v2) + sizeof(v2));
-	//	return v1;
-	//}
-
 	template<int N>
 	const Num<N> operator - (const Num<N>& v)
 	{
@@ -155,29 +184,14 @@ namespace BigNum
 	const Num<N> operator - (const Num<N>& v1, const Num<N>& v2)
 	{
 		Num<N> rez;
-
-		int carry = 0;
-		for (int i = 0; i < Num<N>::Size; i++)
-		{
-			int sum = v1[i] + carry - v2[i];
-			rez[i] = static_cast<unsigned char>(sum & 0xFF);
-			carry = sum >> 8;
-		}
-
+		Core::sub(rez.begin(), rez.end(), v1.begin(), v1.end(), v2.begin(), v2.end());
 		return rez;
 	}
 
 	template<int N>
 	const Num<N> operator - (Num<N> v1, unsigned char v2)
 	{
-		int carry = -v2;
-		for (int i = 0; i < Num<N>::Size && carry != 0; i++)
-		{
-			int sum = v1[i] + carry;
-			v1[i] = static_cast<unsigned char>(sum & 0xFF);
-			carry = sum >> 8;
-		}
-
+		Core::sub(v1.begin(), v1.end(), v1.begin(), v1.end(), &v2, (&v2) + sizeof(v2));
 		return v1;
 	}
 
@@ -376,34 +390,6 @@ namespace BigNum
 	const Num<N> operator >> (const Num<N>& v1, int bits)
 	{
 		return shift_right(v1, bits);
-	}
-
-	template<int N>
-	void div(const Num<N>& n, const Num<N>& d, Num<N>& q, Num<N>& r)
-	{
-		Num<N + 8> rest;
-
-		const Num<N+8> shiftedD[8] = { Num<N + 8>(d), Num<N + 8>(d) << 1, Num<N + 8>(d) << 2, Num<N + 8>(d) << 3, Num<N + 8>(d) << 4, Num<N + 8>(d) << 5, Num<N + 8>(d) << 6, Num<N + 8>(d) << 7 };
-
-		for (int i = Num<N>::Size - 1; i >= 0; i--)
-		{
-			rest = shift_left_bytes(rest, 1u);
-			rest[0] = n[i];
-			unsigned int val = 0;
-			if (rest >= shiftedD[0])
-			{
-				for (int j = 7; j >= 0; --j)
-				{
-					if (rest >= shiftedD[j])
-					{
-						rest = rest - shiftedD[j];
-						val += 1 << j;
-					}
-				}
-			}
-			q[i] = static_cast<unsigned char>(val);
-		}
-		r = rest;
 	}
 
 	template<int N, int M>
@@ -621,14 +607,14 @@ namespace BigNum
 		return rez;
 	}
 
-	template<int N>
-	bool operator && (const Num<N>& v1, const Num<N>& v2)
+	template<int N, int M>
+	bool operator && (const Num<N>& v1, const Num<M>& v2)
 	{
 		return v1 != 0 && v2 != 0;
 	}
 
-	template<int N>
-	bool operator || (const Num<N>& v1, const Num<N>& v2)
+	template<int N, int M>
+	bool operator || (const Num<N>& v1, const Num<M>& v2)
 	{
 		return v1 != 0 || v2 != 0;
 	}
@@ -662,10 +648,7 @@ namespace BigNum
 	{
 		Num<2 * N> m = mul2N(v1, v2);
 		Num<N> g = gcd(v1, v2);
-		Num<2 * N> ret;
-		Num<N> rest;
-		div(m, g, ret, rest);
-		return ret;
+		return m / g;
 	}
 
 	template<int N>
