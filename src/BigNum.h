@@ -7,7 +7,7 @@ namespace BigNum
 	namespace Core
 	{
 		template<typename It1, typename It2>
-		int cmp(It1 v1begin, It1 v1end, It2 v2begin, It2 v2end)
+		int cmp(It1 v1begin, It1 v1end, It2 v2begin, It2 v2end) noexcept
 		{
 			const std::ptrdiff_t v1len = v1end - v1begin;
 			const std::ptrdiff_t v2len = v2end - v2begin;
@@ -23,14 +23,14 @@ namespace BigNum
 			return 0;
 		}
 
-		bool adc(unsigned char& ret, const unsigned char v1, const unsigned char v2, bool carry)
+		bool adc(unsigned char& ret, const unsigned char v1, const unsigned char v2, bool carry) noexcept
 		{
 			unsigned short sum = v1 + v2 + (carry ? 1 : 0);
 			ret = sum & 0xFF;
 			return (sum >> 8) > 0;
 		}
 
-		bool sbc(unsigned char& ret, const unsigned char v1, const unsigned char v2, bool carry)
+		bool sbc(unsigned char& ret, const unsigned char v1, const unsigned char v2, bool carry) noexcept
 		{
 			unsigned short sum = v1 - (v2 + (carry ? 1 : 0));
 			ret = sum & 0xFF;
@@ -38,7 +38,7 @@ namespace BigNum
 		}
 
 		template<typename ItRez, typename It1, typename It2>
-		int add(ItRez rezbegin, ItRez rezend, It1 v1begin, It1 v1end, It2 v2begin, It2 v2end)
+		int add(ItRez rezbegin, ItRez rezend, It1 v1begin, It1 v1end, It2 v2begin, It2 v2end) noexcept
 		{
 			const std::ptrdiff_t rezlen = rezend - rezbegin;
 			const std::ptrdiff_t v1len = v1end - v1begin;
@@ -62,7 +62,7 @@ namespace BigNum
 		}
 
 		template<typename ItRez, typename It1, typename It2>
-		int sub(ItRez rezbegin, ItRez rezend, It1 v1begin, It1 v1end, It2 v2begin, It2 v2end)
+		int sub(ItRez rezbegin, ItRez rezend, It1 v1begin, It1 v1end, It2 v2begin, It2 v2end) noexcept
 		{
 			const std::ptrdiff_t rezlen = rezend - rezbegin;
 			const std::ptrdiff_t v1len = v1end - v1begin;
@@ -90,19 +90,29 @@ namespace BigNum
 	class Num
 	{
 	public:
+		typedef unsigned char Digit;
+
 		enum
 		{
-			Size = (N + (sizeof(unsigned char) * 8) - 1) / (sizeof(unsigned char) * 8),
+			DigitSizeBits = sizeof(Digit) * 8,
+			Size = (N + (DigitSizeBits) - 1) / (DigitSizeBits),
 		};
 	private:
-		unsigned char data[Size];
+		Digit data[Size];
 	public:
-		Num(unsigned int num = 0) noexcept
+		Num() noexcept
+		{
+			for (int i = 0; i < Size; i++)
+				data[i] = 0;
+		}
+
+		template<typename T>
+		Num(T num) noexcept
 		{
 			for (int i = 0; i < Size; i++)
 			{
-				data[i] = num & 0xFF;
-				num >>= 8;
+				data[i] = num & ((1 << DigitSizeBits) - 1);
+				num >>= DigitSizeBits;
 			}
 		}
 
@@ -145,18 +155,18 @@ namespace BigNum
 			bool ret = false;
 			if (i >= 0 && i < N)
 			{
-				const int byte = i / 8;
-				const int bit = i % 8;
+				const int byte = i / DigitSizeBits;
+				const int bit = i % DigitSizeBits;
 				ret = ((*this)[byte] & (1 << bit)) != 0;
 			}
 			return ret;
 		}
 
-		unsigned char* begin() { return &data[0]; }
-		unsigned char* end() { return &data[Size]; }
+		Digit* begin() noexcept { return &data[0]; }
+		Digit* end() noexcept { return &data[Size]; }
 
-		const unsigned char* begin() const { return &data[0]; }
-		const unsigned char* end() const { return &data[Size]; }
+		const Digit* begin() const noexcept { return &data[0]; }
+		const Digit* end() const noexcept { return &data[Size]; }
 	};
 
 	template<int N, int M>
@@ -218,21 +228,7 @@ namespace BigNum
 	template<int N>
 	const Num<N> operator * (const Num<N>& v1, const Num<N>& v2)
 	{
-		unsigned int poly[Num<N>::Size * 2] = { 0 };
-
-		for (int i = 0; i < Num<N>::Size; i++)
-			for (int j = 0; j < Num<N>::Size; j++)
-				poly[i + j] += v1[i] * v2[j];
-
-		Num<N> rez;
-		unsigned int carry = 0;
-		for (int i = 0; i < Num<N>::Size; i++)
-		{
-			int sum = carry + poly[i];
-			rez[i] = static_cast<unsigned char>(sum & 0xFF);
-			carry = sum >> 8;
-		}
-		return rez;
+		return mul2N(v1, v2);
 	}
 
 	template<int N>
@@ -318,8 +314,8 @@ namespace BigNum
 		}
 		else if (count > 0 && count < N)
 		{
-			const int bytes = count / 8;
-			const int bits = count % 8;
+			const int bytes = count / Num<N>::DigitSizeBits;
+			const int bits = count % Num<N>::DigitSizeBits;
 			if (bits == 0)
 			{
 				ret = shift_left_bytes(v, bytes);
@@ -330,8 +326,8 @@ namespace BigNum
 				for (int i = bytes; i < Num<N>::Size; i++)
 				{
 					unsigned int val = static_cast<unsigned int>(v[i - bytes]) << bits;
-					ret[i] = static_cast<unsigned char>(val | carry);
-					carry = val >> 8;
+					ret[i] = static_cast<Num<N>::Digit>(val | carry);
+					carry = val >> Num<N>::DigitSizeBits;
 				}
 			}
 		}
@@ -365,8 +361,8 @@ namespace BigNum
 		}
 		else if (count > 0 && count < N)
 		{
-			const int bytes = count / 8;
-			const int bits = count % 8;
+			const int bytes = count / Num<N>::DigitSizeBits;
+			const int bits = count % Num<N>::DigitSizeBits;
 			if (bits == 0)
 			{
 				ret = shift_right_bytes(v, bytes);
@@ -376,10 +372,10 @@ namespace BigNum
 				unsigned int carry = v[bytes];
 				for (int i = 0; i < Num<N>::Size - bytes; i++)
 				{
-					unsigned int val = (static_cast<unsigned int>(((i + bytes + 1) < Num<N>::Size) ? v[i + bytes + 1] : 0) << 8 );
+					unsigned int val = (static_cast<unsigned int>(((i + bytes + 1) < Num<N>::Size) ? v[i + bytes + 1] : 0) << Num<N>::DigitSizeBits);
 					val = (val | carry);
-					ret[i] = static_cast<unsigned char>(val >> bits);
-					carry = val >> (8);
+					ret[i] = static_cast<Num<N>::Digit>(val >> bits);
+					carry = val >> (Num<N>::DigitSizeBits);
 				}
 			}
 		}
@@ -395,9 +391,19 @@ namespace BigNum
 	template<int N, int M>
 	void div(const Num<N>& n, const Num<M>& d, Num<N>& q, Num<M>& r)
 	{
-		Num<M + 8> rest;
+		Num<M + Num<M>::DigitSizeBits> rest;
 
-		const Num<M + 8> shiftedD[8] = { Num<M + 8>(d), Num<M + 8>(d) << 1, Num<M + 8>(d) << 2, Num<M + 8>(d) << 3, Num<M + 8>(d) << 4, Num<M + 8>(d) << 5, Num<M + 8>(d) << 6, Num<M + 8>(d) << 7 };
+		const Num<M + Num<M>::DigitSizeBits> shiftedD[Num<N>::DigitSizeBits] = 
+			{ 
+				Num<M + 8>(d), 
+				Num<M + 8>(d) << 1, 
+				Num<M + 8>(d) << 2, 
+				Num<M + 8>(d) << 3, 
+				Num<M + 8>(d) << 4, 
+				Num<M + 8>(d) << 5, 
+				Num<M + 8>(d) << 6, 
+				Num<M + 8>(d) << 7 
+			};
 
 		for (int i = Num<N>::Size - 1; i >= 0; i--)
 		{
@@ -406,7 +412,7 @@ namespace BigNum
 			unsigned int val = 0;
 			if (rest >= shiftedD[0])
 			{
-				for (int j = 7; j >= 0; --j)
+				for (int j = Num<M>::DigitSizeBits - 1; j >= 0; --j)
 				{
 					if (rest >= shiftedD[j])
 					{
@@ -420,33 +426,33 @@ namespace BigNum
 		r = rest;
 	}
 
-	template<int N>
-	void div(const Num<N>& n, unsigned char d, Num<N>& q, unsigned char& r)
-	{
-		unsigned short rest = 0;
-		for (int i = Num<N>::Size - 1; i >= 0; i--)
-		{
-			rest = rest<<8;
-			rest+= n[i];
-			q[i] = (unsigned char)(rest / d);
-			rest = rest % d;
-		}
-		r = (unsigned char)rest;
-	}
+	//template<int N>
+	//void div(const Num<N>& n, unsigned char d, Num<N>& q, unsigned char& r)
+	//{
+	//	unsigned short rest = 0;
+	//	for (int i = Num<N>::Size - 1; i >= 0; i--)
+	//	{
+	//		rest = rest<<8;
+	//		rest+= n[i];
+	//		q[i] = (unsigned char)(rest / d);
+	//		rest = rest % d;
+	//	}
+	//	r = (unsigned char)rest;
+	//}
 
-	template<int N>
-	void div(const Num<N>& n, unsigned short d, Num<N>& q, unsigned short& r)
-	{
-		unsigned int rest = 0;
-		for (int i = Num<N>::Size - 1; i >= 0; i--)
-		{
-			rest = rest << 8;
-			rest += n[i];
-			q[i] = (unsigned char)(rest / d);
-			rest = rest % d;
-		}
-		r = (unsigned short)rest;
-	}
+	//template<int N>
+	//void div(const Num<N>& n, unsigned short d, Num<N>& q, unsigned short& r)
+	//{
+	//	unsigned int rest = 0;
+	//	for (int i = Num<N>::Size - 1; i >= 0; i--)
+	//	{
+	//		rest = rest << 8;
+	//		rest += n[i];
+	//		q[i] = (unsigned char)(rest / d);
+	//		rest = rest % d;
+	//	}
+	//	r = (unsigned short)rest;
+	//}
 
 	template<int N>
 	void div(const Num<N>& n, unsigned int d, Num<N>& q, unsigned int& r)
@@ -454,7 +460,7 @@ namespace BigNum
 		unsigned long long int rest = 0;
 		for (int i = Num<N>::Size - 1; i >= 0; i--)
 		{
-			rest = rest << 8;
+			rest = rest << Num<N>::DigitSizeBits;
 			rest += n[i];
 			q[i] = (unsigned char)(rest / d);
 			rest = rest % d;
@@ -474,23 +480,23 @@ namespace BigNum
 		return q;
 	}
 
-	template<int N>
-	const Num<N> operator / (const Num<N>& v1, const unsigned char v2)
-	{
-		Num<N> q;
-		unsigned char r = 0;
-		div(v1, v2, q, r);
-		return q;
-	}
+	//template<int N>
+	//const Num<N> operator / (const Num<N>& v1, const unsigned char v2)
+	//{
+	//	Num<N> q;
+	//	unsigned char r = 0;
+	//	div(v1, v2, q, r);
+	//	return q;
+	//}
 
-	template<int N>
-	const Num<N> operator / (const Num<N>& v1, const unsigned short v2)
-	{
-		Num<N> q;
-		unsigned short r = 0;
-		div(v1, v2, q, r);
-		return q;
-	}
+	//template<int N>
+	//const Num<N> operator / (const Num<N>& v1, const unsigned short v2)
+	//{
+	//	Num<N> q;
+	//	unsigned short r = 0;
+	//	div(v1, v2, q, r);
+	//	return q;
+	//}
 
 	template<int N>
 	const Num<N> operator / (const Num<N>& v1, const unsigned int v2)
@@ -513,23 +519,23 @@ namespace BigNum
 		return r;
 	}
 
-	template<int N>
-	const unsigned char operator % (const Num<N>& v1, const unsigned char v2)
-	{
-		Num<N> q;
-		unsigned char r = 0;
-		div(v1, v2, q, r);
-		return r;
-	}
+	//template<int N>
+	//const unsigned char operator % (const Num<N>& v1, const unsigned char v2)
+	//{
+	//	Num<N> q;
+	//	unsigned char r = 0;
+	//	div(v1, v2, q, r);
+	//	return r;
+	//}
 
-	template<int N>
-	const unsigned short operator % (const Num<N>& v1, const unsigned short v2)
-	{
-		Num<N> q;
-		unsigned short r = 0;
-		div(v1, v2, q, r);
-		return r;
-	}
+	//template<int N>
+	//const unsigned short operator % (const Num<N>& v1, const unsigned short v2)
+	//{
+	//	Num<N> q;
+	//	unsigned short r = 0;
+	//	div(v1, v2, q, r);
+	//	return r;
+	//}
 
 	template<int N>
 	const unsigned int operator % (const Num<N>& v1, const unsigned int v2)
@@ -819,7 +825,7 @@ namespace BigNum
 		while (realExpSize >= 0 && exp[realExpSize - 1] == 0)
 			realExpSize--;
 
-		for (int i = realExpSize * 8; i -->0 ;)
+		for (int i = realExpSize * Num<M>::DigitSizeBits; i -->0 ;)
 		{
 			ret = monMod(ret, ret);
 			if (exp.bit(i))
