@@ -1,9 +1,13 @@
 #pragma once
 
 #include <algorithm>
+#include <array>
 
 namespace BigNum
 {
+	typedef unsigned char Digit;
+	constexpr size_t DigitSizeBits = sizeof(Digit) * 8;
+
 	namespace Core
 	{
 		template<typename It1, typename It2>
@@ -90,11 +94,8 @@ namespace BigNum
 	class Num
 	{
 	public:
-		typedef unsigned char Digit;
-
 		enum
 		{
-			DigitSizeBits = sizeof(Digit) * 8,
 			Size = (N + (DigitSizeBits) - 1) / (DigitSizeBits),
 		};
 	private:
@@ -107,7 +108,7 @@ namespace BigNum
 		}
 
 		template<typename T>
-		Num(T num) noexcept
+		explicit Num(T num) noexcept
 		{
 			for (int i = 0; i < Size; i++)
 			{
@@ -141,7 +142,7 @@ namespace BigNum
 			for (int i = std::min<int>(Size, Num<M>::Size); i < Size; i++)
 				data[i] = 0;
 				
-			assert(std::none_of(&other[std::min<int>(Size, Num<M>::Size)],&other[Num<M>::Size], [](unsigned char x){ return x != 0; }));
+			//assert(std::none_of(&other[std::min<int>(Size, Num<M>::Size)],&other[Num<M>::Size], [](unsigned char x){ return x != 0; }));
 
 			return *this;
 		}
@@ -314,8 +315,8 @@ namespace BigNum
 		}
 		else if (count > 0 && count < N)
 		{
-			const int bytes = count / Num<N>::DigitSizeBits;
-			const int bits = count % Num<N>::DigitSizeBits;
+			const int bytes = count / DigitSizeBits;
+			const int bits = count % DigitSizeBits;
 			if (bits == 0)
 			{
 				ret = shift_left_bytes(v, bytes);
@@ -326,8 +327,8 @@ namespace BigNum
 				for (int i = bytes; i < Num<N>::Size; i++)
 				{
 					unsigned int val = static_cast<unsigned int>(v[i - bytes]) << bits;
-					ret[i] = static_cast<Num<N>::Digit>(val | carry);
-					carry = val >> Num<N>::DigitSizeBits;
+					ret[i] = static_cast<Digit>(val | carry);
+					carry = val >> DigitSizeBits;
 				}
 			}
 		}
@@ -361,8 +362,8 @@ namespace BigNum
 		}
 		else if (count > 0 && count < N)
 		{
-			const int bytes = count / Num<N>::DigitSizeBits;
-			const int bits = count % Num<N>::DigitSizeBits;
+			const int bytes = count / DigitSizeBits;
+			const int bits = count % DigitSizeBits;
 			if (bits == 0)
 			{
 				ret = shift_right_bytes(v, bytes);
@@ -372,10 +373,10 @@ namespace BigNum
 				unsigned int carry = v[bytes];
 				for (int i = 0; i < Num<N>::Size - bytes; i++)
 				{
-					unsigned int val = (static_cast<unsigned int>(((i + bytes + 1) < Num<N>::Size) ? v[i + bytes + 1] : 0) << Num<N>::DigitSizeBits);
+					unsigned int val = (static_cast<unsigned int>(((i + bytes + 1) < Num<N>::Size) ? v[i + bytes + 1] : 0) << DigitSizeBits);
 					val = (val | carry);
-					ret[i] = static_cast<Num<N>::Digit>(val >> bits);
-					carry = val >> (Num<N>::DigitSizeBits);
+					ret[i] = static_cast<Digit>(val >> bits);
+					carry = val >> (DigitSizeBits);
 				}
 			}
 		}
@@ -388,71 +389,45 @@ namespace BigNum
 		return shift_right(v1, bits);
 	}
 
-	template<int N, int M>
-	void div(const Num<N>& n, const Num<M>& d, Num<N>& q, Num<M>& r)
+	template<int N>
+	std::array<Num<N + DigitSizeBits>, DigitSizeBits> calcShiftedD(const Num<N>& d)
 	{
-		Num<M + Num<M>::DigitSizeBits> rest;
+		std::array<Num<N + DigitSizeBits>, DigitSizeBits> ret;
+		ret[0] = d;
+		for (int i = 1; i < DigitSizeBits; i++)
+			ret[i] = ret[0] << i;
+		return ret;
+	}
 
-		const Num<M + Num<M>::DigitSizeBits> shiftedD[Num<N>::DigitSizeBits] = 
-			{ 
-				Num<M + 8>(d), 
-				Num<M + 8>(d) << 1, 
-				Num<M + 8>(d) << 2, 
-				Num<M + 8>(d) << 3, 
-				Num<M + 8>(d) << 4, 
-				Num<M + 8>(d) << 5, 
-				Num<M + 8>(d) << 6, 
-				Num<M + 8>(d) << 7 
-			};
+	template<int N, int M>
+	Num<N> div(Num<N>& n, const Num<M>& d)
+	{
+		Num<N> q;
 
-		for (int i = Num<N>::Size - 1; i >= 0; i--)
+		const std::array<Num<M + DigitSizeBits>, DigitSizeBits> shiftedD = calcShiftedD(d);
+
+		Digit* qbeg = n.end()-1;
+		Digit* qend = n.end();
+
+		for (int i = Num<N>::Size; i-->0;)
 		{
-			rest = shift_left_bytes(rest, 1u);
-			rest[0] = n[i];
-			unsigned int val = 0;
-			if (rest >= shiftedD[0])
+			Digit val = 0;
+			if (Core::cmp(qbeg, qend, d.begin(), d.end()) >= 0)
 			{
-				for (int j = Num<M>::DigitSizeBits - 1; j >= 0; --j)
+				for (int j = DigitSizeBits - 1; j >= 0; --j)
 				{
-					if (rest >= shiftedD[j])
+					if (Core::cmp(qbeg, qend, shiftedD[j].begin(), shiftedD[j].end()) >= 0)
 					{
-						rest = rest - shiftedD[j];
+						Core::sub(qbeg, qend, qbeg, qend, shiftedD[j].begin(), shiftedD[j].end());
 						val += 1 << j;
 					}
 				}
 			}
-			q[i] = static_cast<unsigned char>(val);
+			q[i] = val;
+			qbeg--;
 		}
-		r = rest;
+		return q;
 	}
-
-	//template<int N>
-	//void div(const Num<N>& n, unsigned char d, Num<N>& q, unsigned char& r)
-	//{
-	//	unsigned short rest = 0;
-	//	for (int i = Num<N>::Size - 1; i >= 0; i--)
-	//	{
-	//		rest = rest<<8;
-	//		rest+= n[i];
-	//		q[i] = (unsigned char)(rest / d);
-	//		rest = rest % d;
-	//	}
-	//	r = (unsigned char)rest;
-	//}
-
-	//template<int N>
-	//void div(const Num<N>& n, unsigned short d, Num<N>& q, unsigned short& r)
-	//{
-	//	unsigned int rest = 0;
-	//	for (int i = Num<N>::Size - 1; i >= 0; i--)
-	//	{
-	//		rest = rest << 8;
-	//		rest += n[i];
-	//		q[i] = (unsigned char)(rest / d);
-	//		rest = rest % d;
-	//	}
-	//	r = (unsigned short)rest;
-	//}
 
 	template<int N>
 	void div(const Num<N>& n, unsigned int d, Num<N>& q, unsigned int& r)
@@ -460,9 +435,9 @@ namespace BigNum
 		unsigned long long int rest = 0;
 		for (int i = Num<N>::Size - 1; i >= 0; i--)
 		{
-			rest = rest << Num<N>::DigitSizeBits;
+			rest = rest << DigitSizeBits;
 			rest += n[i];
-			q[i] = (unsigned char)(rest / d);
+			q[i] = (Digit)(rest / d);
 			rest = rest % d;
 		}
 		r = (unsigned int)rest;
@@ -474,29 +449,9 @@ namespace BigNum
 		if (v1 < v2)
 			return Num<N>(0);
 
-		Num<N> q;
-		Num<M> r;
-		div(v1, v2, q, r);
-		return q;
+		Num<N> q = v1;
+		return div(q, v2);
 	}
-
-	//template<int N>
-	//const Num<N> operator / (const Num<N>& v1, const unsigned char v2)
-	//{
-	//	Num<N> q;
-	//	unsigned char r = 0;
-	//	div(v1, v2, q, r);
-	//	return q;
-	//}
-
-	//template<int N>
-	//const Num<N> operator / (const Num<N>& v1, const unsigned short v2)
-	//{
-	//	Num<N> q;
-	//	unsigned short r = 0;
-	//	div(v1, v2, q, r);
-	//	return q;
-	//}
 
 	template<int N>
 	const Num<N> operator / (const Num<N>& v1, const unsigned int v2)
@@ -513,29 +468,10 @@ namespace BigNum
 		if (v1 < v2)
 			return v1;
 
-		Num<N> q;
-		Num<M> r;
-		div(v1, v2, q, r);
-		return r;
+		Num<N> q = v1;
+		div(q, v2);
+		return q;
 	}
-
-	//template<int N>
-	//const unsigned char operator % (const Num<N>& v1, const unsigned char v2)
-	//{
-	//	Num<N> q;
-	//	unsigned char r = 0;
-	//	div(v1, v2, q, r);
-	//	return r;
-	//}
-
-	//template<int N>
-	//const unsigned short operator % (const Num<N>& v1, const unsigned short v2)
-	//{
-	//	Num<N> q;
-	//	unsigned short r = 0;
-	//	div(v1, v2, q, r);
-	//	return r;
-	//}
 
 	template<int N>
 	const unsigned int operator % (const Num<N>& v1, const unsigned int v2)
@@ -678,7 +614,7 @@ namespace BigNum
 	        	r = tmp;
 	        }
 	    }
-	    if (r > Num<N>(1)) return 0;
+	    if (r > Num<N>(1)) return Num<N>(0);
 		if (t > n)
 		{
 			// signed < 0
@@ -708,7 +644,7 @@ namespace BigNum
 				r = tmp;
 			}
 		}
-		if (r > T(1)) return 0;
+		if (r > T(1)) return Num<N>(0);
 		if (t < 0) t = t + n;
 		return t;
 	}
@@ -719,7 +655,7 @@ namespace BigNum
 		if (mod == 1)
 			return Num<N>(0);
 
-		Num<N> result = 1;
+		Num<N> result(1);
 		Num<N> power = base;
 
 		int realExpSize = Num<N>::Size;
@@ -727,16 +663,18 @@ namespace BigNum
 		while (realExpSize >= 0 && exp[realExpSize - 1] == 0)
 			realExpSize--;
 
-		for (int i = realExpSize * 8; i-->0;)
+		for (int i = realExpSize * DigitSizeBits; i-->0;)
 		{
 			{
-				Num<2 * N> q;
-				div(mul2N(result, result), mod, q, result);
+				Num<2 * N> q = mul2N(result, result);
+				div(q, mod);
+				result = q;
 			}
 			if (exp.bit(i))
 			{
-				Num<2 * N> q;
-				div(mul2N(result, power), mod, q, result);
+				Num<2 * N> q = mul2N(result, power);
+				div(q, mod);
+				result = q;
 			}
 		}
 
@@ -759,10 +697,7 @@ namespace BigNum
 
 			assert((Num<2 * N>(rinv) << N) % Num<2 * N>(n) == 1);
 
-			Num<N> tempr;
-			Num<2 * N> q;
-			div((Num<2 * N>(rinv)<<N) - 1, n, q, tempr);
-			ninv = Num<N>(q);
+			ninv = ((Num<2 * N>(rinv) << N) - 1) / n;
 
 			assert((Num<2 * N>(rinv) << N) - mul2N(ninv,n) == 1);
 		}
@@ -772,10 +707,7 @@ namespace BigNum
 			Num<2 * N> ret(x);
 			ret = ret << N;
 
-			Num<N> tempr;
-			Num<2 * N> q;
-			div(ret, n, q, tempr);
-			return tempr;
+			return ret % n;
 		}
 
 		template<int M>
@@ -784,15 +716,12 @@ namespace BigNum
 			Num<N+M> ret(x);
 			ret = ret << N;
 
-			Num<N> tempr;
-			Num<N+M> q;
-			div(ret, n, q, tempr);
-			return tempr;
+			return ret % n;
 		}
 
 		const Num<N> Out(const Num<N>& x) const
 		{
-			return (*this)(x, 1);
+			return (*this)(x, Num<N>(1));
 		}
 
 		const Num<N> operator()(const Num<N>& a, const Num<N>& b) const
@@ -825,7 +754,7 @@ namespace BigNum
 		while (realExpSize >= 0 && exp[realExpSize - 1] == 0)
 			realExpSize--;
 
-		for (int i = realExpSize * Num<M>::DigitSizeBits; i -->0 ;)
+		for (int i = realExpSize * DigitSizeBits; i -->0 ;)
 		{
 			ret = monMod(ret, ret);
 			if (exp.bit(i))
@@ -867,10 +796,7 @@ namespace BigNum
 			if (a_to_power == num - 1)
 				return true;
 
-			BigNum::Num<N * 2> temp = BigNum::mul2N(a_to_power, a_to_power);
-
-			BigNum::Num<N * 2> q;
-			BigNum::div(temp, num, q, a_to_power);
+			a_to_power = BigNum::mul2N(a_to_power, a_to_power) % num;
 		}
 
 		if (a_to_power == num - 1)

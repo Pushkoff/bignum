@@ -170,9 +170,6 @@ int main()
 	test(BigNum::lcm(fromString<128>("3"), fromString<128>("4")) == fromString<256>("12"));
 	test(BigNum::lcm(fromString<128>("6"), fromString<128>("4")) == fromString<64>("12"));
 
-	BigNum::Num<128> inv = BigNum::modInv(BigNum::Num<128>(7), BigNum::Num<128>(11));
-	printf("inv of 7 mod 11 = %s\n", toString(inv).c_str());
-
 	test((BigNum::modInv(BigNum::Num<128>(7), BigNum::Num<128>(11)) * BigNum::Num<128>(7)) % BigNum::Num<128>(11) == BigNum::Num<128>(1));
 	test((BigNum::modInv(BigNum::Num<128>(961748941), BigNum::Num<128>(982451653)) * BigNum::Num<128>(961748941)) % BigNum::Num<128>(982451653) == BigNum::Num<128>(1));
 
