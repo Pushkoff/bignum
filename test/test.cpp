@@ -271,8 +271,8 @@ int main()
 		auto p = BigNum::findPrime<512>(BigNum::Num<512>(1) << 511);
 		auto q = BigNum::findPrime<512>((BigNum::Num<512>(1) << 511) + (BigNum::Num<512>(1) << 32));
 
-		auto N = BigNum::mul2N(p, q);
-		auto t = BigNum::mul2N(p - 1, q - 1);
+		auto N = p * q;
+		auto t = (p - 1) * (q - 1);
 		auto e = BigNum::Num<1024>(65537);
 		auto d = BigNum::modInv(e, t);
 
@@ -322,7 +322,7 @@ int main()
 			BigNum::Num<512> datap = BigNum::monModExp(cipper, dp, p);
 			BigNum::Num<512> dataq = BigNum::monModExp(cipper, dq, q);
 
-			BigNum::Num<1024> data = BigNum::Num<1024>(dataq) + BigNum::mul2N(BigNum::mul2N(datap - dataq, qinvp) % p, q);
+			BigNum::Num<1024> data = BigNum::Num<1024>(dataq) + (((datap - dataq) * qinvp) % p) * q;
 			for (int i = 0; i < BigNum::Num<1024>::Size/2; ++i)
 				decrypted.push_back(data[i]);
 		}

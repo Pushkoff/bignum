@@ -7,11 +7,11 @@ namespace BigNum
 {
 	typedef unsigned char Digit;
 	constexpr size_t DigitSizeBits = sizeof(Digit) * 8;
+	constexpr size_t DigitMaskBits = ((1 << DigitSizeBits) - 1);
 
 	namespace Core
 	{
-		template<typename It1, typename It2>
-		int cmp(It1 v1begin, It1 v1end, It2 v2begin, It2 v2end) noexcept
+		int cmp(const Digit* v1begin, const Digit* v1end, const Digit* v2begin, const Digit* v2end) noexcept
 		{
 			const std::ptrdiff_t v1len = v1end - v1begin;
 			const std::ptrdiff_t v2len = v2end - v2begin;
@@ -27,35 +27,22 @@ namespace BigNum
 			return 0;
 		}
 
-		bool adc(unsigned char& ret, const unsigned char v1, const unsigned char v2, bool carry) noexcept
+		Digit adc(Digit& ret, const Digit v1, const Digit v2, Digit carry) noexcept
 		{
-			unsigned short sum = v1 + v2 + (carry ? 1 : 0);
-			ret = sum & 0xFF;
-			return (sum >> 8) > 0;
+			static_assert(sizeof(long long) > sizeof(Digit), "cant detect overflow");
+
+			long long sum = v1 + v2 + carry;
+			ret = sum & DigitMaskBits;
+			return Digit(sum >> DigitSizeBits);
 		}
 
-		bool sbc(unsigned char& ret, const unsigned char v1, const unsigned char v2, bool carry) noexcept
-		{
-			unsigned short sum = v1 - (v2 + (carry ? 1 : 0));
-			ret = sum & 0xFF;
-			return (sum >> 8) > 0;
-		}
-
-		template<typename ItRez, typename It1, typename It2>
-		int add(ItRez rezbegin, ItRez rezend, It1 v1begin, It1 v1end, It2 v2begin, It2 v2end) noexcept
+		Digit add(Digit* rezbegin, Digit* rezend, const Digit* v1begin, const Digit* v1end, const Digit* v2begin, const Digit* v2end) noexcept
 		{
 			const std::ptrdiff_t rezlen = rezend - rezbegin;
 			const std::ptrdiff_t v1len = v1end - v1begin;
 			const std::ptrdiff_t v2len = v2end - v2begin;
 
-			//assert(rezlen >= v1len && rezlen >= v2len);
-
-			static_assert(sizeof(*rezbegin) == sizeof(*v1begin), "type have to be the same");
-			static_assert(sizeof(*rezbegin) == sizeof(*v2begin), "type have to be the same");
-
-			static_assert(sizeof(int) > sizeof(*rezbegin), "cant detect overflow");
-
-			bool carry = false;
+			Digit carry = 0;
 			for (std::ptrdiff_t i = 0; i < rezlen; i++)
 			{
 				const auto v1 = (i < v1len) ? v1begin[i] : 0;
@@ -65,21 +52,22 @@ namespace BigNum
 			return carry;
 		}
 
-		template<typename ItRez, typename It1, typename It2>
-		int sub(ItRez rezbegin, ItRez rezend, It1 v1begin, It1 v1end, It2 v2begin, It2 v2end) noexcept
+		Digit sbc(Digit& ret, const Digit v1, const Digit v2, Digit carry) noexcept
+		{
+			static_assert(sizeof(long long) > sizeof(Digit), "cant detect overflow");
+
+			long long sum = v1 - (v2 + carry);
+			ret = sum & DigitMaskBits;
+			return Digit(-(sum >> DigitSizeBits));
+		}
+
+		Digit sub(Digit* rezbegin, Digit* rezend, const Digit* v1begin, const Digit* v1end, const Digit* v2begin, const Digit* v2end) noexcept
 		{
 			const std::ptrdiff_t rezlen = rezend - rezbegin;
 			const std::ptrdiff_t v1len = v1end - v1begin;
 			const std::ptrdiff_t v2len = v2end - v2begin;
 
-			//assert(rezlen >= v1len && rezlen >= v2len);
-
-			static_assert(sizeof(*rezbegin) == sizeof(*v1begin), "type have to be the same");
-			static_assert(sizeof(*rezbegin) == sizeof(*v2begin), "type have to be the same");
-
-			static_assert(sizeof(int) > sizeof(*rezbegin), "cant detect overflow");
-
-			bool carry = false;
+			Digit carry = 0;
 			for (std::ptrdiff_t i = 0; i < rezlen; i++)
 			{
 				const auto v1 = (i < v1len) ? v1begin[i] : 0;
@@ -87,6 +75,31 @@ namespace BigNum
 				carry = sbc(rezbegin[i], v1, v2, carry);
 			}
 			return carry;
+		}
+
+		void mul(Digit* rez, Digit v1, Digit v2)
+		{
+			unsigned int m = (unsigned int)(v1) * v2;
+			rez[0] = Digit(m & DigitMaskBits);
+			rez[1] = Digit((m >> DigitSizeBits) & DigitMaskBits);
+		}
+
+		void mul(Digit* rezbegin, Digit* rezend, const Digit* v1begin, const Digit* v1end, const Digit* v2begin, const Digit* v2end) noexcept
+		{
+			const std::ptrdiff_t rezlen = rezend - rezbegin;
+			const std::ptrdiff_t v1len = v1end - v1begin;
+			const std::ptrdiff_t v2len = v2end - v2begin;
+
+			for (std::ptrdiff_t v1it = 0; v1it < v1len; ++v1it)
+				for (std::ptrdiff_t v2it = 0; v2it < v2len; ++v2it)
+				{
+					if (v1it + v2it < rezlen)
+					{
+						Digit partial[2] = { 0 };
+						mul(partial, v1begin[v1it], v2begin[v2it]);
+						add(rezbegin + v1it + v2it, rezend, rezbegin + v1it + v2it, rezend, partial, partial + 2);
+					}
+				}
 		}
 	}
 	
@@ -191,8 +204,8 @@ namespace BigNum
 		return Num<N>(0) - v;
 	}
 
-	template<int N>
-	const Num<N> operator - (const Num<N>& v1, const Num<N>& v2)
+	template<int N, int M>
+	const Num<N> operator - (const Num<N>& v1, const Num<M>& v2)
 	{
 		Num<N> rez;
 		Core::sub(rez.begin(), rez.end(), v1.begin(), v1.end(), v2.begin(), v2.end());
@@ -206,30 +219,28 @@ namespace BigNum
 		return v1;
 	}
 
-	template<int N>
-	const Num<2*N> mul2N (const Num<N>& v1, const Num<N>& v2)
+	template<int N, int M>
+	const Num<N+M> operator * (const Num<N>& v1, const Num<M>& v2)
 	{
-		unsigned int poly[Num<N>::Size * 2] = { 0 };
+		unsigned int poly[Num<N>::Size + Num<M>::Size] = { 0 };
 
 		for (int i = 0; i < Num<N>::Size; i++)
-			for (int j = 0; j < Num<N>::Size; j++)
+			for (int j = 0; j < Num<M>::Size; j++)
 				poly[i + j] += v1[i] * v2[j];
 
-		Num<2*N> rez;
+		Num<N + M> rez;
 		unsigned int carry = 0;
-		for (int i = 0; i < Num<2*N>::Size; i++)
+		for (int i = 0; i < Num<N + M>::Size; i++)
 		{
-			int sum = carry + poly[i];
-			rez[i] = static_cast<unsigned char>(sum & 0xFF);
-			carry = sum >> 8;
+			unsigned int sum = carry + poly[i];
+			rez[i] = static_cast<Digit>(sum & DigitMaskBits);
+			carry = sum >> DigitSizeBits;
 		}
 		return rez;
-	}
 
-	template<int N>
-	const Num<N> operator * (const Num<N>& v1, const Num<N>& v2)
-	{
-		return mul2N(v1, v2);
+		//Num<2 * N> rez(0);
+		//Core::mul(rez.begin(), rez.end(), v1.begin(), v1.end(), v2.begin(), v2.end());
+		//return rez;
 	}
 
 	template<int N>
@@ -240,8 +251,8 @@ namespace BigNum
 		for (int i = 0; i < Num<N>::Size; i++)
 		{
 			unsigned int sum = carry + v1[i] * v2;
-			rez[i] = sum & 0xFF;
-			carry = sum >> 8;
+			rez[i] = sum & DigitMaskBits;
+			carry = sum >> DigitSizeBits;
 		}
 		return rez;
 	}
@@ -588,7 +599,7 @@ namespace BigNum
 	template<int N>
 	const Num<2*N> lcm(const Num<N>& v1, const Num<N>& v2)
 	{
-		Num<2 * N> m = mul2N(v1, v2);
+		Num<2 * N> m = v1 * v2;
 		Num<N> g = gcd(v1, v2);
 		return m / g;
 	}
@@ -644,7 +655,7 @@ namespace BigNum
 				r = tmp;
 			}
 		}
-		if (r > T(1)) return Num<N>(0);
+		if (r > T(1)) return T(0);
 		if (t < 0) t = t + n;
 		return t;
 	}
@@ -666,13 +677,13 @@ namespace BigNum
 		for (int i = realExpSize * DigitSizeBits; i-->0;)
 		{
 			{
-				Num<2 * N> q = mul2N(result, result);
+				Num<2 * N> q = result * result;
 				div(q, mod);
 				result = q;
 			}
 			if (exp.bit(i))
 			{
-				Num<2 * N> q = mul2N(result, power);
+				Num<2 * N> q = result * power;
 				div(q, mod);
 				result = q;
 			}
@@ -699,7 +710,7 @@ namespace BigNum
 
 			ninv = ((Num<2 * N>(rinv) << N) - 1) / n;
 
-			assert((Num<2 * N>(rinv) << N) - mul2N(ninv,n) == 1);
+			assert((Num<2 * N>(rinv) << N) - (ninv*n) == 1);
 		}
 
 		const Num<N> In(const Num<N>& x) const
@@ -726,9 +737,9 @@ namespace BigNum
 
 		const Num<N> operator()(const Num<N>& a, const Num<N>& b) const
 		{
-			Num<2*N> t = mul2N(a, b);
-			Num<N> m = mul2N(Num<N>(t & (r - 1)), ninv) & (r - 1);
-			Num<N> u = (t + mul2N(m, n)) >> N;
+			Num<2*N> t = a * b;
+			Num<N> m = (Num<N>(t & (r - 1)) * ninv) & (r - 1);
+			Num<N> u = (t + m* n) >> N;
 			while (u >= n)
 				u = u - n;
 			return Num<N>(u);
@@ -796,7 +807,7 @@ namespace BigNum
 			if (a_to_power == num - 1)
 				return true;
 
-			a_to_power = BigNum::mul2N(a_to_power, a_to_power) % num;
+			a_to_power = (a_to_power*a_to_power) % num;
 		}
 
 		if (a_to_power == num - 1)
