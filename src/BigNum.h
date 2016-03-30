@@ -160,8 +160,8 @@ namespace BigNum
 			return *this;
 		}
 
-		unsigned char& operator[](int i) noexcept { return data[i]; }
-		const unsigned char& operator[](int i) const noexcept { return data[i]; }
+		Digit& operator[](int i) noexcept { return data[i]; }
+		const Digit& operator[](int i) const noexcept { return data[i]; }
 
 		bool bit(int i) const noexcept
 		{
@@ -192,9 +192,9 @@ namespace BigNum
 	}
 
 	template<int N>
-	const Num<N> operator + (Num<N> v1, unsigned char v2)
+	const Num<N> operator + (Num<N> v1, Digit v2)
 	{
-		Core::add(v1.begin(), v1.end(), v1.begin(), v1.end(), &v2, (&v2)+sizeof(v2));
+		Core::add(v1.begin(), v1.end(), v1.begin(), v1.end(), &v2, (&v2) + 1);
 		return v1;
 	}
 
@@ -213,9 +213,9 @@ namespace BigNum
 	}
 
 	template<int N>
-	const Num<N> operator - (Num<N> v1, unsigned char v2)
+	const Num<N> operator - (Num<N> v1, Digit v2)
 	{
-		Core::sub(v1.begin(), v1.end(), v1.begin(), v1.end(), &v2, (&v2) + sizeof(v2));
+		Core::sub(v1.begin(), v1.end(), v1.begin(), v1.end(), &v2, (&v2) + 1);
 		return v1;
 	}
 
@@ -244,7 +244,7 @@ namespace BigNum
 	}
 
 	template<int N>
-	const Num<N> operator * (const Num<N>& v1, unsigned char v2)
+	const Num<N> operator * (const Num<N>& v1, Digit v2)
 	{
 		Num<N> rez;
 		unsigned int carry = 0;
@@ -264,9 +264,9 @@ namespace BigNum
 	}
 
 	template<int N>
-	const bool operator == (const Num<N>& v1, unsigned char v2)
+	const bool operator == (const Num<N>& v1, Digit v2)
 	{
-		return Core::cmp(&v1[0], &v1[v1.Size], &v2, (&v2) + sizeof(v2)) == 0;
+		return Core::cmp(&v1[0], &v1[v1.Size], &v2, (&v2) + 1) == 0;
 	}
 
 	template<int N, int M>
@@ -276,7 +276,7 @@ namespace BigNum
 	}
 	
 	template<int N>
-	const bool operator != (const Num<N>& v1, unsigned char v2)
+	const bool operator != (const Num<N>& v1, Digit v2)
 	{
 		return !(v1 == v2);
 	}
@@ -306,17 +306,6 @@ namespace BigNum
 	}
 
 	template<int N>
-	const Num<N> shift_left_bytes(const Num<N>& v, int count)
-	{
-		Num<N> ret;
-		for (int i = Num<N>::Size - 1; i >= int(count); i--)
-		{
-			ret[i] = v[i - count];
-		}
-		return ret;
-	}
-
-	template<int N>
 	const Num<N> shift_left(const Num<N>& v, int count)
 	{
 		Num<N> ret;
@@ -330,7 +319,10 @@ namespace BigNum
 			const int bits = count % DigitSizeBits;
 			if (bits == 0)
 			{
-				ret = shift_left_bytes(v, bytes);
+				for (int i = Num<N>::Size - 1; i >= int(bytes); i--)
+				{
+					ret[i] = v[i - bytes];
+				}
 			}
 			else
 			{
@@ -353,17 +345,6 @@ namespace BigNum
 	}
 
 	template<int N>
-	const Num<N> shift_right_bytes(const Num<N>& v, int count)
-	{
-		Num<N> ret;
-		for (int i = 0; i < Num<N>::Size - count; i++)
-		{
-			ret[i] = v[i + count];
-		}
-		return ret;
-	}
-
-	template<int N>
 	const Num<N> shift_right(const Num<N>& v, int count)
 	{
 		Num<N> ret;
@@ -377,7 +358,10 @@ namespace BigNum
 			const int bits = count % DigitSizeBits;
 			if (bits == 0)
 			{
-				ret = shift_right_bytes(v, bytes);
+				for (int i = 0; i < Num<N>::Size - bytes; i++)
+				{
+					ret[i] = v[i + bytes];
+				}
 			}
 			else
 			{
@@ -520,7 +504,7 @@ namespace BigNum
 	}
 
 	template<int N>
-	const Num<N> operator & (const Num<N>& v1, const unsigned char v2)
+	const Num<N> operator & (const Num<N>& v1, const Digit v2)
 	{
 		Num<N> rez(v1[0] & v2);
 		return rez;
@@ -540,7 +524,7 @@ namespace BigNum
 	}
 
 	template<int N>
-	const Num<N> operator | (const Num<N>& v1, const unsigned char v2)
+	const Num<N> operator | (const Num<N>& v1, const Digit v2)
 	{
 		Num<N> rez = v1;
 		rez[0] = v1[0] | v2;
@@ -762,7 +746,7 @@ namespace BigNum
 		Num<N> power = monMod.In(base);
 
 		int realExpSize = Num<M>::Size;
-		while (realExpSize >= 0 && exp[realExpSize - 1] == 0)
+		while (realExpSize > 0 && exp[realExpSize - 1] == 0)
 			realExpSize--;
 
 		for (int i = realExpSize * DigitSizeBits; i -->0 ;)

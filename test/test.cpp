@@ -110,7 +110,7 @@ int main()
 		for (int i = 0; i < 64; i++)
 		{
 			BigNum::Num<64> testbn = bn << i;
-			passed = passed && (testbn[i/8] == (1 << i%8));
+			passed = passed && (testbn[i/ BigNum::DigitSizeBits] == (1 << i%BigNum::DigitSizeBits));
 		}
 		test(passed == true);
 	}
@@ -121,7 +121,7 @@ int main()
 		for (int i = 0; i < 64; i++)
 		{
 			BigNum::Num<64> testbn = bn >> i;
-			passed = passed && (testbn[(63 - i)/8] == (1 << (7 - i%8)));
+			passed = passed && (testbn[(63 - i)/ BigNum::DigitSizeBits] == (1 << ((BigNum::DigitSizeBits-1) - i%BigNum::DigitSizeBits)));
 		}
 		test(passed == true && "Rignt shift");
 	}
@@ -284,12 +284,12 @@ int main()
 		auto elapsed = stop - start;
 		printf(" duration - %lld ms\n", (long long)std::chrono::duration_cast<std::chrono::milliseconds>(elapsed).count());
 
-		std::vector<char> testdata(10240);
+		std::vector<BigNum::Digit> testdata(10240);
 		std::generate(std::begin(testdata), std::end(testdata), []() {return rand() % 256; });
 
-		std::vector<char> decrypted;
+		std::vector<BigNum::Digit> decrypted;
 
-		std::vector<char> cipperdata;
+		std::vector<BigNum::Digit> cipperdata;
 
 		printf("Encrypt");
 		start = std::chrono::high_resolution_clock::now();
