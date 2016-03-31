@@ -19,8 +19,8 @@ namespace BigNum
 
 			for(std::ptrdiff_t i = vmax; i-->0;)
 			{
-				const auto v1 = (i < v1len) ? v1begin[i] : 0;
-				const auto v2 = (i < v2len) ? v2begin[i] : 0;
+				const Digit v1 = (i < v1len) ? v1begin[i] : 0;
+				const Digit v2 = (i < v2len) ? v2begin[i] : 0;
 				if (v1 != v2)
 					return v1 > v2 ? 1 : -1;
 			}
@@ -45,9 +45,23 @@ namespace BigNum
 			Digit carry = 0;
 			for (std::ptrdiff_t i = 0; i < rezlen; i++)
 			{
-				const auto v1 = (i < v1len) ? v1begin[i] : 0;
-				const auto v2 = (i < v2len) ? v2begin[i] : 0;
+				const Digit v1 = (i < v1len) ? v1begin[i] : 0;
+				const Digit v2 = (i < v2len) ? v2begin[i] : 0;
 				carry = adc(rezbegin[i], v1, v2, carry);
+			}
+			return carry;
+		}
+
+		Digit add(Digit* rezbegin, Digit* rezend, const Digit* v2begin, const Digit* v2end) noexcept
+		{
+			const std::ptrdiff_t rezlen = rezend - rezbegin;
+			const std::ptrdiff_t v2len = v2end - v2begin;
+
+			Digit carry = 0;
+			for (std::ptrdiff_t i = 0; i < rezlen && (i < v2len || carry != 0); i++)
+			{
+				const Digit v2 = (i < v2len) ? v2begin[i] : 0;
+				carry = adc(rezbegin[i], rezbegin[i], v2, carry);
 			}
 			return carry;
 		}
@@ -70,9 +84,23 @@ namespace BigNum
 			Digit carry = 0;
 			for (std::ptrdiff_t i = 0; i < rezlen; i++)
 			{
-				const auto v1 = (i < v1len) ? v1begin[i] : 0;
-				const auto v2 = (i < v2len) ? v2begin[i] : 0;
+				const Digit v1 = (i < v1len) ? v1begin[i] : 0;
+				const Digit v2 = (i < v2len) ? v2begin[i] : 0;
 				carry = sbc(rezbegin[i], v1, v2, carry);
+			}
+			return carry;
+		}
+
+		Digit sub(Digit* rezbegin, Digit* rezend, const Digit* v2begin, const Digit* v2end) noexcept
+		{
+			const std::ptrdiff_t rezlen = rezend - rezbegin;
+			const std::ptrdiff_t v2len = v2end - v2begin;
+
+			Digit carry = 0;
+			for (std::ptrdiff_t i = 0; i < rezlen && (i < v2len || carry != 0); i++)
+			{
+				const Digit v2 = (i < v2len) ? v2begin[i] : 0;
+				carry = sbc(rezbegin[i], rezbegin[i], v2, carry);
 			}
 			return carry;
 		}
@@ -97,7 +125,7 @@ namespace BigNum
 					{
 						Digit partial[2] = { 0 };
 						mul(partial, v1begin[v1it], v2begin[v2it]);
-						add(rezbegin + v1it + v2it, rezend, rezbegin + v1it + v2it, rezend, partial, partial + 2);
+						add(rezbegin + v1it + v2it, rezend, partial, partial + 2);
 					}
 				}
 		}
@@ -155,7 +183,7 @@ namespace BigNum
 			for (int i = std::min<int>(Size, Num<M>::Size); i < Size; i++)
 				data[i] = 0;
 				
-			//assert(std::none_of(&other[std::min<int>(Size, Num<M>::Size)],&other[Num<M>::Size], [](unsigned char x){ return x != 0; }));
+			assert(std::none_of(&other[std::min<int>(Size, Num<M>::Size)],&other[Num<M>::Size], [](unsigned char x){ return x != 0; }));
 
 			return *this;
 		}
@@ -184,43 +212,41 @@ namespace BigNum
 	};
 
 	template<int N, int M>
-	const Num<N> operator + (const Num<N>& v1, const Num<M>& v2)
+	const Num<N> operator + (Num<N> v1, const Num<M>& v2) noexcept
 	{
-		Num<N> rez;
-		Core::add(rez.begin(), rez.end(), v1.begin(), v1.end(), v2.begin(), v2.end());
-		return rez;
-	}
-
-	template<int N>
-	const Num<N> operator + (Num<N> v1, Digit v2)
-	{
-		Core::add(v1.begin(), v1.end(), v1.begin(), v1.end(), &v2, (&v2) + 1);
+		Core::add(v1.begin(), v1.end(), v2.begin(), v2.end());
 		return v1;
 	}
 
 	template<int N>
-	const Num<N> operator - (const Num<N>& v)
+	const Num<N> operator + (Num<N> v1, Digit v2) noexcept
+	{
+		Core::add(v1.begin(), v1.end(), &v2, (&v2) + 1);
+		return v1;
+	}
+
+	template<int N>
+	const Num<N> operator - (const Num<N>& v) noexcept
 	{
 		return Num<N>(0) - v;
 	}
 
 	template<int N, int M>
-	const Num<N> operator - (const Num<N>& v1, const Num<M>& v2)
+	const Num<N> operator - (Num<N> v1, const Num<M>& v2) noexcept
 	{
-		Num<N> rez;
-		Core::sub(rez.begin(), rez.end(), v1.begin(), v1.end(), v2.begin(), v2.end());
-		return rez;
+		Core::sub(v1.begin(), v1.end(), v2.begin(), v2.end());
+		return v1;
 	}
 
 	template<int N>
-	const Num<N> operator - (Num<N> v1, Digit v2)
+	const Num<N> operator - (Num<N> v1, Digit v2) noexcept
 	{
-		Core::sub(v1.begin(), v1.end(), v1.begin(), v1.end(), &v2, (&v2) + 1);
+		Core::sub(v1.begin(), v1.end(), &v2, (&v2) + 1);
 		return v1;
 	}
 
 	template<int N, int M>
-	const Num<N+M> operator * (const Num<N>& v1, const Num<M>& v2)
+	const Num<N+M> operator * (const Num<N>& v1, const Num<M>& v2) noexcept
 	{
 		unsigned int poly[Num<N>::Size + Num<M>::Size] = { 0 };
 
@@ -238,13 +264,13 @@ namespace BigNum
 		}
 		return rez;
 
-		//Num<2 * N> rez(0);
+		//Num<N + M> rez(0);
 		//Core::mul(rez.begin(), rez.end(), v1.begin(), v1.end(), v2.begin(), v2.end());
 		//return rez;
 	}
 
 	template<int N>
-	const Num<N> operator * (const Num<N>& v1, Digit v2)
+	const Num<N> operator * (const Num<N>& v1, Digit v2) noexcept
 	{
 		Num<N> rez;
 		unsigned int carry = 0;
@@ -258,55 +284,55 @@ namespace BigNum
 	}
 
 	template<int N, int M>
-	const bool operator == (const Num<N>& v1, const Num<M>& v2)
+	const bool operator == (const Num<N>& v1, const Num<M>& v2) noexcept
 	{
 		return Core::cmp(&v1[0], &v1[v1.Size], &v2[0], &v2[v2.Size]) == 0;
 	}
 
 	template<int N>
-	const bool operator == (const Num<N>& v1, Digit v2)
+	const bool operator == (const Num<N>& v1, Digit v2) noexcept
 	{
 		return Core::cmp(&v1[0], &v1[v1.Size], &v2, (&v2) + 1) == 0;
 	}
 
 	template<int N, int M>
-	const bool operator != (const Num<N>& v1, const Num<M>& v2)
+	const bool operator != (const Num<N>& v1, const Num<M>& v2) noexcept
 	{
 		return !(v1 == v2);
 	}
 	
 	template<int N>
-	const bool operator != (const Num<N>& v1, Digit v2)
+	const bool operator != (const Num<N>& v1, Digit v2) noexcept
 	{
 		return !(v1 == v2);
 	}
 
 	template<int N, int M>
-	const bool operator > (const Num<N>& v1, const Num<M>& v2)
+	const bool operator > (const Num<N>& v1, const Num<M>& v2) noexcept
 	{
 		return Core::cmp(&v1[0], &v1[v1.Size], &v2[0], &v2[v2.Size]) > 0;
 	}
 
 	template<int N, int M>
-	const bool operator >= (const Num<N>& v1, const Num<M>& v2)
+	const bool operator >= (const Num<N>& v1, const Num<M>& v2) noexcept
 	{
 		return Core::cmp(&v1[0], &v1[v1.Size], &v2[0], &v2[v2.Size]) >= 0;
 	}
 
 	template<int N, int M>
-	const bool operator < (const Num<N>& v1, const Num<M>& v2)
+	const bool operator < (const Num<N>& v1, const Num<M>& v2) noexcept
 	{
 		return Core::cmp(&v1[0], &v1[v1.Size], &v2[0], &v2[v2.Size]) < 0;
 	}
 
 	template<int N, int M>
-	const bool operator <= (const Num<N>& v1, const Num<M>& v2)
+	const bool operator <= (const Num<N>& v1, const Num<M>& v2) noexcept
 	{
 		return Core::cmp(&v1[0], &v1[v1.Size], &v2[0], &v2[v2.Size]) <= 0;
 	}
 
 	template<int N>
-	const Num<N> shift_left(const Num<N>& v, int count)
+	const Num<N> shift_left(const Num<N>& v, int count) noexcept
 	{
 		Num<N> ret;
 		if (count == 0)
@@ -339,13 +365,13 @@ namespace BigNum
 	}
 
 	template<int N>
-	const Num<N> operator << (const Num<N>& v1, int bits)
+	const Num<N> operator << (const Num<N>& v1, int bits) noexcept
 	{
 		return shift_left(v1, bits);
 	}
 
 	template<int N>
-	const Num<N> shift_right(const Num<N>& v, int count)
+	const Num<N> shift_right(const Num<N>& v, int count) noexcept
 	{
 		Num<N> ret;
 		if (count == 0)
@@ -379,13 +405,13 @@ namespace BigNum
 	}
 
 	template<int N>
-	const Num<N> operator >> (const Num<N>& v1, int bits)
+	const Num<N> operator >> (const Num<N>& v1, int bits) noexcept
 	{
 		return shift_right(v1, bits);
 	}
 
 	template<int N>
-	std::array<Num<N + DigitSizeBits>, DigitSizeBits> calcShiftedD(const Num<N>& d)
+	std::array<Num<N + DigitSizeBits>, DigitSizeBits> calcShiftedD(const Num<N>& d) noexcept
 	{
 		std::array<Num<N + DigitSizeBits>, DigitSizeBits> ret;
 		ret[0] = d;
@@ -395,7 +421,7 @@ namespace BigNum
 	}
 
 	template<int N, int M>
-	Num<N> div(Num<N>& n, const Num<M>& d)
+	Num<N> div(Num<N>& n, const Num<M>& d) noexcept
 	{
 		Num<N> q;
 
@@ -413,7 +439,7 @@ namespace BigNum
 				{
 					if (Core::cmp(qbeg, qend, shiftedD[j].begin(), shiftedD[j].end()) >= 0)
 					{
-						Core::sub(qbeg, qend, qbeg, qend, shiftedD[j].begin(), shiftedD[j].end());
+						Core::sub(qbeg, qend, shiftedD[j].begin(), shiftedD[j].end());
 						val += 1 << j;
 					}
 				}
@@ -425,7 +451,7 @@ namespace BigNum
 	}
 
 	template<int N>
-	void div(const Num<N>& n, unsigned int d, Num<N>& q, unsigned int& r)
+	void div(const Num<N>& n, unsigned int d, Num<N>& q, unsigned int& r) noexcept
 	{
 		unsigned long long int rest = 0;
 		for (int i = Num<N>::Size - 1; i >= 0; i--)
@@ -439,7 +465,7 @@ namespace BigNum
 	}
 
 	template<int N, int M>
-	const Num<N> operator / (const Num<N>& v1, const Num<M>& v2)
+	const Num<N> operator / (const Num<N>& v1, const Num<M>& v2) noexcept
 	{
 		if (v1 < v2)
 			return Num<N>(0);
@@ -449,7 +475,7 @@ namespace BigNum
 	}
 
 	template<int N>
-	const Num<N> operator / (const Num<N>& v1, const unsigned int v2)
+	const Num<N> operator / (const Num<N>& v1, const unsigned int v2) noexcept
 	{
 		Num<N> q;
 		unsigned int r = 0;
@@ -458,7 +484,7 @@ namespace BigNum
 	}
 
 	template<int N, int M>
-	const Num<M> operator % (const Num<N>& v1, const Num<M>& v2)
+	const Num<M> operator % (const Num<N>& v1, const Num<M>& v2) noexcept
 	{
 		if (v1 < v2)
 			return v1;
@@ -469,7 +495,7 @@ namespace BigNum
 	}
 
 	template<int N>
-	const unsigned int operator % (const Num<N>& v1, const unsigned int v2)
+	const unsigned int operator % (const Num<N>& v1, const unsigned int v2) noexcept
 	{
 		Num<N> q;
 		unsigned int r = 0;
@@ -478,7 +504,7 @@ namespace BigNum
 	}
 
 	template<int N>
-	const Num<N> operator & (const Num<N>& v1, const Num<N>& v2)
+	const Num<N> operator & (const Num<N>& v1, const Num<N>& v2) noexcept
 	{
 		Num<N> rez;
 
@@ -491,7 +517,7 @@ namespace BigNum
 	}
 
 	template<int N>
-	const Num<N> operator & (const Num<N>& v1, Num<N>&& v2)
+	const Num<N> operator & (const Num<N>& v1, Num<N>&& v2) noexcept
 	{
 		Num<N> rez;
 
@@ -504,14 +530,14 @@ namespace BigNum
 	}
 
 	template<int N>
-	const Num<N> operator & (const Num<N>& v1, const Digit v2)
+	const Num<N> operator & (const Num<N>& v1, const Digit v2) noexcept
 	{
 		Num<N> rez(v1[0] & v2);
 		return rez;
 	}
 
 	template<int N>
-	const Num<N> operator | (const Num<N>& v1, const Num<N>& v2)
+	const Num<N> operator | (const Num<N>& v1, const Num<N>& v2) noexcept
 	{
 		Num<N> rez;
 
@@ -524,7 +550,7 @@ namespace BigNum
 	}
 
 	template<int N>
-	const Num<N> operator | (const Num<N>& v1, const Digit v2)
+	const Num<N> operator | (const Num<N>& v1, const Digit v2) noexcept
 	{
 		Num<N> rez = v1;
 		rez[0] = v1[0] | v2;
@@ -532,7 +558,7 @@ namespace BigNum
 	}
 
 	template<int N>
-	const Num<N> operator ~ (const Num<N>& v)
+	const Num<N> operator ~ (const Num<N>& v) noexcept
 	{
 		Num<N> rez;
 
@@ -545,25 +571,25 @@ namespace BigNum
 	}
 
 	template<int N, int M>
-	bool operator && (const Num<N>& v1, const Num<M>& v2)
+	bool operator && (const Num<N>& v1, const Num<M>& v2) noexcept
 	{
 		return v1 != 0 && v2 != 0;
 	}
 
 	template<int N, int M>
-	bool operator || (const Num<N>& v1, const Num<M>& v2)
+	bool operator || (const Num<N>& v1, const Num<M>& v2) noexcept
 	{
 		return v1 != 0 || v2 != 0;
 	}
 
 	template<int N>
-	bool operator !(const Num<N>& v)
+	bool operator !(const Num<N>& v) noexcept
 	{
 		return v == 0;
 	}
 	
 	template<int N>
-	const Num<N> gcd(const Num<N>& v1, const Num<N>& v2)
+	const Num<N> gcd(const Num<N>& v1, const Num<N>& v2) noexcept
 	{
 		if (v1 == v2)
 			return v1;
@@ -581,7 +607,7 @@ namespace BigNum
 	}
 
 	template<int N>
-	const Num<2*N> lcm(const Num<N>& v1, const Num<N>& v2)
+	const Num<2*N> lcm(const Num<N>& v1, const Num<N>& v2) noexcept
 	{
 		Num<2 * N> m = v1 * v2;
 		Num<N> g = gcd(v1, v2);
@@ -589,7 +615,7 @@ namespace BigNum
 	}
 
 	template<int N>
-	const Num<N> modInv(const Num<N>& a, const Num<N>& n)
+	const Num<N> modInv(const Num<N>& a, const Num<N>& n) noexcept
 	{
 	    Num<N> t(0), newt(1);    
 	    Num<N> r = n, newr = a;    
@@ -619,7 +645,7 @@ namespace BigNum
 	}
 
 	template<typename T>
-	const T modInv(const T& a, const T& n)
+	const T modInv(const T& a, const T& n) noexcept
 	{
 		T t(0), newt(1);
 		T r = n, newr = a;
@@ -645,7 +671,7 @@ namespace BigNum
 	}
 
 	template<int N>
-	const Num<N> modExp(const Num<N>& base, const Num<N>& exp, const Num<N>& mod)
+	const Num<N> modExp(const Num<N>& base, const Num<N>& exp, const Num<N>& mod) noexcept
 	{
 		if (mod == 1)
 			return Num<N>(0);
@@ -684,7 +710,7 @@ namespace BigNum
 		Num<N> rinv;
 		Num<N> ninv;
 
-		MonMul(const Num<N>& _n) : n(_n), r(Num<2 * N>(1) << N)
+		MonMul(const Num<N>& _n) noexcept : n(_n), r(Num<2 * N>(1) << N)
 		{
 			assert(gcd(Num<2 * N>(n), r) == 1);
 
@@ -697,7 +723,7 @@ namespace BigNum
 			assert((Num<2 * N>(rinv) << N) - (ninv*n) == 1);
 		}
 
-		const Num<N> In(const Num<N>& x) const
+		const Num<N> In(const Num<N>& x) const noexcept
 		{
 			Num<2 * N> ret(x);
 			ret = ret << N;
@@ -706,7 +732,7 @@ namespace BigNum
 		}
 
 		template<int M>
-		const Num<N> In(const Num<M>& x) const
+		const Num<N> In(const Num<M>& x) const noexcept
 		{
 			Num<N+M> ret(x);
 			ret = ret << N;
@@ -714,12 +740,12 @@ namespace BigNum
 			return ret % n;
 		}
 
-		const Num<N> Out(const Num<N>& x) const
+		const Num<N> Out(const Num<N>& x) const noexcept
 		{
 			return (*this)(x, Num<N>(1));
 		}
 
-		const Num<N> operator()(const Num<N>& a, const Num<N>& b) const
+		const Num<N> operator()(const Num<N>& a, const Num<N>& b) const noexcept
 		{
 			Num<2*N> t = a * b;
 			Num<N> m = (Num<N>(t & (r - 1)) * ninv) & (r - 1);
@@ -731,7 +757,7 @@ namespace BigNum
 	};
 
 	template<int N>
-	const Num<N> monModMul(const Num<N>& a, const Num<N>& b, const Num<N>& mod)
+	const Num<N> monModMul(const Num<N>& a, const Num<N>& b, const Num<N>& mod) noexcept
 	{
 		MonMul<N> monMod((mod));
 		Num<N> xa = monMod.In(a);
@@ -739,7 +765,7 @@ namespace BigNum
 	}
 
 	template<int N, int M, int K>
-	const Num<N> monModExp(const Num<K>& base, const Num<M>& exp, const Num<N>& mod)
+	const Num<N> monModExp(const Num<K>& base, const Num<M>& exp, const Num<N>& mod) noexcept
 	{
 		MonMul<N> monMod((mod));
 		Num<N> ret = monMod.In(Num<N>(1));
@@ -759,7 +785,7 @@ namespace BigNum
 	}
 
 	template<int N>
-	const Num<N> rand()
+	const Num<N> rand() noexcept
 	{
 		BigNum::Num<N> ret;
 		for (int i = 0; i < BigNum::Num<N>::Size; ++i)
@@ -772,7 +798,7 @@ namespace BigNum
 	// http://en.literateprograms.org/index.php?title=Special:DownloadCode/Miller-Rabin_primality_test_(C)&oldid=18973
 
 	template<int N>
-	bool millerRabinPass(const BigNum::Num<N>& num, const BigNum::Num<N>& a)
+	bool millerRabinPass(const BigNum::Num<N>& num, const BigNum::Num<N>& a) noexcept
 	{
 		BigNum::Num<N> d = num - 1;
 
@@ -802,7 +828,7 @@ namespace BigNum
 
 
 	template<int N>
-	bool millerRabinTest(const BigNum::Num<N>& num)
+	bool millerRabinTest(const BigNum::Num<N>& num) noexcept
 	{
 		constexpr int times = 3;
 		for (int i = 0; i < times; i++)
@@ -832,13 +858,13 @@ namespace BigNum
 		877,    881,    883,    887,    907,    911,    919,    929,    937,    941,
 		947,    953,    967,    971,    977,    983,    991,    997, };
 
-	constexpr int simplechecks(int size)
+	constexpr int simplechecks(int size) noexcept
 	{
 		return (size <= 256) ? 30 : ((size <= 512) ? 50 : ((size <= 1024) ? 80 : ((size <= 2048) ? 128 : (sizeof(primes) / sizeof(primes[0])))));
 	}
 
 	template<int N>
-	const Num<N> findPrime(const BigNum::Num<N>& from)
+	const Num<N> findPrime(const BigNum::Num<N>& from) noexcept
 	{
 		BigNum::Num<N> prime = from | 1;
 
@@ -870,7 +896,7 @@ namespace BigNum
 	}
 
 	template<int N>
-	const Num<N> randPrime()
+	const Num<N> randPrime() noexcept
 	{
 		BigNum::Num<N> num = rand<N>() | (BigNum::Num<N>(1) | (BigNum::Num<N>(1) << (N - 1)));
 		return findPrime(num);

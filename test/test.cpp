@@ -114,6 +114,17 @@ int main()
 		}
 		test(passed == true);
 	}
+
+	{
+		bool passed = true;
+		BigNum::Num<64> bn(1);
+		for (int i = 0; i < 64; i++, bn = bn * 2)
+		{
+			BigNum::Num<64> testbn = BigNum::Num<64>(1) << i;
+			passed = passed && (testbn == bn);
+		}
+		test(passed == true);
+	}
 	
 	{
 		bool passed = true;
@@ -135,6 +146,17 @@ int main()
 			BigNum::Num<64> testbn1 = bn1 << i;
 			BigNum::Num<64> testbn2 = bn2 >> (56-i);
 			passed = passed && (testbn1 == testbn2);
+		}
+		test(passed == true && "shifts");
+	}
+
+	{
+		bool passed = true;
+		BigNum::Num<64> bn1 = BigNum::Num<64>(0) - 1;
+		for (int i = 0; i < 64; i++)
+		{
+			BigNum::Num<64> testbn1 = bn1 << i;
+			passed = passed && (testbn1 == (BigNum::Num<64>(0) - BigNum::Num<64>(1) << i));
 		}
 		test(passed == true && "shifts");
 	}
@@ -179,6 +201,7 @@ int main()
 	test(BigNum::monModExp<32>(BigNum::Num<32>(4), BigNum::Num<32>(13), BigNum::Num<32>(497)) == BigNum::Num<32>(445));
 	test(BigNum::monModExp<32>(BigNum::Num<32>(4), BigNum::Num<32>(0), BigNum::Num<32>(497)) == BigNum::Num<32>(1));
 	test(BigNum::monModExp<32>(BigNum::Num<32>(4), BigNum::Num<32>(1), BigNum::Num<32>(497)) == BigNum::Num<32>(4));
+	test(BigNum::modExp<64>(fromString<64>("8814054284918744181"), fromString<64>("1152921504606846977"), fromString<64>("9223372036854775817")) == fromString<64>("4724919961687496308"));
 	test(BigNum::monModExp<64>(fromString<64>("8814054284918744181"), fromString<64>("1152921504606846977"), fromString<64>("9223372036854775817")) == fromString<64>("4724919961687496308"));
 
 	//millerRabinPass(fromString<128>("118802731"), fromString<128>("74812"));
@@ -257,7 +280,7 @@ int main()
 	}
 	//{
 	//	auto start = std::chrono::high_resolution_clock::now();
-	//	auto prime = findPrime<2048>(BigNum::Num<2048>(1) << 2047);
+	//	auto prime = BigNum::findPrime<2048>(BigNum::Num<2048>(1) << 2047);
 	//	auto stop = std::chrono::high_resolution_clock::now();
 	//	auto elapsed = stop - start;
 	//	printf("Prime (2048)= %s\n   duration - %lld ms\n", toString(prime).c_str(), (long long)std::chrono::duration_cast<std::chrono::milliseconds>(elapsed).count());
