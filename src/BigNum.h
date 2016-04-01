@@ -5,9 +5,9 @@
 
 namespace BigNum
 {
-	typedef unsigned char Digit;
+	typedef unsigned short Digit;
 	constexpr size_t DigitSizeBits = sizeof(Digit) * 8;
-	constexpr size_t DigitMaskBits = ((1 << DigitSizeBits) - 1);
+	constexpr size_t DigitMaskBits = ((1ull << DigitSizeBits) - 1ull);
 
 	namespace Core
 	{
@@ -105,29 +105,30 @@ namespace BigNum
 			return carry;
 		}
 
-		void mul(Digit* rez, Digit v1, Digit v2)
-		{
-			unsigned int m = (unsigned int)(v1) * v2;
-			rez[0] = Digit(m & DigitMaskBits);
-			rez[1] = Digit((m >> DigitSizeBits) & DigitMaskBits);
-		}
-
 		void mul(Digit* rezbegin, Digit* rezend, const Digit* v1begin, const Digit* v1end, const Digit* v2begin, const Digit* v2end) noexcept
 		{
 			const std::ptrdiff_t rezlen = rezend - rezbegin;
 			const std::ptrdiff_t v1len = v1end - v1begin;
 			const std::ptrdiff_t v2len = v2end - v2begin;
-
+						
 			for (std::ptrdiff_t v1it = 0; v1it < v1len; ++v1it)
+			{
+				unsigned long long int carry = 0;
 				for (std::ptrdiff_t v2it = 0; v2it < v2len; ++v2it)
 				{
-					if (v1it + v2it < rezlen)
-					{
-						Digit partial[2] = { 0 };
-						mul(partial, v1begin[v1it], v2begin[v2it]);
-						add(rezbegin + v1it + v2it, rezend, partial, partial + 2);
-					}
+					carry += unsigned long long int(rezbegin[v1it + v2it]) + unsigned long long int(v1begin[v1it]) * unsigned long long int(v2begin[v2it]);
+					rezbegin[v1it + v2it] = Digit(carry & DigitMaskBits);
+					carry >>= DigitSizeBits;
 				}
+
+				int i = 0;
+				while (carry != 0)
+				{
+					rezbegin[v1it + v2len + i] = Digit(carry & DigitMaskBits);
+					carry >>= DigitSizeBits;
+					i++;
+				}
+			}
 		}
 	}
 	
@@ -153,7 +154,7 @@ namespace BigNum
 		{
 			for (int i = 0; i < Size; i++)
 			{
-				data[i] = num & ((1 << DigitSizeBits) - 1);
+				data[i] = num & ((1ull << DigitSizeBits) - 1ull);
 				num >>= DigitSizeBits;
 			}
 		}
@@ -248,35 +249,35 @@ namespace BigNum
 	template<int N, int M>
 	const Num<N+M> operator * (const Num<N>& v1, const Num<M>& v2) noexcept
 	{
-		unsigned int poly[Num<N>::Size + Num<M>::Size] = { 0 };
+		//unsigned int poly[Num<N>::Size + Num<M>::Size] = { 0 };
 
-		for (int i = 0; i < Num<N>::Size; i++)
-			for (int j = 0; j < Num<M>::Size; j++)
-				poly[i + j] += v1[i] * v2[j];
+		//for (int i = 0; i < Num<N>::Size; i++)
+		//	for (int j = 0; j < Num<M>::Size; j++)
+		//		poly[i + j] += (unsigned int)(v1[i]) * v2[j];
 
-		Num<N + M> rez;
-		unsigned int carry = 0;
-		for (int i = 0; i < Num<N + M>::Size; i++)
-		{
-			unsigned int sum = carry + poly[i];
-			rez[i] = static_cast<Digit>(sum & DigitMaskBits);
-			carry = sum >> DigitSizeBits;
-		}
-		return rez;
-
-		//Num<N + M> rez(0);
-		//Core::mul(rez.begin(), rez.end(), v1.begin(), v1.end(), v2.begin(), v2.end());
+		//Num<N + M> rez;
+		//unsigned int carry = 0;
+		//for (int i = 0; i < Num<N + M>::Size; i++)
+		//{
+		//	unsigned int sum = carry + poly[i];
+		//	rez[i] = static_cast<Digit>(sum & DigitMaskBits);
+		//	carry = sum >> DigitSizeBits;
+		//}
 		//return rez;
+
+		Num<N + M> rez(0);
+		Core::mul(rez.begin(), rez.end(), v1.begin(), v1.end(), v2.begin(), v2.end());
+		return rez;
 	}
 
 	template<int N>
 	const Num<N> operator * (const Num<N>& v1, Digit v2) noexcept
 	{
 		Num<N> rez;
-		unsigned int carry = 0;
+		unsigned long long int carry = 0;
 		for (int i = 0; i < Num<N>::Size; i++)
 		{
-			unsigned int sum = carry + v1[i] * v2;
+			unsigned long long int sum = carry + (unsigned long long int)(v1[i]) * v2;
 			rez[i] = sum & DigitMaskBits;
 			carry = sum >> DigitSizeBits;
 		}
@@ -352,10 +353,10 @@ namespace BigNum
 			}
 			else
 			{
-				unsigned int carry = 0;
+				unsigned long long int carry = 0;
 				for (int i = bytes; i < Num<N>::Size; i++)
 				{
-					unsigned int val = static_cast<unsigned int>(v[i - bytes]) << bits;
+					unsigned long long int val = static_cast<unsigned long long int>(v[i - bytes]) << bits;
 					ret[i] = static_cast<Digit>(val | carry);
 					carry = val >> DigitSizeBits;
 				}
@@ -391,10 +392,10 @@ namespace BigNum
 			}
 			else
 			{
-				unsigned int carry = v[bytes];
+				unsigned long long int carry = v[bytes];
 				for (int i = 0; i < Num<N>::Size - bytes; i++)
 				{
-					unsigned int val = (static_cast<unsigned int>(((i + bytes + 1) < Num<N>::Size) ? v[i + bytes + 1] : 0) << DigitSizeBits);
+					unsigned long long int val = (static_cast<unsigned long long int>(((i + bytes + 1) < Num<N>::Size) ? v[i + bytes + 1] : 0) << DigitSizeBits);
 					val = (val | carry);
 					ret[i] = static_cast<Digit>(val >> bits);
 					carry = val >> (DigitSizeBits);

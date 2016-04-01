@@ -65,6 +65,7 @@ int main()
 	test(BigNum::Num<16>(255 << 8) - 1 == BigNum::Num<16>((255 << 8) - 1));
 
 	test(BigNum::Num<64>(20) * BigNum::Num<64>(45) == BigNum::Num<64>(20 * 45));
+	test(BigNum::Num<32>(0xFFFFFFFFu) * BigNum::Num<32>(0xFFFFFFFFu) == BigNum::Num<64>(0xFFFFFFFFull * 0xFFFFFFFFull));
 
 	BigNum::Num<1024> fact(1);
 	for (unsigned char i = 2; i <= 100; i++)
@@ -285,7 +286,6 @@ int main()
 	//	auto elapsed = stop - start;
 	//	printf("Prime (2048)= %s\n   duration - %lld ms\n", toString(prime).c_str(), (long long)std::chrono::duration_cast<std::chrono::milliseconds>(elapsed).count());
 	//}
-
 	{
 		
 		printf("Generate RSA keys.");
