@@ -107,7 +107,7 @@ namespace BigNum
 
 		void mul(Digit* rezbegin, Digit* rezend, const Digit* v1begin, const Digit* v1end, const Digit* v2begin, const Digit* v2end) noexcept
 		{
-			const std::ptrdiff_t rezlen = rezend - rezbegin;
+			//const std::ptrdiff_t rezlen = rezend - rezbegin;
 			const std::ptrdiff_t v1len = v1end - v1begin;
 			const std::ptrdiff_t v2len = v2end - v2begin;
 						
@@ -116,7 +116,7 @@ namespace BigNum
 				unsigned long long int carry = 0;
 				for (std::ptrdiff_t v2it = 0; v2it < v2len; ++v2it)
 				{
-					carry += unsigned long long int(rezbegin[v1it + v2it]) + unsigned long long int(v1begin[v1it]) * unsigned long long int(v2begin[v2it]);
+					carry += (unsigned long long int)(rezbegin[v1it + v2it]) + (unsigned long long int)(v1begin[v1it]) * (unsigned long long int)(v2begin[v2it]);
 					rezbegin[v1it + v2it] = Digit(carry & DigitMaskBits);
 					carry >>= DigitSizeBits;
 				}
