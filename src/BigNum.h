@@ -244,38 +244,16 @@ namespace BigNum
 	template<int N, int M>
 	const Num<N+M> operator * (const Num<N>& v1, const Num<M>& v2) noexcept
 	{
-		//unsigned int poly[Num<N>::Size + Num<M>::Size] = { 0 };
-
-		//for (int i = 0; i < Num<N>::Size; i++)
-		//	for (int j = 0; j < Num<M>::Size; j++)
-		//		poly[i + j] += (unsigned int)(v1[i]) * v2[j];
-
-		//Num<N + M> rez;
-		//unsigned int carry = 0;
-		//for (int i = 0; i < Num<N + M>::Size; i++)
-		//{
-		//	unsigned int sum = carry + poly[i];
-		//	rez[i] = static_cast<Digit>(sum & DigitMaskBits);
-		//	carry = sum >> DigitSizeBits;
-		//}
-		//return rez;
-
 		Num<N + M> rez(0);
 		Core::mul(rez.begin(), rez.end(), v1.begin(), v1.end(), v2.begin(), v2.end());
 		return rez;
 	}
 
 	template<int N>
-	const Num<N> operator * (const Num<N>& v1, Digit v2) noexcept
+	const Num<N + DigitSizeBits> operator * (const Num<N>& v1, Digit v2) noexcept
 	{
-		Num<N> rez;
-		unsigned long long int carry = 0;
-		for (int i = 0; i < Num<N>::Size; i++)
-		{
-			unsigned long long int sum = carry + (unsigned long long int)(v1[i]) * v2;
-			rez[i] = sum & DigitMaskBits;
-			carry = sum >> DigitSizeBits;
-		}
+		Num<N + DigitSizeBits> rez(0);
+		Core::mul(rez.begin(), rez.end(), v1.begin(), v1.end(), &v2, (&v2) + 1);
 		return rez;
 	}
 
