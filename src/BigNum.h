@@ -501,27 +501,27 @@ namespace BigNum
 		return r;
 	}
 
-	template<int N>
-	const Num<N> operator & (const Num<N>& v1, const Num<N>& v2) noexcept
+	template<int N, int M>
+	const Num<N> operator & (const Num<N>& v1, const Num<M>& v2) noexcept
 	{
-		Num<N> rez;
+		Num<N> rez(0);
 
 		for (int i = 0; i < Num<N>::Size; i++)
 		{
-			rez[i] = v1[i] & v2[i];
+			rez[i] = v1[i] & ((i < M) ? v2[i] : 0);
 		}
 
 		return rez;
 	}
 
-	template<int N>
-	const Num<N> operator & (const Num<N>& v1, Num<N>&& v2) noexcept
+	template<int N, int M>
+	const Num<N> operator & (const Num<N>& v1, Num<M>&& v2) noexcept
 	{
-		Num<N> rez;
+		Num<N> rez(0);
 
 		for (int i = 0; i < Num<N>::Size; i++)
 		{
-			rez[i] = v1[i] & v2[i];
+			rez[i] = v1[i] & ((i < M) ? v2[i] : 0);
 		}
 
 		return rez;
@@ -704,12 +704,14 @@ namespace BigNum
 	struct MonMul
 	{
 		const Num<N> n;
-		const Num<2 * N> r;
 		Num<N> rinv;
 		Num<N> ninv;
+		//Num<N> rmask;
 
-		MonMul(const Num<N>& _n) noexcept : n(_n), r(Num<2 * N>(1) << N)
+		MonMul(const Num<N>& _n) noexcept : n(_n)
 		{
+			const Num<2 * N> r(Num<2 * N>(1) << N);
+
 			assert(gcd(Num<2 * N>(n), r) == 1);
 
 			rinv = Num<N>(modInv<2 * N>(r, n));
@@ -719,6 +721,8 @@ namespace BigNum
 			ninv = ((Num<2 * N>(rinv) << N) - 1) / n;
 
 			assert((Num<2 * N>(rinv) << N) - (ninv*n) == 1);
+
+			//rmask = (r - 1);
 		}
 
 		const Num<N> In(const Num<N>& x) const noexcept
@@ -746,7 +750,8 @@ namespace BigNum
 		const Num<N> operator()(const Num<N>& a, const Num<N>& b) const noexcept
 		{
 			Num<2*N> t = a * b;
-			Num<N> m = (Num<N>(t & (r - 1)) * ninv) & (r - 1);
+			//Num<N> m = (Num<N>(t & rmask) * ninv) & rmask;
+			Num<N> m = Num<N>(t) * ninv;
 			Num<N> u = (t + m* n) >> N;
 
 			//Num<2 * N> t1 = t;
