@@ -17,6 +17,7 @@ std::string toString(const BigNum::Num<N>& num)
 	{
 		R = Q % BigNum::Num<N>(10);
 		Q = Q / BigNum::Num<N>(10);
+		assert(R < 10);
 		ret.push_back(R[0] + '0');
 	}
 	std::reverse(ret.begin(), ret.end());
@@ -43,7 +44,7 @@ const BigNum::Num<N> fromString(const char* str)
 int main()
 {
 #if PROFILING
-	auto prime = findPrime<2048>(BigNum::Num<2048>(1) << 2047);
+	auto prime = BigNum::findPrime<2048>(BigNum::Num<2048>(1) << 2047);
 #else
 	//srand(time(nullptr));
 	
@@ -68,13 +69,12 @@ int main()
 	test(BigNum::Num<32>(0xFFFFFFFFu) * BigNum::Num<32>(0xFFFFFFFFu) == BigNum::Num<64>(0xFFFFFFFFull * 0xFFFFFFFFull));
 
 	BigNum::Num<1024> fact(1);
-	for (unsigned char i = 2; i <= 100; i++)
+	for (BigNum::Digit i = 2; i <= 100; i++)
 	{
-		fact = fact * i;
+		fact = fact * BigNum::Num<32>(i);
 	}
-	test(fact == fromString<1024>("93326215443944152681699238856266700490715968264381621468592963895217599993229915608941463976156518286253697920827223758251185210916864000000000000000000000000"));
 	printf("100!=%s\n", toString(fact).c_str());
-
+	test(fact == fromString<1024>("93326215443944152681699238856266700490715968264381621468592963895217599993229915608941463976156518286253697920827223758251185210916864000000000000000000000000"));
 
 	test((BigNum::Num<64>(1) > BigNum::Num<64>(0)));
 	test((BigNum::Num<64>(1) < BigNum::Num<64>(0)) == false);
@@ -119,10 +119,12 @@ int main()
 	{
 		bool passed = true;
 		BigNum::Num<64> bn(1);
-		for (int i = 0; i < 64; i++, bn = bn * 2)
+		for (int i = 0; i < 64; i++)
 		{
 			BigNum::Num<64> testbn = BigNum::Num<64>(1) << i;
 			passed = passed && (testbn == bn);
+
+			bn = bn * 2;
 		}
 		test(passed == true);
 	}
@@ -194,7 +196,7 @@ int main()
 	test(BigNum::lcm(fromString<128>("6"), fromString<128>("4")) == fromString<64>("12"));
 
 	test((BigNum::modInv(BigNum::Num<128>(7), BigNum::Num<128>(11)) * BigNum::Num<128>(7)) % BigNum::Num<128>(11) == BigNum::Num<128>(1));
-	test((BigNum::modInv(BigNum::Num<128>(961748941), BigNum::Num<128>(982451653)) * BigNum::Num<128>(961748941)) % BigNum::Num<128>(982451653) == BigNum::Num<128>(1));
+	test((BigNum::modInv(BigNum::Num<128>(961748941), BigNum::Num<128>(982451653)) * BigNum::Num<128>(961748941)) % BigNum::Num<128>(982451653) == 1);
 
 	//BigNum::MonMul<16> mod11(BigNum::Num<16>(121));
 	//test(mod11(BigNum::Num<16>(100), BigNum::Num<16>(100)) == BigNum::Num<16>(78));

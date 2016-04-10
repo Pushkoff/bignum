@@ -7,7 +7,7 @@ namespace BigNum
 {
 	typedef unsigned short Digit;
 	constexpr size_t DigitSizeBits = sizeof(Digit) * 8;
-	constexpr size_t DigitMaskBits = ((1ull << DigitSizeBits) - 1ull);
+	constexpr unsigned int DigitMaskBits = ((1ull << DigitSizeBits) - 1ull);
 
 	namespace Core
 	{
@@ -110,6 +110,8 @@ namespace BigNum
 			//const std::ptrdiff_t rezlen = rezend - rezbegin;
 			const std::ptrdiff_t v1len = v1end - v1begin;
 			const std::ptrdiff_t v2len = v2end - v2begin;
+
+			assert((rezend - rezbegin) >= (v1end - v1begin) + (v2end - v2begin));
 						
 			for (std::ptrdiff_t v1it = 0; v1it < v1len; ++v1it)
 			{
@@ -120,14 +122,7 @@ namespace BigNum
 					rezbegin[v1it + v2it] = Digit(carry & DigitMaskBits);
 					carry >>= DigitSizeBits;
 				}
-
-				int i = 0;
-				while (carry != 0)
-				{
-					rezbegin[v1it + v2len + i] = Digit(carry & DigitMaskBits);
-					carry >>= DigitSizeBits;
-					i++;
-				}
+				rezbegin[v1it + v2len] = Digit(carry & DigitMaskBits);
 			}
 		}
 	}
@@ -184,7 +179,7 @@ namespace BigNum
 			for (int i = std::min<int>(Size, Num<M>::Size); i < Size; i++)
 				data[i] = 0;
 				
-			assert(std::none_of(&other[std::min<int>(Size, Num<M>::Size)],&other[Num<M>::Size], [](unsigned char x){ return x != 0; }));
+			//assert(std::none_of(&other[std::min<int>(Size, Num<M>::Size)],&other[Num<M>::Size], [](unsigned char x){ return x != 0; }));
 
 			return *this;
 		}
@@ -314,10 +309,22 @@ namespace BigNum
 		return Core::cmp(&v1[0], &v1[v1.Size], &v2[0], &v2[v2.Size]) > 0;
 	}
 
+	template<int N>
+	const bool operator > (const Num<N>& v1, Digit v2) noexcept
+	{
+		return Core::cmp(&v1[0], &v1[v1.Size], &v2, (&v2) + 1) > 0;
+	}
+
 	template<int N, int M>
 	const bool operator >= (const Num<N>& v1, const Num<M>& v2) noexcept
 	{
 		return Core::cmp(&v1[0], &v1[v1.Size], &v2[0], &v2[v2.Size]) >= 0;
+	}
+
+	template<int N>
+	const bool operator >= (const Num<N>& v1, Digit v2) noexcept
+	{
+		return Core::cmp(&v1[0], &v1[v1.Size], &v2, (&v2) + 1) >= 0;
 	}
 
 	template<int N, int M>
@@ -326,10 +333,22 @@ namespace BigNum
 		return Core::cmp(&v1[0], &v1[v1.Size], &v2[0], &v2[v2.Size]) < 0;
 	}
 
+	template<int N>
+	const bool operator < (const Num<N>& v1, Digit v2) noexcept
+	{
+		return Core::cmp(&v1[0], &v1[v1.Size], &v2, (&v2) + 1) < 0;
+	}
+
 	template<int N, int M>
 	const bool operator <= (const Num<N>& v1, const Num<M>& v2) noexcept
 	{
 		return Core::cmp(&v1[0], &v1[v1.Size], &v2[0], &v2[v2.Size]) <= 0;
+	}
+
+	template<int N>
+	const bool operator <= (const Num<N>& v1, Digit v2) noexcept
+	{
+		return Core::cmp(&v1[0], &v1[v1.Size], &v2, (&v2) + 1) <= 0;
 	}
 
 	template<int N>
@@ -751,6 +770,12 @@ namespace BigNum
 			Num<2*N> t = a * b;
 			Num<N> m = (Num<N>(t & (r - 1)) * ninv) & (r - 1);
 			Num<N> u = (t + m* n) >> N;
+
+			//Num<2 * N> t1 = t;
+			//Core::mul(t1.begin(), t1.end(), m.begin(), m.end(), n.begin(), n.end());
+			//Num<N> u1 = (t1) >> N;
+			//assert(u == u1);
+
 			while (u >= n)
 				u = u - n;
 			return Num<N>(u);
@@ -776,7 +801,7 @@ namespace BigNum
 		while (realExpSize > 0 && exp[realExpSize - 1] == 0)
 			realExpSize--;
 
-		for (int i = realExpSize * DigitSizeBits; i -->0 ;)
+		for (int i = realExpSize * DigitSizeBits; i --> 0;)
 		{
 			ret = monMod(ret, ret);
 			if (exp.bit(i))
