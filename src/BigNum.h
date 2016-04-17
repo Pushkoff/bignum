@@ -433,7 +433,7 @@ namespace BigNum
 			Digit val = 0;
 			if (Core::cmp(qbeg, qend, d.begin(), d.end()) >= 0)
 			{
-				for (int j = DigitSizeBits - 1; j >= 0; --j)
+				for (int j = DigitSizeBits; j-- > 0;)
 				{
 					if (Core::cmp(qbeg, qend, shiftedD[j].begin(), shiftedD[j].end()) >= 0)
 					{
@@ -449,17 +449,33 @@ namespace BigNum
 	}
 
 	template<int N>
-	void div(const Num<N>& n, unsigned int d, Num<N>& q, unsigned int& r) noexcept
+	Num<N> div(Num<N>& n, const Digit d) noexcept
 	{
+		Num<N> q(0);
 		unsigned long long int rest = 0;
-		for (int i = Num<N>::Size - 1; i >= 0; i--)
+		for (int i = Num<N>::Size; i--> 0;)
 		{
 			rest = rest << DigitSizeBits;
 			rest += n[i];
+			n[i] = 0;
 			q[i] = (Digit)(rest / d);
 			rest = rest % d;
 		}
-		r = (unsigned int)rest;
+		n[0] = (Digit)rest;
+		return q;
+	}
+
+	template<int N>
+	Digit mod(const Num<N>& n, const Digit d) noexcept
+	{
+		unsigned long long int rest = 0;
+		for (int i = Num<N>::Size; i--> 0;)
+		{
+			rest = rest << DigitSizeBits;
+			rest += n[i];
+			rest = rest % d;
+		}
+		return (Digit)rest;
 	}
 
 	template<int N, int M>
@@ -473,12 +489,10 @@ namespace BigNum
 	}
 
 	template<int N>
-	const Num<N> operator / (const Num<N>& v1, const unsigned int v2) noexcept
+	const Num<N> operator / (const Num<N>& v1, const Digit v2) noexcept
 	{
-		Num<N> q;
-		unsigned int r = 0;
-		div(v1, v2, q, r);
-		return q;
+		Num<N> q = v1;
+		return div(q, v2);
 	}
 
 	template<int N, int M>
@@ -493,12 +507,9 @@ namespace BigNum
 	}
 
 	template<int N>
-	const unsigned int operator % (const Num<N>& v1, const unsigned int v2) noexcept
+	const Digit operator % (const Num<N>& v1, const Digit v2) noexcept
 	{
-		Num<N> q;
-		unsigned int r = 0;
-		div(v1, v2, q, r);
-		return r;
+		return mod(v1, v2);
 	}
 
 	template<int N, int M>
