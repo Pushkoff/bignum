@@ -144,6 +144,15 @@ namespace BigNum
 				data[i] = 0;
 		}
 
+		explicit Num(int num) noexcept
+		{
+			for (int i = 0; i < Size; i++)
+			{
+				data[i] = num & ((1ull << DigitSizeBits) - 1ull);
+				num >>= DigitSizeBits;
+			}
+		}
+
 		template<typename T>
 		explicit Num(T num) noexcept
 		{
@@ -189,7 +198,7 @@ namespace BigNum
 
 		bool bit(int i) const noexcept
 		{
-			//assert(i >= 0 && i < Size);
+			assert(i >= 0 && i < N);
 			bool ret = false;
 			if (i >= 0 && i < N)
 			{
@@ -921,4 +930,35 @@ namespace BigNum
 		BigNum::Num<N> num = rand<N>() | (BigNum::Num<N>(1) | (BigNum::Num<N>(1) << (N - 1)));
 		return findPrime(num);
 	}
+
+	namespace operators
+	{
+		template <char... args>
+		BigNum::Num<2048> operator "" _bn2048()
+		{
+			BigNum::Num<2048> ret(0);
+			char buf[sizeof...(args)] = { args... };
+			for (char i : buf)
+			{
+				assert(isdigit(i));
+				ret = ret * 10 + BigNum::Digit(i - '0');
+			}
+			return ret;
+		}
+
+		template <char... args>
+		BigNum::Num<1024> operator "" _bn1024()
+		{
+			BigNum::Num<1024> ret(0);
+			char buf[sizeof...(args)] = { args... };
+			for (char i : buf)
+			{
+				assert(isdigit(i));
+				ret = ret * 10 + BigNum::Digit(i - '0');
+			}
+			return ret;
+		}
+	}
 };
+
+using namespace BigNum::operators;

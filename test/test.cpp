@@ -49,6 +49,8 @@ int main()
 	//srand(time(nullptr));
 	
 	test(BigNum::Num<256>(fromString<128>("118802731")) == fromString<256>("118802731"));
+	test(BigNum::Num<256>(fromString<128>("118802731")) == 118802731_bn2048);
+	test(BigNum::Num<256>(fromString<128>("118802731")) == 118802731_bn1024);
 	test(fromString<128>(toString(fromString<128>("118802731")).c_str()) == fromString<128>("118802731"));
 
 	printf("%s\n", toString(fromString<128>("118802731")).c_str());
@@ -297,7 +299,7 @@ int main()
 		auto q = BigNum::findPrime<512>((BigNum::Num<512>(1) << 511) + (BigNum::Num<512>(1) << 32));
 
 		auto N = p * q;
-		auto t = (p - 1) * (q - 1);
+		auto t = (p - 1) * (q -1);
 		auto e = BigNum::Num<1024>(65537);
 		auto d = BigNum::modInv(e, t);
 
