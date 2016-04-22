@@ -37,14 +37,25 @@ const BigNum::Num<N> fromString(const char* str)
 	return ret;
 }
 
-#define test(a) do{ bool ret = (a); printf("%s\n - %s\n\n", #a, (ret) ? "Ok" : "Fail" ); assert(ret); }while(false);
+template<typename Fn>
+void doTest(Fn fn, const char* testName)
+{
+	srand(0);
+	auto start = std::chrono::high_resolution_clock::now();
+	bool ret = fn();
+	auto stop = std::chrono::high_resolution_clock::now();
+	auto elapsed = stop - start;
+	printf("%s\n   %s - duration - %lld ms\n", testName, ret ? "Ok" : "Fail", (long long)std::chrono::duration_cast<std::chrono::milliseconds>(elapsed).count());
+}
+
+#define test(a) do{  doTest([&](){ return a; }, #a); assert(ret); }while(false);
 
 #define PROFILING 0
 
 int main()
 {
 #if PROFILING
-	auto prime = BigNum::findPrime<2048>(BigNum::Num<2048>(1) << 2047);
+	auto prime = BigNum::nextPrime<2048>(BigNum::Num<2048>(1) << 2047);
 #else
 	//srand(time(nullptr));
 	
@@ -211,8 +222,6 @@ int main()
 
 	//millerRabinPass(fromString<128>("118802731"), fromString<128>("74812"));
 
-	srand(0);
-	
 	test(millerRabinTest(fromString<32>("17")) == true);
 
 	test(millerRabinTest(fromString<128>("961748941")) == true);
@@ -220,88 +229,75 @@ int main()
 	test(millerRabinTest(fromString<256>("89685068870671644428994813094690803553")) == true);
 	test(millerRabinTest(fromString<128>("982451655")) == false);
 
+	test(BigNum::nextPrime<64>(BigNum::Num<64>(1) << 63) == 9223372036854775837_bn64);
+	test(BigNum::nextPrimeOpt<64>(BigNum::Num<64>(1) << 63) == 9223372036854775837_bn64);
+	
+	test(BigNum::nextPrime<128>(BigNum::Num<64>(1) << 63) == 9223372036854775837_bn64);
+	test(BigNum::nextPrimeOpt<128>(BigNum::Num<64>(1) << 63) == 9223372036854775837_bn64);
+	
+	test(BigNum::nextPrime<256>(BigNum::Num<64>(1) << 63) == 9223372036854775837_bn64);
+	test(BigNum::nextPrimeOpt<256>(BigNum::Num<64>(1) << 63) == 9223372036854775837_bn64);
+	
+	test(BigNum::nextPrime<512>(BigNum::Num<64>(1) << 63) == 9223372036854775837_bn64);
+	test(BigNum::nextPrimeOpt<512>(BigNum::Num<64>(1) << 63) == 9223372036854775837_bn64);
+	
+	test(BigNum::nextPrime<1024>(BigNum::Num<64>(1) << 63) == 9223372036854775837_bn64);
+	test(BigNum::nextPrimeOpt<1024>(BigNum::Num<64>(1) << 63) == 9223372036854775837_bn64);
+
+	test(BigNum::nextPrime<128>(BigNum::Num<128>(1) << 127) == 170141183460469231731687303715884105757_bn128);
+	test(BigNum::nextPrimeOpt<128>(BigNum::Num<128>(1) << 127) == 170141183460469231731687303715884105757_bn128);
+
+	test(BigNum::nextPrime<256>(BigNum::Num<256>(1) << 255) == 57896044618658097711785492504343953926634992332820282019728792003956564820063_bn256);
+	test(BigNum::nextPrimeOpt<256>(BigNum::Num<256>(1) << 255) == 57896044618658097711785492504343953926634992332820282019728792003956564820063_bn256);
+
+	test(BigNum::nextPrime<512>(1_bn512 << 511) == 6703903964971298549787012499102923063739682910296196688861780721860882015036773488400937149083451713845015929093243025426876941405973284973216824503042159_bn512);
+	test(BigNum::nextPrimeOpt<512>(1_bn512 << 511) == 6703903964971298549787012499102923063739682910296196688861780721860882015036773488400937149083451713845015929093243025426876941405973284973216824503042159_bn512);
+
+	test(BigNum::nextPrime<1024>(1_bn1024 << 1023) == 89884656743115795386465259539451236680898848947115328636715040578866337902750481566354238661203768010560056939935696678829394884407208311246423715319737062188883946712432742638151109800623047059726541476042502884419075341171231440736956555270413618581675255342293149119973622969239858152417678164812112069763_bn1024);
+	test(BigNum::nextPrimeOpt<1024>(1_bn1024 << 1023) == 89884656743115795386465259539451236680898848947115328636715040578866337902750481566354238661203768010560056939935696678829394884407208311246423715319737062188883946712432742638151109800623047059726541476042502884419075341171231440736956555270413618581675255342293149119973622969239858152417678164812112069763_bn1024);
+
+	srand(0);
 	{
 		auto start = std::chrono::high_resolution_clock::now();
-		auto prime = BigNum::findPrime<64>(BigNum::Num<64>(1) << 63);
+		BigNum::randPrime<512>(BigNum::RandType::Simple);
+		BigNum::randPrime<512>(BigNum::RandType::Simple);
 		auto stop = std::chrono::high_resolution_clock::now();
 		auto elapsed = stop - start;
-		printf("Prime (64)= %s\n   duration - %lld ms\n", toString(prime).c_str(), (long long)std::chrono::duration_cast<std::chrono::milliseconds>(elapsed).count());
+		printf("2x Primes (512) - Simple \n   duration - %lld ms\n", (long long)std::chrono::duration_cast<std::chrono::milliseconds>(elapsed).count());
 	}
+
+	srand(0);
 	{
 		auto start = std::chrono::high_resolution_clock::now();
-		auto prime = BigNum::findPrime<128>(BigNum::Num<128>(1) << 63);
+		BigNum::randPrime<512>(BigNum::RandType::FindNext);
+		BigNum::randPrime<512>(BigNum::RandType::FindNext);
 		auto stop = std::chrono::high_resolution_clock::now();
 		auto elapsed = stop - start;
-		printf("Prime (128)= %s\n   duration - %lld ms\n", toString(prime).c_str(), (long long)std::chrono::duration_cast<std::chrono::milliseconds>(elapsed).count());
+		printf("2x Primes (512) - FindNext Simple\n   duration - %lld ms\n", (long long)std::chrono::duration_cast<std::chrono::milliseconds>(elapsed).count());
 	}
+
+	srand(0);
 	{
 		auto start = std::chrono::high_resolution_clock::now();
-		auto prime = BigNum::findPrime<256>(BigNum::Num<256>(1) << 63);
+		BigNum::randPrime<512>(BigNum::RandType::FindNextOpt);
+		BigNum::randPrime<512>(BigNum::RandType::FindNextOpt);
 		auto stop = std::chrono::high_resolution_clock::now();
 		auto elapsed = stop - start;
-		printf("Prime (256)= %s\n   duration - %lld ms\n", toString(prime).c_str(), (long long)std::chrono::duration_cast<std::chrono::milliseconds>(elapsed).count());
+		printf("2x Primes (512) - FindNext Optimized\n   duration - %lld ms\n", (long long)std::chrono::duration_cast<std::chrono::milliseconds>(elapsed).count());
 	}
-	{
-		auto start = std::chrono::high_resolution_clock::now();
-		auto prime = BigNum::findPrime<512>(BigNum::Num<512>(1) << 63);
-		auto stop = std::chrono::high_resolution_clock::now();
-		auto elapsed = stop - start;
-		printf("Prime (512)= %s\n   duration - %lld ms\n", toString(prime).c_str(), (long long)std::chrono::duration_cast<std::chrono::milliseconds>(elapsed).count());
-	}
-		{
-		auto start = std::chrono::high_resolution_clock::now();
-		auto prime = BigNum::findPrime<1024>(BigNum::Num<1024>(1) << 63);
-		auto stop = std::chrono::high_resolution_clock::now();
-		auto elapsed = stop - start;
-		printf("Prime (1024)= %s\n   duration - %lld ms\n", toString(prime).c_str(), (long long)std::chrono::duration_cast<std::chrono::milliseconds>(elapsed).count());
-	}
-	{
-		auto start = std::chrono::high_resolution_clock::now();
-		auto prime = BigNum::findPrime<128>(BigNum::Num<128>(1) << 127);
-		auto stop = std::chrono::high_resolution_clock::now();
-		auto elapsed = stop - start;
-		printf("Prime (128)= %s\n   duration - %lld ms\n", toString(prime).c_str(), (long long)std::chrono::duration_cast<std::chrono::milliseconds>(elapsed).count());
-	}
-	{
-		auto start = std::chrono::high_resolution_clock::now();
-		auto prime = BigNum::findPrime<256>(BigNum::Num<256>(1) << 255);
-		auto stop = std::chrono::high_resolution_clock::now();
-		auto elapsed = stop - start;
-		printf("Prime (256)= %s\n   duration - %lld ms\n", toString(prime).c_str(), (long long)std::chrono::duration_cast<std::chrono::milliseconds>(elapsed).count());
-	}
-	{
-		auto start = std::chrono::high_resolution_clock::now();
-		auto prime = BigNum::findPrime<512>(BigNum::Num<512>(1) << 511);
-		auto stop = std::chrono::high_resolution_clock::now();
-		auto elapsed = stop - start;
-		printf("Prime (512)= %s\n   duration - %lld ms\n", toString(prime).c_str(), (long long)std::chrono::duration_cast<std::chrono::milliseconds>(elapsed).count());
-	}
-	{
-		auto start = std::chrono::high_resolution_clock::now();
-		auto prime = BigNum::findPrime<1024>(BigNum::Num<1024>(1) << 1023);
-		auto stop = std::chrono::high_resolution_clock::now();
-		auto elapsed = stop - start;
-		printf("Prime (1024)= %s\n   duration - %lld ms\n", toString(prime).c_str(), (long long)std::chrono::duration_cast<std::chrono::milliseconds>(elapsed).count());
-	}
-	//{
-	//	auto start = std::chrono::high_resolution_clock::now();
-	//	auto prime = BigNum::findPrime<2048>(BigNum::Num<2048>(1) << 2047);
-	//	auto stop = std::chrono::high_resolution_clock::now();
-	//	auto elapsed = stop - start;
-	//	printf("Prime (2048)= %s\n   duration - %lld ms\n", toString(prime).c_str(), (long long)std::chrono::duration_cast<std::chrono::milliseconds>(elapsed).count());
-	//}
+	
 	{
 		
 		printf("Generate RSA keys.");
 		auto start = std::chrono::high_resolution_clock::now();
 
-		auto p = BigNum::findPrime<512>(BigNum::Num<512>(1) << 511);
-		auto q = BigNum::findPrime<512>((BigNum::Num<512>(1) << 511) + (BigNum::Num<512>(1) << 32));
+		BigNum::Num<512> p = BigNum::randPrime<512>();
+		BigNum::Num<512> q = BigNum::randPrime<512>();
 
-		auto N = p * q;
-		auto t = (p - 1) * (q -1);
-		auto e = BigNum::Num<1024>(65537);
-		auto d = BigNum::modInv(e, t);
+		BigNum::Num<1024> N = p * q;
+		BigNum::Num<1024> t = N - p - q +1; // (p - 1)(q - 1) = pq - p - q + 1 = N - p - q + 1
+		BigNum::Num<1024> e = BigNum::Num<1024>(65537);
+		BigNum::Num<1024> d = BigNum::modInv(e, t);
 
 		auto qinvp = BigNum::modInv(q, p);
 		auto dp = d % (p - 1);
@@ -311,7 +307,7 @@ int main()
 		auto elapsed = stop - start;
 		printf(" duration - %lld ms\n", (long long)std::chrono::duration_cast<std::chrono::milliseconds>(elapsed).count());
 
-		std::vector<BigNum::Digit> testdata(10240);
+		std::vector<BigNum::Digit> testdata(512);
 		std::generate(std::begin(testdata), std::end(testdata), []() {return rand() % 256; });
 
 		std::vector<BigNum::Digit> decrypted;

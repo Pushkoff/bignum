@@ -855,11 +855,26 @@ namespace BigNum
 		return false;
 	}
 
+	//numbers from HAC table 4.3
+	int millerRabinProbes(int N)
+	{
+		if (N>=600) return 2; 
+		if (N>=550) return 4;
+		if (N>=500) return 5;
+		if (N>=400) return 6;
+		if (N>=350) return 7;
+		if (N>=300) return 9;
+		if (N>=250) return 12;
+		if (N>=200) return 15;
+		if (N>=150) return 18;
+		if (N>=100) return 27;
+		            return 40;
+	}
 
 	template<int N>
 	bool millerRabinTest(const BigNum::Num<N>& num) noexcept
 	{
-		constexpr int times = 3;
+		int times = millerRabinProbes(N);
 		for (int i = 0; i < times; i++)
 		{
 			BigNum::Num<N> a = (rand<N>() % (num - 2)) + 2;
@@ -885,38 +900,72 @@ namespace BigNum
 		739,    743,    751,    757,    761,    769,    773,    787,    797,    809,
 		811,    821,    823,    827,    829,    839,    853,    857,    859,    863,
 		877,    881,    883,    887,    907,    911,    919,    929,    937,    941,
-		947,    953,    967,    971,    977,    983,    991,    997, };
+		947,    953,    967,    971,    977,    983,    991,    997,   1009,   1013, 
+	   1019,   1021,   1031,   1033,   1039,   1049,   1051,   1061,   1063,   1069, 
+	   1087,   1091,   1093,   1097,   1103,   1109,   1117,   1123,   1129,   1151, 
+	   1153,   1163,   1171,   1181,   1187,   1193,   1201,   1213,   1217,   1223, 
+	   1229,   1231,   1237,   1249,   1259,   1277,   1279,   1283,   1289,   1291, 
+	   1297,   1301,   1303,   1307,   1319,   1321,   1327,   1361,   1367,   1373, 
+	   1381,   1399,   1409,   1423,   1427,   1429,   1433,   1439,   1447,   1451, 
+	   1453,   1459,   1471,   1481,   1483,   1487,   1489,   1493,   1499,   1511, 
+	   1523,   1531,   1543,   1549,   1553,   1559,   1567,   1571,   1579,   1583, 
+	   1597,   1601,   1607,   1609,   1613,   1619,   1621,   1627,   1637,   1657, 
+	   1663,   1667,   1669,   1693,   1697,   1699,   1709,   1721,   1723,   1733, 
+	   1741,   1747,   1753,   1759,   1777,   1783,   1787,   1789,   1801,   1811, 
+	   1823,   1831,   1847,   1861,   1867,   1871,   1873,   1877,   1879,   1889, 
+	   1901,   1907,   1913,   1931,   1933,   1949,   1951,   1973,   1979,   1987, 
+	   1993,   1997,   1999,   2003,   2011,   2017,   2027,   2029,   2039,   2053,
+	   2063,   2069,   2081,   2083,   2087,   2089,   2099,   2111,   2113,   2129, 
+	   2131,   2137,   2141,   2143,   2153,   2161,   2179,   2203,   2207,   2213, 
+	   2221,   2237,   2239,   2243,   2251,   2267,   2269,   2273,   2281,   2287, 
+	   2293,   2297,   2309,   2311,   2333,   2339,   2341,   2347,   2351,   2357, 
+	   2371,   2377,   2381,   2383,   2389,   2393,   2399,   2411,   2417,   2423, 
+	   2437,   2441,   2447,   2459,   2467,   2473,   2477,   2503,   2521,   2531, 
+	   2539,   2543,   2549,   2551,   2557,   2579,   2591,   2593,   2609,   2617, 
+	   2621,   2633,   2647,   2657,   2659,   2663,   2671,   2677,   2683,   2687, 
+	   2689,   2693,   2699,   2707,   2711,   2713,   2719,   2729,   2731,   2741, 
+	   2749,   2753,   2767,   2777,   2789,   2791,   2797,   2801,   2803,   2819, 
+	   2833,   2837,   2843,   2851,   2857,   2861,   2879,   2887,   2897,   2903, 
+	   2909,   2917,   2927,   2939,   2953,   2957,   2963,   2969,   2971,   2999,};
 
 	constexpr int simplechecks(int size) noexcept
 	{
+		//return sizeof(primes) / sizeof(primes[0]);
 		return (size <= 256) ? 30 : ((size <= 512) ? 50 : ((size <= 1024) ? 80 : ((size <= 2048) ? 128 : (sizeof(primes) / sizeof(primes[0])))));
 	}
 
 	template<int N>
-	const Num<N> findPrime(const BigNum::Num<N>& from) noexcept
+	bool simpleTest(const BigNum::Num<N>& num)
+	{
+		for (int i = 0; i < sizeof(primes) / sizeof(primes[0]); i++)
+		{
+			if (num % primes[i] == 0)
+				return false;
+		}
+		return true;
+	}
+
+	template<int N>
+	const Num<N> nextPrimeOpt(const BigNum::Num<N>& from) noexcept
 	{
 		BigNum::Num<N> prime = from | 1;
 
-		unsigned short rests[simplechecks(N)] = { 0 };
+		unsigned int rests[simplechecks(N)] = { 0 };
 
-		bool simpleTest = true;
+		bool simpleTestPassed = true;
 		for (int i = 0; i < sizeof(rests) / sizeof(rests[0]); i++)
 		{
 			rests[i] = prime % primes[i];
-			simpleTest &= (rests[i] != 0);
+			simpleTestPassed = simpleTestPassed && (rests[i] != 0);
 		}
 
-		while (!(simpleTest && millerRabinTest(prime)))
+		while (!(simpleTestPassed && millerRabinTest(prime)))
 		{
-			simpleTest = true;
+			simpleTestPassed = true;
 			for (int i = 0; i < sizeof(rests) / sizeof(rests[0]); i++)
 			{
-				rests[i] += 2;
-				if (rests[i] >= primes[i])
-				{
-					rests[i] -= primes[i];
-					simpleTest &= (rests[i] != 0);
-				}
+				rests[i] = (rests[i] + 2) % primes[i];
+				simpleTestPassed = simpleTestPassed && (rests[i] != 0);
 			}
 			prime = prime + 2;
 		}
@@ -925,10 +974,47 @@ namespace BigNum
 	}
 
 	template<int N>
-	const Num<N> randPrime() noexcept
+	const Num<N> nextPrime(const BigNum::Num<N>& from) noexcept
 	{
-		BigNum::Num<N> num = rand<N>() | (BigNum::Num<N>(1) | (BigNum::Num<N>(1) << (N - 1)));
-		return findPrime(num);
+		BigNum::Num<N> prime = from | 1;
+
+		while (!(simpleTest(prime) && millerRabinTest(prime)))
+		{
+			prime = prime + 2;
+		}
+
+		return prime;
+	}
+
+	enum class RandType
+	{
+		Simple,
+		FindNext,
+		FindNextOpt,
+	};
+
+	template<int N>
+	const Num<N> randPrime(RandType type = RandType::Simple) noexcept
+	{
+		static BigNum::Num<N> mask = (BigNum::Num<N>(1) | (BigNum::Num<N>(1) << (N - 1)));
+		BigNum::Num<N> num = rand<N>() | mask;
+		switch(type)
+		{
+		case RandType::FindNext:
+			return nextPrime(num);
+		case RandType::FindNextOpt:
+			return nextPrimeOpt(num);
+		case RandType::Simple:
+		default:
+			{
+				while (!(simpleTest(num) && millerRabinTest(num)))
+				{
+					num = rand<N>() | mask;
+				}
+				return num;
+			}
+		}
+		//return nextPrime(num);
 	}
 
 	namespace operators
@@ -950,6 +1036,58 @@ namespace BigNum
 		BigNum::Num<1024> operator "" _bn1024()
 		{
 			BigNum::Num<1024> ret(0);
+			char buf[sizeof...(args)] = { args... };
+			for (char i : buf)
+			{
+				assert(isdigit(i));
+				ret = ret * 10 + BigNum::Digit(i - '0');
+			}
+			return ret;
+		}
+		
+		template <char... args>
+		BigNum::Num<512> operator "" _bn512()
+		{
+			BigNum::Num<512> ret(0);
+			char buf[sizeof...(args)] = { args... };
+			for (char i : buf)
+			{
+				assert(isdigit(i));
+				ret = ret * 10 + BigNum::Digit(i - '0');
+			}
+			return ret;
+		}
+		
+		template <char... args>
+		BigNum::Num<256> operator "" _bn256()
+		{
+			BigNum::Num<256> ret(0);
+			char buf[sizeof...(args)] = { args... };
+			for (char i : buf)
+			{
+				assert(isdigit(i));
+				ret = ret * 10 + BigNum::Digit(i - '0');
+			}
+			return ret;
+		}
+		
+		template <char... args>
+		BigNum::Num<128> operator "" _bn128()
+		{
+			BigNum::Num<128> ret(0);
+			char buf[sizeof...(args)] = { args... };
+			for (char i : buf)
+			{
+				assert(isdigit(i));
+				ret = ret * 10 + BigNum::Digit(i - '0');
+			}
+			return ret;
+		}
+		
+		template <char... args>
+		BigNum::Num<64> operator "" _bn64()
+		{
+			BigNum::Num<64> ret(0);
 			char buf[sizeof...(args)] = { args... };
 			for (char i : buf)
 			{
