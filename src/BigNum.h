@@ -819,11 +819,10 @@ namespace BigNum
 		MonMul<N> monMod((mod));
 		Num<N> ret = monMod.In(Num<N>(1));
 		Num<N> baseIn = monMod.In(base);
-		Num<N> power[4];
-		power[0] = monMod.In(Num<N>(1));
-		power[1] = baseIn;
-		power[2] = monMod(baseIn, baseIn);
-		power[3] = monMod(power[2], baseIn);
+		Num<N> power[3];
+		power[0] = baseIn;
+		power[1] = monMod(baseIn, baseIn);
+		power[2] = monMod(power[1], baseIn);
 
 		int realExpSize = Num<M>::Size;
 		while (realExpSize > 0 && exp[realExpSize - 1] == 0)
@@ -834,7 +833,8 @@ namespace BigNum
 			ret = monMod(ret, ret);
 			ret = monMod(ret, ret);
 			int p = (exp.bit(i * 2 + 1) ? 1 : 0) * 2 + (exp.bit(i * 2) ? 1 : 0);
-			ret = monMod(ret, power[p]);
+			if (p > 0)
+				ret = monMod(ret, power[p - 1]);
 		}
 		return monMod.Out(ret);
 	}
