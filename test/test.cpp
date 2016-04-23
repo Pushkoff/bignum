@@ -11,14 +11,15 @@ template<int N>
 std::string toString(const BigNum::Num<N>& num)
 {
 	std::string ret;
-	BigNum::Num<N> Q = num, R;
+	BigNum::Num<N> Q = num;
+	int R;
 
-	while (Q > BigNum::Num<N>(0))
+	while (Q > 0)
 	{
-		R = Q % BigNum::Num<N>(10);
-		Q = Q / BigNum::Num<N>(10);
+		R = Q % 10;
+		Q = Q / 10;
 		assert(R < 10);
-		ret.push_back(R[0] + '0');
+		ret.push_back(R + '0');
 	}
 	std::reverse(ret.begin(), ret.end());
 	return ret;
@@ -31,7 +32,7 @@ const BigNum::Num<N> fromString(const char* str)
 	while (*str && isdigit(*str))
 	{
 		ret = ret * 10;
-		ret = ret + BigNum::Num<N>(*str - '0');
+		ret = ret + (*str - '0');
 		str++;
 	}
 	return ret;

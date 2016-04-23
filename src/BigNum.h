@@ -457,6 +457,31 @@ namespace BigNum
 		return q;
 	}
 
+	template<int N, int M>
+	Num<M> mod(Num<N> n, const Num<M>& d) noexcept
+	{
+		const std::array<Num<M + DigitSizeBits>, DigitSizeBits> shiftedD = calcShiftedD(d);
+
+		Digit* qbeg = n.end() - 1;
+		Digit* qend = n.end();
+
+		for (int i = Num<N>::Size; i-->0;)
+		{
+			if (Core::cmp(qbeg, qend, d.begin(), d.end()) >= 0)
+			{
+				for (int j = DigitSizeBits; j-- > 0;)
+				{
+					if (Core::cmp(qbeg, qend, shiftedD[j].begin(), shiftedD[j].end()) >= 0)
+					{
+						Core::sub(qbeg, qend, shiftedD[j].begin(), shiftedD[j].end());
+					}
+				}
+			}
+			qbeg--;
+		}
+		return n;
+	}
+
 	template<int N>
 	Num<N> div(Num<N>& n, const Digit d) noexcept
 	{
@@ -507,12 +532,7 @@ namespace BigNum
 	template<int N, int M>
 	const Num<M> operator % (const Num<N>& v1, const Num<M>& v2) noexcept
 	{
-		if (v1 < v2)
-			return v1;
-
-		Num<N> q = v1;
-		div(q, v2);
-		return q;
+		return mod(v1, v2);
 	}
 
 	template<int N>
@@ -689,9 +709,9 @@ namespace BigNum
 	}
 
 	template<int N>
-	const Num<N> modExp(const Num<N>& base, const Num<N>& exp, const Num<N>& mod) noexcept
+	const Num<N> modExp(const Num<N>& base, const Num<N>& exp, const Num<N>& modulo) noexcept
 	{
-		if (mod == 1)
+		if (modulo == 1)
 			return Num<N>(0);
 
 		Num<N> result(1);
@@ -704,20 +724,12 @@ namespace BigNum
 
 		for (int i = realExpSize * DigitSizeBits; i-->0;)
 		{
-			{
-				Num<2 * N> q = result * result;
-				div(q, mod);
-				result = q;
-			}
+			result = (result * result) % modulo;
 			if (exp.bit(i))
-			{
-				Num<2 * N> q = result * power;
-				div(q, mod);
-				result = q;
-			}
+				result = (result * power) % modulo;
 		}
 
-		return Num<N>(result);
+		return result;
 	}
 
 	template<int N>
