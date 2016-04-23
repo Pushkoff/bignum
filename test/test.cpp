@@ -37,6 +37,9 @@ const BigNum::Num<N> fromString(const char* str)
 	return ret;
 }
 
+int TestsPass = 0;
+int TestsFailed = 0;
+
 template<typename Fn>
 void doTest(Fn fn, const char* testName)
 {
@@ -45,10 +48,12 @@ void doTest(Fn fn, const char* testName)
 	bool ret = fn();
 	auto stop = std::chrono::high_resolution_clock::now();
 	auto elapsed = stop - start;
+	assert(ret);
+	(ret ? TestsPass : TestsFailed)++;
 	printf("%s\n   %s - duration - %lld ms\n", testName, ret ? "Ok" : "Fail", (long long)std::chrono::duration_cast<std::chrono::milliseconds>(elapsed).count());
 }
 
-#define test(a) do{  doTest([&](){ return a; }, #a); assert(ret); }while(false);
+#define test(a) do{  doTest([&](){ return a; }, #a); }while(false);
 
 #define PROFILING 0
 
@@ -56,6 +61,7 @@ int main()
 {
 #if PROFILING
 	auto prime = BigNum::nextPrime<2048>(BigNum::Num<2048>(1) << 2047);
+	printf("%s\n", toString(prime).c_str());
 #else
 	//srand(time(nullptr));
 	
@@ -64,7 +70,7 @@ int main()
 	test(BigNum::Num<256>(fromString<128>("118802731")) == 118802731_bn1024);
 	test(fromString<128>(toString(fromString<128>("118802731")).c_str()) == fromString<128>("118802731"));
 
-	printf("%s\n", toString(fromString<128>("118802731")).c_str());
+	test(toString(fromString<128>("118802731"))== "118802731");
 
 	test(BigNum::Num<64>(0) == BigNum::Num<64>(0));
 	test(BigNum::Num<64>(0) != BigNum::Num<64>(1));
@@ -87,7 +93,7 @@ int main()
 		fact = fact * BigNum::Num<32>(i);
 	}
 	printf("100!=%s\n", toString(fact).c_str());
-	test(fact == fromString<1024>("93326215443944152681699238856266700490715968264381621468592963895217599993229915608941463976156518286253697920827223758251185210916864000000000000000000000000"));
+	test(fact == 93326215443944152681699238856266700490715968264381621468592963895217599993229915608941463976156518286253697920827223758251185210916864000000000000000000000000_bn1024);
 
 	test((BigNum::Num<64>(1) > BigNum::Num<64>(0)));
 	test((BigNum::Num<64>(1) < BigNum::Num<64>(0)) == false);
@@ -116,7 +122,7 @@ int main()
 	test((BigNum::Num<64>(135056 >> 12) == BigNum::shift_right(BigNum::Num<64>(135056), 12)));
 	test((BigNum::Num<64>(13505675 >> 15) == BigNum::shift_right(BigNum::Num<64>(13505675), 15)));
 	test((BigNum::Num<64>(13505675 >> 22) == BigNum::shift_right(BigNum::Num<64>(13505675), 22)));
-	test(BigNum::Num<1024>(1) << 1023 == fromString<1024>("89884656743115795386465259539451236680898848947115328636715040578866337902750481566354238661203768010560056939935696678829394884407208311246423715319737062188883946712432742638151109800623047059726541476042502884419075341171231440736956555270413618581675255342293149119973622969239858152417678164812112068608"));
+	test(BigNum::Num<1024>(1) << 1023 == 89884656743115795386465259539451236680898848947115328636715040578866337902750481566354238661203768010560056939935696678829394884407208311246423715319737062188883946712432742638151109800623047059726541476042502884419075341171231440736956555270413618581675255342293149119973622969239858152417678164812112068608_bn1024);
 
 	{
 		bool passed = true;
@@ -219,6 +225,7 @@ int main()
 	test(BigNum::monModExp<32>(BigNum::Num<32>(4), BigNum::Num<32>(1), BigNum::Num<32>(497)) == BigNum::Num<32>(4));
 	test(BigNum::modExp<64>(fromString<64>("8814054284918744181"), fromString<64>("1152921504606846977"), fromString<64>("9223372036854775817")) == fromString<64>("4724919961687496308"));
 	test(BigNum::monModExp<64>(fromString<64>("8814054284918744181"), fromString<64>("1152921504606846977"), fromString<64>("9223372036854775817")) == fromString<64>("4724919961687496308"));
+	test(BigNum::monModExp2ary<64>(fromString<64>("8814054284918744181"), fromString<64>("1152921504606846977"), fromString<64>("9223372036854775817")) == fromString<64>("4724919961687496308"));
 
 	//millerRabinPass(fromString<128>("118802731"), fromString<128>("74812"));
 
@@ -287,12 +294,11 @@ int main()
 	}
 	
 	{
-		
 		printf("Generate RSA keys.");
 		auto start = std::chrono::high_resolution_clock::now();
 
-		BigNum::Num<512> p = BigNum::randPrime<512>();
-		BigNum::Num<512> q = BigNum::randPrime<512>();
+		BigNum::Num<512> p = BigNum::randPrime<512>(BigNum::RandType::FindNext);
+		BigNum::Num<512> q = BigNum::randPrime<512>(BigNum::RandType::FindNext);
 
 		BigNum::Num<1024> N = p * q;
 		BigNum::Num<1024> t = N - p - q +1; // (p - 1)(q - 1) = pq - p - q + 1 = N - p - q + 1
@@ -356,7 +362,7 @@ int main()
 
 		printf("%s\n", (decrypted == testdata) ? "Ok" : "Fail");
 	}
-	printf("Press any key...");
+	printf("Passed %d tests\nFailed %d tests\nPress any key...", TestsPass, TestsFailed);
 	int ret = getchar();
 	(void)ret;
 #endif

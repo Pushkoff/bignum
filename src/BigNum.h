@@ -813,6 +813,32 @@ namespace BigNum
 		return monMod.Out(ret);
 	}
 
+	template<int N, int M, int K>
+	const Num<N> monModExp2ary(const Num<K>& base, const Num<M>& exp, const Num<N>& mod) noexcept
+	{
+		MonMul<N> monMod((mod));
+		Num<N> ret = monMod.In(Num<N>(1));
+		Num<N> baseIn = monMod.In(base);
+		Num<N> power[4];
+		power[0] = monMod.In(Num<N>(1));
+		power[1] = baseIn;
+		power[2] = monMod(baseIn, baseIn);
+		power[3] = monMod(power[2], baseIn);
+
+		int realExpSize = Num<M>::Size;
+		while (realExpSize > 0 && exp[realExpSize - 1] == 0)
+			realExpSize--;
+
+		for (int i = realExpSize * DigitSizeBits/2; i--> 0;)
+		{
+			ret = monMod(ret, ret);
+			ret = monMod(ret, ret);
+			int p = (exp.bit(i * 2 + 1) ? 1 : 0) * 2 + (exp.bit(i * 2) ? 1 : 0);
+			ret = monMod(ret, power[p]);
+		}
+		return monMod.Out(ret);
+	}
+
 	template<int N>
 	const Num<N> rand() noexcept
 	{
