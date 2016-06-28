@@ -5,13 +5,16 @@
 
 namespace BigNum
 {
-	typedef unsigned short Digit;
-	constexpr size_t DigitSizeBits = sizeof(Digit) * 8;
+	typedef unsigned short Word;
+	typedef unsigned long  DWord;
+	constexpr size_t DigitSizeBits = sizeof(Word) * 8;
 	constexpr unsigned int DigitMaskBits = ((1ull << DigitSizeBits) - 1ull);
+
+	static_assert(sizeof(DWord) > sizeof(Word), "cant detect overflow");
 
 	namespace Core
 	{
-		int cmp(const Digit* v1begin, const Digit* v1end, const Digit* v2begin, const Digit* v2end) noexcept
+		int cmp(const Word* v1begin, const Word* v1end, const Word* v2begin, const Word* v2end) noexcept
 		{
 			const std::ptrdiff_t v1len = v1end - v1begin;
 			const std::ptrdiff_t v2len = v2end - v2begin;
@@ -19,93 +22,89 @@ namespace BigNum
 
 			for(std::ptrdiff_t i = vmax; i-->0;)
 			{
-				const Digit v1 = (i < v1len) ? v1begin[i] : 0;
-				const Digit v2 = (i < v2len) ? v2begin[i] : 0;
+				const Word v1 = (i < v1len) ? v1begin[i] : 0;
+				const Word v2 = (i < v2len) ? v2begin[i] : 0;
 				if (v1 != v2)
 					return v1 > v2 ? 1 : -1;
 			}
 			return 0;
 		}
 
-		Digit adc(Digit& ret, const Digit v1, const Digit v2, Digit carry) noexcept
+		Word adc(Word& ret, const Word v1, const Word v2, const Word carry) noexcept
 		{
-			static_assert(sizeof(long long) > sizeof(Digit), "cant detect overflow");
-
-			long long sum = v1 + v2 + carry;
+			const DWord sum = v1 + v2 + carry;
 			ret = sum & DigitMaskBits;
-			return Digit(sum >> DigitSizeBits);
+			return Word(sum >> DigitSizeBits);
 		}
 
-		Digit add(Digit* rezbegin, Digit* rezend, const Digit* v1begin, const Digit* v1end, const Digit* v2begin, const Digit* v2end) noexcept
+		Word add(Word* rezbegin, Word* rezend, const Word* v1begin, const Word* v1end, const Word* v2begin, const Word* v2end) noexcept
 		{
 			const std::ptrdiff_t rezlen = rezend - rezbegin;
 			const std::ptrdiff_t v1len = v1end - v1begin;
 			const std::ptrdiff_t v2len = v2end - v2begin;
 
-			Digit carry = 0;
+			Word carry = 0;
 			for (std::ptrdiff_t i = 0; i < rezlen; i++)
 			{
-				const Digit v1 = (i < v1len) ? v1begin[i] : 0;
-				const Digit v2 = (i < v2len) ? v2begin[i] : 0;
+				const Word v1 = (i < v1len) ? v1begin[i] : 0;
+				const Word v2 = (i < v2len) ? v2begin[i] : 0;
 				carry = adc(rezbegin[i], v1, v2, carry);
 			}
 			return carry;
 		}
 
-		Digit add(Digit* rezbegin, Digit* rezend, const Digit* v2begin, const Digit* v2end) noexcept
+		Word add(Word* rezbegin, Word* rezend, const Word* v2begin, const Word* v2end) noexcept
 		{
 			const std::ptrdiff_t rezlen = rezend - rezbegin;
 			const std::ptrdiff_t v2len = v2end - v2begin;
 
-			Digit carry = 0;
+			Word carry = 0;
 			for (std::ptrdiff_t i = 0; i < rezlen && (i < v2len || carry != 0); i++)
 			{
-				const Digit v2 = (i < v2len) ? v2begin[i] : 0;
+				const Word v2 = (i < v2len) ? v2begin[i] : 0;
 				carry = adc(rezbegin[i], rezbegin[i], v2, carry);
 			}
 			return carry;
 		}
 
-		Digit sbc(Digit& ret, const Digit v1, const Digit v2, Digit carry) noexcept
+		Word sbc(Word& ret, const Word v1, const Word v2, const Word carry) noexcept
 		{
-			static_assert(sizeof(long long) > sizeof(Digit), "cant detect overflow");
-
-			long long sum = v1 - (v2 + carry);
+			const long long sum = v1 - (v2 + carry);
 			ret = sum & DigitMaskBits;
-			return Digit(-(sum >> DigitSizeBits));
+			return Word(-(sum >> DigitSizeBits));
 		}
 
-		Digit sub(Digit* rezbegin, Digit* rezend, const Digit* v1begin, const Digit* v1end, const Digit* v2begin, const Digit* v2end) noexcept
+		Word sub(Word* rezbegin, Word* rezend, const Word* v1begin, const Word* v1end, const Word* v2begin, const Word* v2end) noexcept
 		{
 			const std::ptrdiff_t rezlen = rezend - rezbegin;
 			const std::ptrdiff_t v1len = v1end - v1begin;
 			const std::ptrdiff_t v2len = v2end - v2begin;
 
-			Digit carry = 0;
+			Word carry = 0;
 			for (std::ptrdiff_t i = 0; i < rezlen; i++)
 			{
-				const Digit v1 = (i < v1len) ? v1begin[i] : 0;
-				const Digit v2 = (i < v2len) ? v2begin[i] : 0;
+				const Word v1 = (i < v1len) ? v1begin[i] : 0;
+				const Word v2 = (i < v2len) ? v2begin[i] : 0;
 				carry = sbc(rezbegin[i], v1, v2, carry);
 			}
 			return carry;
 		}
 
-		Digit sub(Digit* rezbegin, Digit* rezend, const Digit* v2begin, const Digit* v2end) noexcept
+		Word sub(Word* rezbegin, Word* rezend, const Word* v2begin, const Word* v2end) noexcept
 		{
 			const std::ptrdiff_t rezlen = rezend - rezbegin;
 			const std::ptrdiff_t v2len = v2end - v2begin;
 
-			Digit carry = 0;
+			Word carry = 0;
 			for (std::ptrdiff_t i = 0; i < rezlen && (i < v2len || carry != 0); i++)
 			{
-				const Digit v2 = (i < v2len) ? v2begin[i] : 0;
+				const Word v2 = (i < v2len) ? v2begin[i] : 0;
 				carry = sbc(rezbegin[i], rezbegin[i], v2, carry);
 			}
 			return carry;
 		}
 
-		void mul(Digit* rezbegin, Digit* rezend, const Digit* v1begin, const Digit* v1end, const Digit* v2begin, const Digit* v2end) noexcept
+		void mul(Word* rezbegin, Word* rezend, const Word* v1begin, const Word* v1end, const Word* v2begin, const Word* v2end) noexcept
 		{
 			//const std::ptrdiff_t rezlen = rezend - rezbegin;
 			const std::ptrdiff_t v1len = v1end - v1begin;
@@ -115,14 +114,14 @@ namespace BigNum
 						
 			for (std::ptrdiff_t v1it = 0; v1it < v1len; ++v1it)
 			{
-				unsigned long long int carry = 0;
+				DWord carry = 0;
 				for (std::ptrdiff_t v2it = 0; v2it < v2len; ++v2it)
 				{
-					carry += (unsigned long long int)(rezbegin[v1it + v2it]) + (unsigned long long int)(v1begin[v1it]) * (unsigned long long int)(v2begin[v2it]);
-					rezbegin[v1it + v2it] = Digit(carry & DigitMaskBits);
+					carry += (DWord)(rezbegin[v1it + v2it]) + (DWord)(v1begin[v1it]) * (DWord)(v2begin[v2it]);
+					rezbegin[v1it + v2it] = Word(carry & DigitMaskBits);
 					carry >>= DigitSizeBits;
 				}
-				rezbegin[v1it + v2len] = Digit(carry & DigitMaskBits);
+				rezbegin[v1it + v2len] = Word(carry & DigitMaskBits);
 			}
 		}
 	}
@@ -136,7 +135,7 @@ namespace BigNum
 			Size = (N + (DigitSizeBits) - 1) / (DigitSizeBits),
 		};
 	private:
-		Digit data[Size];
+		Word data[Size];
 	public:
 		Num() noexcept
 		{
@@ -195,8 +194,8 @@ namespace BigNum
 			return *this;
 		}
 
-		Digit& operator[](int i) noexcept { return data[i]; }
-		const Digit& operator[](int i) const noexcept { return data[i]; }
+		Word& operator[](int i) noexcept { return data[i]; }
+		const Word& operator[](int i) const noexcept { return data[i]; }
 
 		bool bit(int i) const noexcept
 		{
@@ -211,11 +210,11 @@ namespace BigNum
 			return ret;
 		}
 
-		Digit* begin() noexcept { return &data[0]; }
-		Digit* end() noexcept { return &data[Size]; }
+		Word* begin() noexcept { return &data[0]; }
+		Word* end() noexcept { return &data[Size]; }
 
-		const Digit* begin() const noexcept { return &data[0]; }
-		const Digit* end() const noexcept { return &data[Size]; }
+		const Word* begin() const noexcept { return &data[0]; }
+		const Word* end() const noexcept { return &data[Size]; }
 	};
 
 	template<int N, int M>
@@ -226,7 +225,7 @@ namespace BigNum
 	}
 
 	template<int N>
-	const Num<N> operator + (Num<N> v1, Digit v2) noexcept
+	const Num<N> operator + (Num<N> v1, Word v2) noexcept
 	{
 		Core::add(v1.begin(), v1.end(), &v2, (&v2) + 1);
 		return v1;
@@ -246,7 +245,7 @@ namespace BigNum
 	}
 
 	template<int N>
-	const Num<N> operator - (Num<N> v1, Digit v2) noexcept
+	const Num<N> operator - (Num<N> v1, Word v2) noexcept
 	{
 		Core::sub(v1.begin(), v1.end(), &v2, (&v2) + 1);
 		return v1;
@@ -261,7 +260,7 @@ namespace BigNum
 	}
 
 	template<int N>
-	const Num<N + DigitSizeBits> operator * (const Num<N>& v1, Digit v2) noexcept
+	const Num<N + DigitSizeBits> operator * (const Num<N>& v1, Word v2) noexcept
 	{
 		Num<N + DigitSizeBits> rez(0);
 		Core::mul(rez.begin(), rez.end(), v1.begin(), v1.end(), &v2, (&v2) + 1);
@@ -271,13 +270,13 @@ namespace BigNum
 	template<int N, int M>
 	const bool operator == (const Num<N>& v1, const Num<M>& v2) noexcept
 	{
-		return Core::cmp(&v1[0], &v1[v1.Size], &v2[0], &v2[v2.Size]) == 0;
+		return Core::cmp(v1.begin(), v1.end(), v2.begin(), v2.end()) == 0;
 	}
 
 	template<int N>
-	const bool operator == (const Num<N>& v1, Digit v2) noexcept
+	const bool operator == (const Num<N>& v1, Word v2) noexcept
 	{
-		return Core::cmp(&v1[0], &v1[v1.Size], &v2, (&v2) + 1) == 0;
+		return Core::cmp(v1.begin(), v1.end(), &v2, (&v2) + 1) == 0;
 	}
 
 	template<int N, int M>
@@ -287,7 +286,7 @@ namespace BigNum
 	}
 	
 	template<int N>
-	const bool operator != (const Num<N>& v1, Digit v2) noexcept
+	const bool operator != (const Num<N>& v1, Word v2) noexcept
 	{
 		return !(v1 == v2);
 	}
@@ -295,49 +294,49 @@ namespace BigNum
 	template<int N, int M>
 	const bool operator > (const Num<N>& v1, const Num<M>& v2) noexcept
 	{
-		return Core::cmp(&v1[0], &v1[v1.Size], &v2[0], &v2[v2.Size]) > 0;
+		return Core::cmp(v1.begin(), v1.end(), v2.begin(), v2.end()) > 0;
 	}
 
 	template<int N>
-	const bool operator > (const Num<N>& v1, Digit v2) noexcept
+	const bool operator > (const Num<N>& v1, Word v2) noexcept
 	{
-		return Core::cmp(&v1[0], &v1[v1.Size], &v2, (&v2) + 1) > 0;
+		return Core::cmp(v1.begin(), v1.end(), &v2, (&v2) + 1) > 0;
 	}
 
 	template<int N, int M>
 	const bool operator >= (const Num<N>& v1, const Num<M>& v2) noexcept
 	{
-		return Core::cmp(&v1[0], &v1[v1.Size], &v2[0], &v2[v2.Size]) >= 0;
+		return Core::cmp(v1.begin(), v1.end(), v2.begin(), v2.end()) >= 0;
 	}
 
 	template<int N>
-	const bool operator >= (const Num<N>& v1, Digit v2) noexcept
+	const bool operator >= (const Num<N>& v1, Word v2) noexcept
 	{
-		return Core::cmp(&v1[0], &v1[v1.Size], &v2, (&v2) + 1) >= 0;
+		return Core::cmp(v1.begin(), v1.end(), &v2, (&v2) + 1) >= 0;
 	}
 
 	template<int N, int M>
 	const bool operator < (const Num<N>& v1, const Num<M>& v2) noexcept
 	{
-		return Core::cmp(&v1[0], &v1[v1.Size], &v2[0], &v2[v2.Size]) < 0;
+		return Core::cmp(v1.begin(), v1.end(), v2.begin(), v2.end()) < 0;
 	}
 
 	template<int N>
-	const bool operator < (const Num<N>& v1, Digit v2) noexcept
+	const bool operator < (const Num<N>& v1, Word v2) noexcept
 	{
-		return Core::cmp(&v1[0], &v1[v1.Size], &v2, (&v2) + 1) < 0;
+		return Core::cmp(v1.begin(), v1.end(), &v2, (&v2) + 1) < 0;
 	}
 
 	template<int N, int M>
 	const bool operator <= (const Num<N>& v1, const Num<M>& v2) noexcept
 	{
-		return Core::cmp(&v1[0], &v1[v1.Size], &v2[0], &v2[v2.Size]) <= 0;
+		return Core::cmp(v1.begin(), v1.end(), v2.begin(), v2.end()) <= 0;
 	}
 
 	template<int N>
-	const bool operator <= (const Num<N>& v1, Digit v2) noexcept
+	const bool operator <= (const Num<N>& v1, Word v2) noexcept
 	{
-		return Core::cmp(&v1[0], &v1[v1.Size], &v2, (&v2) + 1) <= 0;
+		return Core::cmp(v1.begin(), v1.end(), &v2, (&v2) + 1) <= 0;
 	}
 
 	template<int N>
@@ -361,11 +360,11 @@ namespace BigNum
 			}
 			else
 			{
-				unsigned long long int carry = 0;
+				DWord carry = 0;
 				for (int i = bytes; i < Num<N>::Size; i++)
 				{
-					unsigned long long int val = static_cast<unsigned long long int>(v[i - bytes]) << bits;
-					ret[i] = static_cast<Digit>(val | carry);
+					DWord val = static_cast<DWord>(v[i - bytes]) << bits;
+					ret[i] = static_cast<Word>(val | carry);
 					carry = val >> DigitSizeBits;
 				}
 			}
@@ -400,12 +399,12 @@ namespace BigNum
 			}
 			else
 			{
-				unsigned long long int carry = v[bytes];
+				DWord carry = v[bytes];
 				for (int i = 0; i < Num<N>::Size - bytes; i++)
 				{
-					unsigned long long int val = (static_cast<unsigned long long int>(((i + bytes + 1) < Num<N>::Size) ? v[i + bytes + 1] : 0) << DigitSizeBits);
+					DWord val = (static_cast<DWord>(((i + bytes + 1) < Num<N>::Size) ? v[i + bytes + 1] : 0) << DigitSizeBits);
 					val = (val | carry);
-					ret[i] = static_cast<Digit>(val >> bits);
+					ret[i] = static_cast<Word>(val >> bits);
 					carry = val >> (DigitSizeBits);
 				}
 			}
@@ -436,12 +435,12 @@ namespace BigNum
 
 		const std::array<Num<M + DigitSizeBits>, DigitSizeBits> shiftedD = calcShiftedD(d);
 
-		Digit* qbeg = n.end()-1;
-		Digit* qend = n.end();
+		Word* qbeg = n.end()-1;
+		Word* qend = n.end();
 
 		for (int i = Num<N>::Size; i-->0;)
 		{
-			Digit val = 0;
+			Word val = 0;
 			if (Core::cmp(qbeg, qend, d.begin(), d.end()) >= 0)
 			{
 				for (int j = DigitSizeBits; j-- > 0;)
@@ -464,8 +463,8 @@ namespace BigNum
 	{
 		const std::array<Num<M + DigitSizeBits>, DigitSizeBits> shiftedD = calcShiftedD(d);
 
-		Digit* qbeg = n.end() - 1;
-		Digit* qend = n.end();
+		Word* qbeg = n.end() - 1;
+		Word* qend = n.end();
 
 		for (int i = Num<N>::Size; i-->0;)
 		{
@@ -485,33 +484,33 @@ namespace BigNum
 	}
 
 	template<int N>
-	Num<N> div(Num<N>& n, const Digit d) noexcept
+	Num<N> div(Num<N>& n, const Word d) noexcept
 	{
 		Num<N> q(0);
-		unsigned long long int rest = 0;
+		DWord rest = 0;
 		for (int i = Num<N>::Size; i--> 0;)
 		{
 			rest = rest << DigitSizeBits;
 			rest += n[i];
 			n[i] = 0;
-			q[i] = (Digit)(rest / d);
+			q[i] = (Word)(rest / d);
 			rest = rest % d;
 		}
-		n[0] = (Digit)rest;
+		n[0] = (Word)rest;
 		return q;
 	}
 
 	template<int N>
-	Digit mod(const Num<N>& n, const Digit d) noexcept
+	Word mod(const Num<N>& n, const Word d) noexcept
 	{
-		unsigned long long int rest = 0;
+		DWord rest = 0;
 		for (int i = Num<N>::Size; i--> 0;)
 		{
 			rest = rest << DigitSizeBits;
 			rest += n[i];
 			rest = rest % d;
 		}
-		return (Digit)rest;
+		return (Word)rest;
 	}
 
 	template<int N, int M>
@@ -525,7 +524,7 @@ namespace BigNum
 	}
 
 	template<int N>
-	const Num<N> operator / (const Num<N>& v1, const Digit v2) noexcept
+	const Num<N> operator / (const Num<N>& v1, const Word v2) noexcept
 	{
 		Num<N> q = v1;
 		return div(q, v2);
@@ -538,7 +537,7 @@ namespace BigNum
 	}
 
 	template<int N>
-	const Digit operator % (const Num<N>& v1, const Digit v2) noexcept
+	const Word operator % (const Num<N>& v1, const Word v2) noexcept
 	{
 		return mod(v1, v2);
 	}
@@ -570,7 +569,7 @@ namespace BigNum
 	}
 
 	template<int N>
-	const Num<N> operator & (const Num<N>& v1, const Digit v2) noexcept
+	const Num<N> operator & (const Num<N>& v1, const Word v2) noexcept
 	{
 		Num<N> rez(v1[0] & v2);
 		return rez;
@@ -590,7 +589,7 @@ namespace BigNum
 	}
 
 	template<int N>
-	const Num<N> operator | (const Num<N>& v1, const Digit v2) noexcept
+	const Num<N> operator | (const Num<N>& v1, const Word v2) noexcept
 	{
 		Num<N> rez = v1;
 		rez[0] = v1[0] | v2;
@@ -1015,7 +1014,7 @@ namespace BigNum
 	{
 		BigNum::Num<N> prime = from | 1;
 
-		unsigned int rests[simplechecks(N)] = { 0 };
+		unsigned short rests[simplechecks(N)] = { 0 };
 
 		bool simpleTestPassed = true;
 		for (int i = 0; i < sizeof(rests) / sizeof(rests[0]); i++)
@@ -1092,7 +1091,7 @@ namespace BigNum
 			for (char i : buf)
 			{
 				assert(isdigit(i));
-				ret = ret * 10 + BigNum::Digit(i - '0');
+				ret = ret * 10 + BigNum::Word(i - '0');
 			}
 			return ret;
 		}
@@ -1105,7 +1104,7 @@ namespace BigNum
 			for (char i : buf)
 			{
 				assert(isdigit(i));
-				ret = ret * 10 + BigNum::Digit(i - '0');
+				ret = ret * 10 + BigNum::Word(i - '0');
 			}
 			return ret;
 		}
@@ -1118,7 +1117,7 @@ namespace BigNum
 			for (char i : buf)
 			{
 				assert(isdigit(i));
-				ret = ret * 10 + BigNum::Digit(i - '0');
+				ret = ret * 10 + BigNum::Word(i - '0');
 			}
 			return ret;
 		}
@@ -1131,7 +1130,7 @@ namespace BigNum
 			for (char i : buf)
 			{
 				assert(isdigit(i));
-				ret = ret * 10 + BigNum::Digit(i - '0');
+				ret = ret * 10 + BigNum::Word(i - '0');
 			}
 			return ret;
 		}
@@ -1144,7 +1143,7 @@ namespace BigNum
 			for (char i : buf)
 			{
 				assert(isdigit(i));
-				ret = ret * 10 + BigNum::Digit(i - '0');
+				ret = ret * 10 + BigNum::Word(i - '0');
 			}
 			return ret;
 		}
@@ -1157,7 +1156,7 @@ namespace BigNum
 			for (char i : buf)
 			{
 				assert(isdigit(i));
-				ret = ret * 10 + BigNum::Digit(i - '0');
+				ret = ret * 10 + BigNum::Word(i - '0');
 			}
 			return ret;
 		}
