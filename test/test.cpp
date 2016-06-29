@@ -67,7 +67,7 @@ const BigNum::Num<N> fromHex(const char* str)
 		if (a >= 'a' && a <= 'f')
 			return a - 'a' + 10;
 		return -1;
-	}
+	};
 
 	BigNum::Num<N> ret;
 	while (*str && hexToNum(*str) != -1)
