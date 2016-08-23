@@ -1059,7 +1059,7 @@ namespace BigNum
 	};
 
 	template<int N>
-	const Num<N> randPrime(RandType type = RandType::Simple) noexcept
+	const Num<N> randPrime(RandType type = RandType::FindNext) noexcept
 	{
 		static BigNum::Num<N> mask = (BigNum::Num<N>(1) | (BigNum::Num<N>(1) << (N - 1)));
 		BigNum::Num<N> num = rand<N>() | mask;

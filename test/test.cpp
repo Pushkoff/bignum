@@ -369,7 +369,7 @@ int main()
 			auto elapsed = stop - start;
 			printf(" duration - %lld ms\n", (long long)std::chrono::duration_cast<std::chrono::milliseconds>(elapsed).count());
 
-			std::vector<BigNum::Word> testdata(512);
+			std::vector<BigNum::Word> testdata(32);
 			std::generate(std::begin(testdata), std::end(testdata), []() {return rand() % 256; });
 
 			std::vector<BigNum::Word> decrypted;
