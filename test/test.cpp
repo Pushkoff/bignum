@@ -83,7 +83,7 @@ int TestsPass = 0;
 int TestsFailed = 0;
 
 template<typename Fn>
-void doTest(Fn fn, const char* testName)
+void doTest(Fn fn, const char* testName, const char* filename = "",  int fileLine = 0)
 {
 	srand(0);
 	auto start = std::chrono::high_resolution_clock::now();
@@ -91,12 +91,14 @@ void doTest(Fn fn, const char* testName)
 	auto stop = std::chrono::high_resolution_clock::now();
 	auto elapsed = stop - start;
 	(ret ? TestsPass : TestsFailed)++;
-	printf("%s\n   %s - duration - %lld ms\n", testName, ret ? "Ok" : "Fail", (long long)std::chrono::duration_cast<std::chrono::milliseconds>(elapsed).count());
+	printf("%3d  %s\n   %s - duration - %lld ms\n",fileLine, testName, ret ? "Ok" : "Fail", (long long)std::chrono::duration_cast<std::chrono::milliseconds>(elapsed).count());
 	
 	if (!ret) throw(1);
 }
 
-#define test(a) do{  doTest([&](){ return a; }, #a); }while(false);
+
+
+#define test(a) do{  doTest([&](){ return a; }, #a, __FILE__, __LINE__); }while(false);
 
 #define PROFILING 0
 
