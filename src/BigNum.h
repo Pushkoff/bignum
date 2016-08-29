@@ -170,21 +170,18 @@ namespace BigNum
 		template<int N, int M, int K>
         void mul(Word (&rez)[N], const Word (&v1)[M], const Word (&v2)[K]) noexcept
 		{
-			const int v1len = M;
-			const int v2len = K;
-
 			static_assert((N) >= (M) + (K), "");
 						
-			for (int v1it = 0; v1it < v1len; ++v1it)
+			for (int v1it = 0; v1it < M; ++v1it)
 			{
 				DWord carry = 0;
-				for (int v2it = 0; v2it < v2len; ++v2it)
+				for (int v2it = 0; v2it < K; ++v2it)
 				{
 					carry += (DWord)(rez[v1it + v2it]) + (DWord)(v1[v1it]) * (DWord)(v2[v2it]);
 					rez[v1it + v2it] = Word(carry & WordMaskBits);
 					carry >>= WordSizeBits;
 				}
-				rez[v1it + v2len] = Word(carry & WordMaskBits);
+				rez[v1it + K] = Word(carry & WordMaskBits);
 			}
 		}
 	}
@@ -289,10 +286,12 @@ namespace BigNum
 	}
 
 	template<int N>
-	const Num<N> operator + (Num<N> v1, Word v2) noexcept
+	const Num<N> operator + (const Num<N>& v1, Word v2) noexcept
 	{
-		Core::add(v1.begin(), v1.end(), &v2, (&v2) + 1);
-		return v1;
+		Num<N> ret;
+		const Word a2[] = {v2};
+		Core::add(ret.data, v1.data, a2);
+		return ret;
 	}
 
 	template<int N>
@@ -310,10 +309,12 @@ namespace BigNum
 	}
 
 	template<int N>
-	const Num<N> operator - (Num<N> v1, Word v2) noexcept
+	const Num<N> operator - (const Num<N>& v1, Word v2) noexcept
 	{
-		Core::sub(v1.begin(), v1.end(), &v2, (&v2) + 1);
-		return v1;
+		Num<N> ret;
+		const Word a2[] = { v2 };
+		Core::sub(ret.data, v1.data, a2);
+		return ret;
 	}
 
 	template<int N, int M>
@@ -328,7 +329,8 @@ namespace BigNum
 	const Num<N + WordSizeBits> operator * (const Num<N>& v1, Word v2) noexcept
 	{
 		Num<N + WordSizeBits> rez(0);
-		Core::mul(rez.begin(), rez.end(), v1.begin(), v1.end(), &v2, (&v2) + 1);
+		const Word a2[] = { v2 };
+		Core::mul(rez.data, v1.data, a2);
 		return rez;
 	}
 
@@ -341,7 +343,8 @@ namespace BigNum
 	template<int N>
 	const bool operator == (const Num<N>& v1, Word v2) noexcept
 	{
-		return Core::cmp(v1.begin(), v1.end(), &v2, (&v2) + 1) == 0;
+		const Word a2[] = { v2 };
+		return Core::cmp(v1.data, a2) == 0;
 	}
 
 	template<int N, int M>
@@ -365,7 +368,8 @@ namespace BigNum
 	template<int N>
 	const bool operator > (const Num<N>& v1, Word v2) noexcept
 	{
-		return Core::cmp(v1.begin(), v1.end(), &v2, (&v2) + 1) > 0;
+		const Word a2[] = { v2 };
+		return Core::cmp(v1.data, a2) > 0;
 	}
 
 	template<int N, int M>
@@ -377,7 +381,8 @@ namespace BigNum
 	template<int N>
 	const bool operator >= (const Num<N>& v1, Word v2) noexcept
 	{
-		return Core::cmp(v1.begin(), v1.end(), &v2, (&v2) + 1) >= 0;
+		const Word a2[] = { v2 };
+		return Core::cmp(v1.data, a2) >= 0;
 	}
 
 	template<int N, int M>
@@ -389,7 +394,8 @@ namespace BigNum
 	template<int N>
 	const bool operator < (const Num<N>& v1, Word v2) noexcept
 	{
-		return Core::cmp(v1.begin(), v1.end(), &v2, (&v2) + 1) < 0;
+		const Word a2[] = { v2 };
+		return Core::cmp(v1.data, a2) < 0;
 	}
 
 	template<int N, int M>
@@ -401,7 +407,8 @@ namespace BigNum
 	template<int N>
 	const bool operator <= (const Num<N>& v1, Word v2) noexcept
 	{
-		return Core::cmp(v1.begin(), v1.end(), &v2, (&v2) + 1) <= 0;
+		const Word a2[] = { v2 };
+		return Core::cmp(v1.data, a2) <= 0;
 	}
 
 	template<int N>
@@ -849,12 +856,11 @@ namespace BigNum
 		const Num<N> operator()(const Num<N>& a, const Num<N>& b) const noexcept
 		{
 			Num<2*N> t = a * b;
-			//Num<N> m = (Num<N>(t & rmask) * ninv) & rmask;
 			Num<N> m = Num<N>(t) * ninv;
 			Num<N> u = (t + m * n) >> N;
 
 			//Num<2 * N> t1 = t;
-			//Core::mul(t1.begin(), t1.end(), m.begin(), m.end(), n.begin(), n.end());
+			//Core::muladd(t1.data, m.data, n.data);
 			//Num<N> u1 = (t1) >> N;
 			//assert(u == u1);
 
