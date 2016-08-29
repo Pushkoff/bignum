@@ -30,6 +30,23 @@ namespace BigNum
 			return 0;
 		}
 
+        template<int N, int M>
+      	int cmp(const Word (&v1)[N], const Word (&v2)[M]) noexcept
+		{
+			const int v1len = N;
+			const int v2len = M;
+			const int vmax = (v1len > v2len)? v1len : v2len;
+
+			for(int i = vmax; i-->0;)
+			{
+				const Word v1v = (i < v1len) ? v1[i] : 0;
+				const Word v2v = (i < v2len) ? v2[i] : 0;
+				if (v1v != v2v)
+					return v1v > v2v ? 1 : -1;
+			}
+			return 0;
+		}
+
 		Word adc(Word& ret, const Word v1, const Word v2, const Word carry) noexcept
 		{
 			const DWord sum = DWord(v1) + v2 + carry;
@@ -49,6 +66,19 @@ namespace BigNum
 				const Word v1 = (i < v1len) ? v1begin[i] : 0;
 				const Word v2 = (i < v2len) ? v2begin[i] : 0;
 				carry = adc(rezbegin[i], v1, v2, carry);
+			}
+			return carry;
+		}
+		
+		template<int N, int M, int K>
+		Word add(Word (&rez)[N], const Word (&v1)[M], const Word (&v2)[K]) noexcept
+		{
+			Word carry = 0;
+			for (int i = 0; i < N; i++)
+			{
+				const Word v1v = (i < M) ? v1[i] : 0;
+				const Word v2v = (i < K) ? v2[i] : 0;
+				carry = adc(rez[i], v1v, v2v, carry);
 			}
 			return carry;
 		}
@@ -90,6 +120,19 @@ namespace BigNum
 			return carry;
 		}
 
+		template<int N, int M, int K>
+		Word sub(Word (&rez)[N], const Word (&v1)[M], const Word (&v2)[K]) noexcept
+		{
+			Word carry = 0;
+			for (int i = 0; i < N; i++)
+			{
+				const Word v1v = (i < M) ? v1[i] : 0;
+				const Word v2v = (i < K) ? v2[i] : 0;
+				carry = sbc(rez[i], v1v, v2v, carry);
+			}
+			return carry;
+		}
+
 		Word sub(Word* rezbegin, Word* rezend, const Word* v2begin, const Word* v2end) noexcept
 		{
 			const std::ptrdiff_t rezlen = rezend - rezbegin;
@@ -106,7 +149,6 @@ namespace BigNum
 
 		void mul(Word* rezbegin, Word* rezend, const Word* v1begin, const Word* v1end, const Word* v2begin, const Word* v2end) noexcept
 		{
-			//const std::ptrdiff_t rezlen = rezend - rezbegin;
 			const std::ptrdiff_t v1len = v1end - v1begin;
 			const std::ptrdiff_t v2len = v2end - v2begin;
 
@@ -124,6 +166,27 @@ namespace BigNum
 				rezbegin[v1it + v2len] = Word(carry & WordMaskBits);
 			}
 		}
+		
+		template<int N, int M, int K>
+        void mul(Word (&rez)[N], const Word (&v1)[M], const Word (&v2)[K]) noexcept
+		{
+			const int v1len = M;
+			const int v2len = K;
+
+			static_assert((N) >= (M) + (K), "");
+						
+			for (int v1it = 0; v1it < v1len; ++v1it)
+			{
+				DWord carry = 0;
+				for (int v2it = 0; v2it < v2len; ++v2it)
+				{
+					carry += (DWord)(rez[v1it + v2it]) + (DWord)(v1[v1it]) * (DWord)(v2[v2it]);
+					rez[v1it + v2it] = Word(carry & WordMaskBits);
+					carry >>= WordSizeBits;
+				}
+				rez[v1it + v2len] = Word(carry & WordMaskBits);
+			}
+		}
 	}
 	
 	template<int N>
@@ -134,9 +197,9 @@ namespace BigNum
 		{
 			Size = (N + (WordSizeBits) - 1) / (WordSizeBits),
 		};
-	private:
+
 		Word data[Size];
-	public:
+
 		Num() noexcept
 		{
 			for (int i = 0; i < Size; i++)
@@ -218,10 +281,11 @@ namespace BigNum
 	};
 
 	template<int N, int M>
-	const Num<N> operator + (Num<N> v1, const Num<M>& v2) noexcept
+	const Num<N> operator + (const Num<N>& v1, const Num<M>& v2) noexcept
 	{
-		Core::add(v1.begin(), v1.end(), v2.begin(), v2.end());
-		return v1;
+		Num<N> ret;
+		Core::add(ret.data, v1.data, v2.data);
+		return ret;
 	}
 
 	template<int N>
@@ -238,10 +302,11 @@ namespace BigNum
 	}
 
 	template<int N, int M>
-	const Num<N> operator - (Num<N> v1, const Num<M>& v2) noexcept
+	const Num<N> operator - (const Num<N>& v1, const Num<M>& v2) noexcept
 	{
-		Core::sub(v1.begin(), v1.end(), v2.begin(), v2.end());
-		return v1;
+		Num<N> ret;
+		Core::sub(ret.data, v1.data, v2.data);
+		return ret;
 	}
 
 	template<int N>
@@ -255,7 +320,7 @@ namespace BigNum
 	const Num<N+M> operator * (const Num<N>& v1, const Num<M>& v2) noexcept
 	{
 		Num<N + M> rez(0);
-		Core::mul(rez.begin(), rez.end(), v1.begin(), v1.end(), v2.begin(), v2.end());
+		Core::mul(rez.data, v1.data, v2.data);
 		return rez;
 	}
 
@@ -270,7 +335,7 @@ namespace BigNum
 	template<int N, int M>
 	const bool operator == (const Num<N>& v1, const Num<M>& v2) noexcept
 	{
-		return Core::cmp(v1.begin(), v1.end(), v2.begin(), v2.end()) == 0;
+		return Core::cmp(v1.data, v2.data) == 0;
 	}
 
 	template<int N>
@@ -294,7 +359,7 @@ namespace BigNum
 	template<int N, int M>
 	const bool operator > (const Num<N>& v1, const Num<M>& v2) noexcept
 	{
-		return Core::cmp(v1.begin(), v1.end(), v2.begin(), v2.end()) > 0;
+		return Core::cmp(v1.data, v2.data) > 0;
 	}
 
 	template<int N>
@@ -306,7 +371,7 @@ namespace BigNum
 	template<int N, int M>
 	const bool operator >= (const Num<N>& v1, const Num<M>& v2) noexcept
 	{
-		return Core::cmp(v1.begin(), v1.end(), v2.begin(), v2.end()) >= 0;
+		return Core::cmp(v1.data, v2.data) >= 0;
 	}
 
 	template<int N>
@@ -318,7 +383,7 @@ namespace BigNum
 	template<int N, int M>
 	const bool operator < (const Num<N>& v1, const Num<M>& v2) noexcept
 	{
-		return Core::cmp(v1.begin(), v1.end(), v2.begin(), v2.end()) < 0;
+		return Core::cmp(v1.data, v2.data) < 0;
 	}
 
 	template<int N>
@@ -330,7 +395,7 @@ namespace BigNum
 	template<int N, int M>
 	const bool operator <= (const Num<N>& v1, const Num<M>& v2) noexcept
 	{
-		return Core::cmp(v1.begin(), v1.end(), v2.begin(), v2.end()) <= 0;
+		return Core::cmp(v1.data, v2.data) <= 0;
 	}
 
 	template<int N>
@@ -423,7 +488,7 @@ namespace BigNum
 	{
 		std::array<Num<N + WordSizeBits>, WordSizeBits> ret;
 		ret[0] = d;
-		for (int i = 1; i < WordSizeBits; i++)
+		for (unsigned int i = 1; i < WordSizeBits; i++)
 			ret[i] = ret[0] << i;
 		return ret;
 	}
@@ -786,7 +851,7 @@ namespace BigNum
 			Num<2*N> t = a * b;
 			//Num<N> m = (Num<N>(t & rmask) * ninv) & rmask;
 			Num<N> m = Num<N>(t) * ninv;
-			Num<N> u = (t + m* n) >> N;
+			Num<N> u = (t + m * n) >> N;
 
 			//Num<2 * N> t1 = t;
 			//Core::mul(t1.begin(), t1.end(), m.begin(), m.end(), n.begin(), n.end());
@@ -908,7 +973,7 @@ namespace BigNum
 		if (N>=200) return 15;
 		if (N>=150) return 18;
 		if (N>=100) return 27;
-		            return 40;
+		return 40;
 	}
 
 	template<int N>
@@ -1002,7 +1067,7 @@ namespace BigNum
 	template<int N>
 	bool simpleTest(const BigNum::Num<N>& num)
 	{
-		for (int i = 0; i < sizeof(primes) / sizeof(primes[0]); i++)
+		for (unsigned int i = 0; i < sizeof(primes) / sizeof(primes[0]); i++)
 		{
 			if (num % primes[i] == 0)
 				return false;
@@ -1018,7 +1083,7 @@ namespace BigNum
 		unsigned short rests[simplechecks(N)] = { 0 };
 
 		bool simpleTestPassed = true;
-		for (int i = 0; i < sizeof(rests) / sizeof(rests[0]); i++)
+		for (unsigned int i = 0; i < sizeof(rests) / sizeof(rests[0]); i++)
 		{
 			rests[i] = prime % primes[i];
 			simpleTestPassed = simpleTestPassed && (rests[i] != 0);
@@ -1027,7 +1092,7 @@ namespace BigNum
 		while (!(simpleTestPassed && millerRabinTest(prime)))
 		{
 			simpleTestPassed = true;
-			for (int i = 0; i < sizeof(rests) / sizeof(rests[0]); i++)
+			for (unsigned int i = 0; i < sizeof(rests) / sizeof(rests[0]); i++)
 			{
 				rests[i] = (rests[i] + 2) % primes[i];
 				simpleTestPassed = simpleTestPassed && (rests[i] != 0);
