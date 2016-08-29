@@ -153,13 +153,14 @@ namespace BigNum
 			const std::ptrdiff_t v2len = v2end - v2begin;
 
 			assert((rezend - rezbegin) >= (v1end - v1begin) + (v2end - v2begin));
-						
+			assert(std::any_of(rezbegin, rezend, [&](Word w) { return w > 0; }) == false);
+
 			for (std::ptrdiff_t v1it = 0; v1it < v1len; ++v1it)
 			{
 				DWord carry = 0;
 				for (std::ptrdiff_t v2it = 0; v2it < v2len; ++v2it)
 				{
-					carry += (DWord)(rezbegin[v1it + v2it]) + (DWord)(v1begin[v1it]) * (DWord)(v2begin[v2it]);
+					carry += DWord(rezbegin[v1it + v2it]) + DWord(v1begin[v1it]) * DWord(v2begin[v2it]);
 					rezbegin[v1it + v2it] = Word(carry & WordMaskBits);
 					carry >>= WordSizeBits;
 				}
@@ -171,13 +172,14 @@ namespace BigNum
         void mul(Word (&rez)[N], const Word (&v1)[M], const Word (&v2)[K]) noexcept
 		{
 			static_assert((N) >= (M) + (K), "");
-						
+			assert(std::any_of(std::begin(rez), std::end(rez), [&](Word w) { return w > 0; }) == false);
+
 			for (int v1it = 0; v1it < M; ++v1it)
 			{
 				DWord carry = 0;
 				for (int v2it = 0; v2it < K; ++v2it)
 				{
-					carry += (DWord)(rez[v1it + v2it]) + (DWord)(v1[v1it]) * (DWord)(v2[v2it]);
+					carry += DWord(rez[v1it + v2it]) + DWord(v1[v1it]) * DWord(v2[v2it]);
 					rez[v1it + v2it] = Word(carry & WordMaskBits);
 					carry >>= WordSizeBits;
 				}
