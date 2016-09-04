@@ -808,7 +808,7 @@ namespace BigNum
 		Num<N> ninv;
 		//Num<N> rmask;
 
-		MonMul(const Num<N>& _n) noexcept : n(_n)
+		explicit MonMul(const Num<N>& _n) noexcept : n(_n)
 		{
 			const Num<2 * N> r(Num<2 * N>(1) << N);
 
