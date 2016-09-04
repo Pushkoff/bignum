@@ -86,12 +86,13 @@ template<typename Fn>
 void doTest(Fn fn, const char* testName, const char* filename = "",  int fileLine = 0)
 {
 	srand(0);
+	printf("%3d  %s\n", fileLine, testName);
 	auto start = std::chrono::high_resolution_clock::now();
 	bool ret = fn();
 	auto stop = std::chrono::high_resolution_clock::now();
 	auto elapsed = stop - start;
 	(ret ? TestsPass : TestsFailed)++;
-	printf("%3d  %s\n   %s - duration - %lld ms\n",fileLine, testName, ret ? "Ok" : "Fail", (long long)std::chrono::duration_cast<std::chrono::milliseconds>(elapsed).count());
+	printf("   %s - duration - %lld ms\n", ret ? "Ok" : "Fail", (long long)std::chrono::duration_cast<std::chrono::milliseconds>(elapsed).count());
 	
 	if (!ret) throw(1);
 }
@@ -165,19 +166,21 @@ int main()
 		test((BigNum::Num<64>(0) <= BigNum::Num<64>(1)));
 		test((BigNum::Num<64>(1) <= BigNum::Num<64>(0)) == false);
 
-		test((BigNum::Num<64>(1 << 8) == BigNum::shift_left(BigNum::Num<64>(1), 8)));
-		test((BigNum::Num<64>(1 << 7) == BigNum::shift_left(BigNum::Num<64>(1), 7)));
-		test((BigNum::Num<64>(135 << 12) == BigNum::shift_left(BigNum::Num<64>(135), 12)));
-		test((BigNum::Num<64>(135056 << 12) == BigNum::shift_left(BigNum::Num<64>(135056), 12)));
-		test((BigNum::Num<64>(135056 << 7) == BigNum::shift_left(BigNum::Num<64>(135056), 7)));
-		test((BigNum::Num<64>(13056 << 15) == BigNum::shift_left(BigNum::Num<64>(13056), 15)));
+		test((BigNum::Num<64>(1) == BigNum::Num<64>(1) << 0));
+		test((BigNum::Num<64>(1 << 8) == BigNum::Num<64>(1) << 8));
+		test((BigNum::Num<64>(1 << 7) == BigNum::Num<64>(1) << 7));
+		test((BigNum::Num<64>(135 << 12) == BigNum::Num<64>(135) << 12));
+		test((BigNum::Num<64>(135056 << 12) == BigNum::Num<64>(135056) << 12));
+		test((BigNum::Num<64>(135056 << 7) == BigNum::Num<64>(135056) << 7));
+		test((BigNum::Num<64>(13056 << 15) == BigNum::Num<64>(13056) << 15));
 
-		test((BigNum::Num<64>(1) == BigNum::shift_right(BigNum::Num<64>(1 << 8), 8)));
-		test((BigNum::Num<64>(135056 >> 1) == BigNum::shift_right(BigNum::Num<64>(135056), 1)));
-		test((BigNum::Num<64>(135056 >> 4) == BigNum::shift_right(BigNum::Num<64>(135056), 4)));
-		test((BigNum::Num<64>(135056 >> 12) == BigNum::shift_right(BigNum::Num<64>(135056), 12)));
-		test((BigNum::Num<64>(13505675 >> 15) == BigNum::shift_right(BigNum::Num<64>(13505675), 15)));
-		test((BigNum::Num<64>(13505675 >> 22) == BigNum::shift_right(BigNum::Num<64>(13505675), 22)));
+		test((BigNum::Num<64>(1) == BigNum::Num<64>(1) >> 0));
+		test((BigNum::Num<64>(1) == BigNum::Num<64>(1 << 8) >> 8));
+		test((BigNum::Num<64>(135056 >> 1) == BigNum::Num<64>(135056) >> 1));
+		test((BigNum::Num<64>(135056 >> 4) == BigNum::Num<64>(135056) >> 4));
+		test((BigNum::Num<64>(135056 >> 12) == BigNum::Num<64>(135056) >> 12));
+		test((BigNum::Num<64>(13505675 >> 15) == BigNum::Num<64>(13505675) >> 15));
+		test((BigNum::Num<64>(13505675 >> 22) == BigNum::Num<64>(13505675) >> 22));
 		test(toString(89884656743115795386465259539451236680898848947115328636715040578866337902750481566354238661203768010560056939935696678829394884407208311246423715319737062188883946712432742638151109800623047059726541476042502884419075341171231440736956555270413618581675255342293149119973622969239858152417678164812112068608_bn1024) == "89884656743115795386465259539451236680898848947115328636715040578866337902750481566354238661203768010560056939935696678829394884407208311246423715319737062188883946712432742638151109800623047059726541476042502884419075341171231440736956555270413618581675255342293149119973622969239858152417678164812112068608")
 			test(BigNum::Num<1024>(1) << 1023 == 89884656743115795386465259539451236680898848947115328636715040578866337902750481566354238661203768010560056939935696678829394884407208311246423715319737062188883946712432742638151109800623047059726541476042502884419075341171231440736956555270413618581675255342293149119973622969239858152417678164812112068608_bn1024);
 

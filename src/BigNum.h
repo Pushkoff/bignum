@@ -186,6 +186,59 @@ namespace BigNum
 				rez[v1it + K] = Word(carry & WordMaskBits);
 			}
 		}
+		
+		template<unsigned int N>
+		void shl(Word (&rez)[N], const Word (&v)[N], unsigned int count) noexcept
+		{
+			assert(count < N*sizeof(Word)*8);
+
+			const unsigned int bytes = count / WordSizeBits;
+			const unsigned int bits = count % WordSizeBits;
+			if (bits == 0)
+			{
+				for (unsigned int i = N; i --> bytes;)
+				{
+					rez[i] = v[i - bytes];
+				}
+			}
+			else
+			{
+				DWord carry = 0;
+				for (unsigned int i = bytes; i < N; i++)
+				{
+					DWord val = static_cast<DWord>(v[i - bytes]) << bits;
+					rez[i] = static_cast<Word>(val | carry);
+					carry = val >> WordSizeBits;
+				}
+			}
+		}
+		
+		template<unsigned int N>
+		void shr(Word (&rez)[N], const Word (&v)[N], unsigned int count) noexcept
+		{
+			assert(count < N*sizeof(Word)*8);
+			
+			const unsigned int bytes = count / WordSizeBits;
+			const unsigned int bits = count % WordSizeBits;
+			if (bits == 0)
+			{
+				for (unsigned int i = 0; i < N - bytes; i++)
+				{
+					rez[i] = v[i + bytes];
+				}
+			}
+			else
+			{
+				DWord carry = v[bytes];
+				for (unsigned int i = 0; i < N - bytes; i++)
+				{
+					DWord val = (static_cast<DWord>(((i + bytes + 1) < N) ? v[i + bytes + 1] : 0) << WordSizeBits);
+					val = (val | carry);
+					rez[i] = static_cast<Word>(val >> bits);
+					carry = val >> (WordSizeBits);
+				}
+			}
+		}
 	}
 	
 	template<int N>
@@ -414,82 +467,21 @@ namespace BigNum
 	}
 
 	template<int N>
-	const Num<N> shift_left(const Num<N>& v, int count) noexcept
+	const Num<N> operator << (const Num<N>& v1, unsigned int bits) noexcept
 	{
 		Num<N> ret;
-		if (count == 0)
-		{
-			ret = v;
-		}
-		else if (count > 0 && count < N)
-		{
-			const int bytes = count / WordSizeBits;
-			const int bits = count % WordSizeBits;
-			if (bits == 0)
-			{
-				for (int i = Num<N>::Size - 1; i >= int(bytes); i--)
-				{
-					ret[i] = v[i - bytes];
-				}
-			}
-			else
-			{
-				DWord carry = 0;
-				for (int i = bytes; i < Num<N>::Size; i++)
-				{
-					DWord val = static_cast<DWord>(v[i - bytes]) << bits;
-					ret[i] = static_cast<Word>(val | carry);
-					carry = val >> WordSizeBits;
-				}
-			}
-		}
+		if (bits < N)
+			Core::shl(ret.data, v1.data, bits);
 		return ret;
 	}
 
 	template<int N>
-	const Num<N> operator << (const Num<N>& v1, int bits) noexcept
-	{
-		return shift_left(v1, bits);
-	}
-
-	template<int N>
-	const Num<N> shift_right(const Num<N>& v, int count) noexcept
+	const Num<N> operator >> (const Num<N>& v1, unsigned int bits) noexcept
 	{
 		Num<N> ret;
-		if (count == 0)
-		{
-			ret = v;
-		}
-		else if (count > 0 && count < N)
-		{
-			const int bytes = count / WordSizeBits;
-			const int bits = count % WordSizeBits;
-			if (bits == 0)
-			{
-				for (int i = 0; i < Num<N>::Size - bytes; i++)
-				{
-					ret[i] = v[i + bytes];
-				}
-			}
-			else
-			{
-				DWord carry = v[bytes];
-				for (int i = 0; i < Num<N>::Size - bytes; i++)
-				{
-					DWord val = (static_cast<DWord>(((i + bytes + 1) < Num<N>::Size) ? v[i + bytes + 1] : 0) << WordSizeBits);
-					val = (val | carry);
-					ret[i] = static_cast<Word>(val >> bits);
-					carry = val >> (WordSizeBits);
-				}
-			}
-		}
+		if (bits < N)
+			Core::shr(ret.data, v1.data, bits);
 		return ret;
-	}
-
-	template<int N>
-	const Num<N> operator >> (const Num<N>& v1, int bits) noexcept
-	{
-		return shift_right(v1, bits);
 	}
 
 	template<int N>
