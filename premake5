@@ -1,92 +1,96 @@
 #!/bin/sh
-
-tools_folder='.tools/'
-
-premake_url=
-premake_platform=
-premake_archive=
-premake_file=
-
-case "$OSTYPE" in
-  darwin*) premake_platform='macosx' ;; 
-  linux*) premake_platform='linux' ;;
-  cygwin*) premake_platform='windows' ;;
-  msys*) premake_platform='windows' ;;
-  '') 
-    case `uname` in
-      Linux*) premake_platform='linux' ;;
-      MSYS*) premake_platform='windows' ;;
-    esac
-    ;;
-  *) echo "unknown: $OSTYPE" && exit 1 ;;
-esac
-
-case "$premake_platform" in
-  macosx )
-    premake_file=${tools_folder}/premake5
-    premake_url="https://github.com/premake/premake-core/releases/download/v5.0.0-alpha10/premake-5.0.0-alpha10-macosx.tar.gz"
-    premake_archive='premake-5.0.0-alpha10-macosx.tar.gz'
-    ;;
-  linux )
-    premake_file=${tools_folder}/premake5
-    premake_url="https://github.com/premake/premake-core/releases/download/v5.0.0-alpha10/premake-5.0.0-alpha10-linux.tar.gz"
-    premake_archive='premake-5.0.0-alpha10-linux.tar.gz'
-    ;;
-  windows )
-    premake_file="${tools_folder}/premake5.exe"
-    premake_url="https://github.com/premake/premake-core/releases/download/v5.0.0-alpha10/premake-5.0.0-alpha10-windows.zip"
-    premake_archive='premake-5.0.0-alpha10-windows.zip'
-    ;;
-esac
-
-[ "${premake_file}" = "" ] && exit 1
-
-if [ ! -e "$premake_file" ]
+if [ `which premak5 &>/dev/null` ]
 then
-  [ -d ${tools_folder} ] || mkdir -p ${tools_folder}
-  base_folder="${PWD}"
-  cd "${tools_folder}"
+  premak5 "$@"
+else
+  tools_folder='.tools/'
   
-  echo "Downloading premake ${premake_url}"
-  if [ `which curl 2>/dev/null` ]
-  then
-    echo "Using curl"
-    curl -O -L -k -s "${premake_url}"
-  else
-      if [ `which wget 2>/dev/null` ]
-      then
-        echo "Using wget"
-        wget "${premake_url}" &>/dev/null
-      else
-        echo "Error. Have no tools for download" 
-      fi
-  fi
+  premake_url=
+  premake_platform=
+  premake_archive=
+  premake_file=
   
-  if [ -e "${premake_archive}" ]
+  case "$OSTYPE" in
+    darwin*) premake_platform='macosx' ;; 
+    linux*) premake_platform='linux' ;;
+    cygwin*) premake_platform='windows' ;;
+    msys*) premake_platform='windows' ;;
+    '') 
+      case `uname` in
+        Linux*) premake_platform='linux' ;;
+        MSYS*) premake_platform='windows' ;;
+      esac
+      ;;
+    *) echo "unknown: $OSTYPE" && exit 1 ;;
+  esac
+  
+  case "$premake_platform" in
+    macosx )
+      premake_file=${tools_folder}/premake5
+      premake_url="https://github.com/premake/premake-core/releases/download/v5.0.0-alpha10/premake-5.0.0-alpha10-macosx.tar.gz"
+      premake_archive='premake-5.0.0-alpha10-macosx.tar.gz'
+      ;;
+    linux )
+      premake_file=${tools_folder}/premake5
+      premake_url="https://github.com/premake/premake-core/releases/download/v5.0.0-alpha10/premake-5.0.0-alpha10-linux.tar.gz"
+      premake_archive='premake-5.0.0-alpha10-linux.tar.gz'
+      ;;
+    windows )
+      premake_file="${tools_folder}/premake5.exe"
+      premake_url="https://github.com/premake/premake-core/releases/download/v5.0.0-alpha10/premake-5.0.0-alpha10-windows.zip"
+      premake_archive='premake-5.0.0-alpha10-windows.zip'
+      ;;
+  esac
+  
+  [ "${premake_file}" = "" ] && exit 1
+  
+  if [ ! -e "$premake_file" ]
   then
-    echo "Decompress"
-    case "${premake_archive}" in
-	  *.tar.gz ) 
-	    
-	    tar -xzf "${premake_archive}"
-		;;
-      *.zip )
-	    unzip -o "${premake_archive}" &> /dev/null
-		;;
-	esac
+    [ -d ${tools_folder} ] || mkdir -p ${tools_folder}
+    base_folder="${PWD}"
+    cd "${tools_folder}"
     
-    rm -f "${premake_archive}"
-	
-	[ -e "$premake_file" ] && chmod +x "$premake_file"
-  else
-    echo "Error. File was not downloaded"
+    echo "Downloading premake ${premake_url}"
+    if [ `which curl 2>/dev/null` ]
+    then
+      echo "Using curl"
+      curl -O -L -k -s "${premake_url}"
+    else
+        if [ `which wget 2>/dev/null` ]
+        then
+          echo "Using wget"
+          wget "${premake_url}" &>/dev/null
+        else
+          echo "Error. Have no tools for download" 
+        fi
+    fi
+    
+    if [ -e "${premake_archive}" ]
+    then
+      echo "Decompress"
+      case "${premake_archive}" in
+  	  *.tar.gz ) 
+  	    
+  	    tar -xzf "${premake_archive}"
+  		;;
+        *.zip )
+  	    unzip -o "${premake_archive}" &> /dev/null
+  		;;
+  	esac
+      
+      rm -f "${premake_archive}"
+  	
+  	[ -e "$premake_file" ] && chmod +x "$premake_file"
+    else
+      echo "Error. File was not downloaded"
+    fi
+    
+    cd "${base_folder}"
+    echo "Done."
   fi
   
-  cd "${base_folder}"
-  echo "Done."
-fi
-
-if [ -x "$premake_file" ]
-then
-  "$premake_file" "$@"
+  if [ -x "$premake_file" ]
+  then
+    "$premake_file" "$@"
+  fi
 fi
