@@ -3,8 +3,7 @@ solution "BigInt"
    platforms { "x64" }
    flags {"MultiProcessorCompile"}
    location "build/"
-   
-   
+
 project "BigInt"
    kind "ConsoleApp"
    language "C++"
@@ -13,11 +12,10 @@ project "BigInt"
    debugdir "bin/%{cfg.platform}_%{cfg.buildcfg}"
    files { "src/**.h", "test/**.cpp" }
    includedirs { "src/" }
-
    
    filter "configurations:Debug"
       defines { "DEBUG" }
-      flags { "Symbols" }
+      symbols "On"
       
    filter "configurations:Release"
       flags { "LinkTimeOptimization", "StaticRuntime" }
