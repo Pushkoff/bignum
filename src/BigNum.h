@@ -919,6 +919,23 @@ namespace BigNum
 	}
 
 	template<int N>
+	void CRT_init(const Num<N>& p, const Num<N>& q, const Num<2*N>& d, Num<N>& dp, Num<N>& dq, Num<N>& qinvp)
+	{
+		qinvp = modInv(q, p);
+		dp = d % (p - 1);
+		dq = d % (q - 1);
+	}
+
+	template<int N>
+	const Num<2*N> CRT(const Num<2*N>& m, const Num<N>& p, const Num<N>& q, const Num<N>& dp, const Num<N>& dq, const Num<N>& qinvp) noexcept
+	{
+		BigNum::Num<N> mp = BigNum::monModExp(m, dp, p);
+		BigNum::Num<N> mq = BigNum::monModExp(m, dq, q);
+
+		return BigNum::Num<1024>(mq) + (((mp - mq) * qinvp) % p) * q;
+	}
+
+	template<int N>
 	const Num<N> rand() noexcept
 	{
 		BigNum::Num<N> ret;

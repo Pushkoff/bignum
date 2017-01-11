@@ -374,9 +374,8 @@ int main()
 			BigNum::Num<1024> e = BigNum::Num<1024>(65537);
 			BigNum::Num<1024> d = BigNum::modInv(e, t);
 
-			auto qinvp = BigNum::modInv(q, p);
-			auto dp = d % (p - 1);
-			auto dq = d % (q - 1);
+			BigNum::Num<512> qinvp, dp, dq;
+			BigNum::CRT_init(p, q, d, dp, dq, qinvp);
 
 			auto stop = std::chrono::high_resolution_clock::now();
 			auto elapsed = stop - start;
@@ -415,12 +414,7 @@ int main()
 				for (int i = 0; i < BigNum::Num<1024>::Size; ++i)
 					cipper[i] = cipperdata[block * BigNum::Num<1024>::Size + i];
 
-				//BigNum::Num<1024> data = BigNum::monModExp(cipper, d, N);
-
-				BigNum::Num<512> datap = BigNum::monModExp(cipper, dp, p);
-				BigNum::Num<512> dataq = BigNum::monModExp(cipper, dq, q);
-
-				BigNum::Num<1024> data = BigNum::Num<1024>(dataq) + (((datap - dataq) * qinvp) % p) * q;
+				BigNum::Num<1024> data = BigNum::CRT(cipper, p, q, dp, dq, qinvp);
 				for (int i = 0; i < BigNum::Num<1024>::Size / 2; ++i)
 					decrypted.push_back(data[i]);
 			}
