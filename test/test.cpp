@@ -324,13 +324,16 @@ int main()
 		test(BigNum::nextPrimeOpt3571113<512>(1_bn512 << 511) == 6703903964971298549787012499102923063739682910296196688861780721860882015036773488400937149083451713845015929093243025426876941405973284973216824503042159_bn512);
 
 		test(BigNum::nextPrime<1024>(1_bn1024 << 1023) == 89884656743115795386465259539451236680898848947115328636715040578866337902750481566354238661203768010560056939935696678829394884407208311246423715319737062188883946712432742638151109800623047059726541476042502884419075341171231440736956555270413618581675255342293149119973622969239858152417678164812112069763_bn1024);
+		test(BigNum::nextPrimeOpt357<1024>(1_bn1024 << 1023) == 89884656743115795386465259539451236680898848947115328636715040578866337902750481566354238661203768010560056939935696678829394884407208311246423715319737062188883946712432742638151109800623047059726541476042502884419075341171231440736956555270413618581675255342293149119973622969239858152417678164812112069763_bn1024);
+		test(BigNum::nextPrimeOpt35711<1024>(1_bn1024 << 1023) == 89884656743115795386465259539451236680898848947115328636715040578866337902750481566354238661203768010560056939935696678829394884407208311246423715319737062188883946712432742638151109800623047059726541476042502884419075341171231440736956555270413618581675255342293149119973622969239858152417678164812112069763_bn1024);
 		test(BigNum::nextPrimeOpt3571113<1024>(1_bn1024 << 1023) == 89884656743115795386465259539451236680898848947115328636715040578866337902750481566354238661203768010560056939935696678829394884407208311246423715319737062188883946712432742638151109800623047059726541476042502884419075341171231440736956555270413618581675255342293149119973622969239858152417678164812112069763_bn1024);
 
 		test(BigNum::nextPrime<2048>(1_bn2048 << 2047) > 0 ); //== 16158503035655503650357438344334975980222051334857742016065172713762327569433945446598600705761456731844358980460949009747059779575245460547544076193224141560315438683650498045875098875194826053398028819192033784138396109321309878080919047169238085235290822926018152521443787945770532904303776199561965192760957166694834171210342487393282284747428088017663161029038902829665513096354230157075129296432088558362971801859230928678799175576150822952201848806616643615613562842355410104862578550863465661734839271290328348967522998634176499319107762583194718667771801067716614802322659239302476074096777926805529798117247_bn2048);
+		test(BigNum::nextPrimeOpt35711<2048>(1_bn2048 << 2047) > 0);
 		test(BigNum::nextPrimeOpt3571113<2048>(1_bn2048 << 2047) > 0);
 
-		test(BigNum::nextPrime<4096>(1_bn4096 << 4095) > 0); 
-		test(BigNum::nextPrimeOpt3571113<4096>(1_bn4096 << 4095) > 0); 
+		//test(BigNum::nextPrime<4096>(1_bn4096 << 4095) > 0); 
+		//test(BigNum::nextPrimeOpt3571113<4096>(1_bn4096 << 4095) > 0); 
 		
 		srand(0);
 		{
@@ -364,17 +367,19 @@ int main()
 
 		{
 			printf("Generate RSA keys.");
+			constexpr int Module = 2048;
+
 			auto start = std::chrono::high_resolution_clock::now();
 
-			BigNum::Num<512> p = BigNum::randPrime<512>();
-			BigNum::Num<512> q = BigNum::randPrime<512>();
+			BigNum::Num<Module / 2> p = BigNum::randPrime<Module / 2>();
+			BigNum::Num<Module / 2> q = BigNum::randPrime<Module / 2>();
 
-			BigNum::Num<1024> N = p * q;
-			BigNum::Num<1024> t = N - p - q + 1; // (p - 1)(q - 1) = pq - p - q + 1 = N - p - q + 1
-			BigNum::Num<1024> e = BigNum::Num<1024>(65537);
-			BigNum::Num<1024> d = BigNum::modInv(e, t);
+			BigNum::Num<Module> N = p * q;
+			BigNum::Num<Module> t = N - p - q + 1; // (p - 1)(q - 1) = pq - p - q + 1 = N - p - q + 1
+			BigNum::Num<Module> e = BigNum::Num<Module>(65537);
+			BigNum::Num<Module> d = BigNum::modInv(e, t);
 
-			BigNum::Num<512> qinvp, dp, dq;
+			BigNum::Num<Module / 2> qinvp, dp, dq;
 			BigNum::CRT_init(p, q, d, dp, dq, qinvp);
 
 			auto stop = std::chrono::high_resolution_clock::now();
@@ -390,15 +395,15 @@ int main()
 
 			printf("Encrypt");
 			start = std::chrono::high_resolution_clock::now();
-			for (std::size_t block = 0; block < (testdata.size() / (BigNum::Num<1024>::Size / 2)); block++)
+			for (std::size_t block = 0; block < (testdata.size() / (BigNum::Num<Module>::Size / 2)); block++)
 			{
-				BigNum::Num<1024> data(0);
-				for (int i = 0; i < BigNum::Num<1024>::Size / 2; ++i)
-					data[i] = testdata[block * BigNum::Num<1024>::Size / 2 + i];
+				BigNum::Num<Module> data(0);
+				for (int i = 0; i < BigNum::Num<Module>::Size / 2; ++i)
+					data[i] = testdata[block * BigNum::Num<Module>::Size / 2 + i];
 
-				BigNum::Num<1024> cipper = BigNum::monModExp(data, e, N);
+				BigNum::Num<Module> cipper = BigNum::monModExp(data, e, N);
 
-				for (int i = 0; i < BigNum::Num<1024>::Size; ++i)
+				for (int i = 0; i < BigNum::Num<Module>::Size; ++i)
 					cipperdata.push_back(cipper[i]);
 			}
 			stop = std::chrono::high_resolution_clock::now();
@@ -408,14 +413,14 @@ int main()
 			printf("Decrypt");
 			start = std::chrono::high_resolution_clock::now();
 
-			for (std::size_t block = 0; block < (cipperdata.size() / BigNum::Num<1024>::Size); block++)
+			for (std::size_t block = 0; block < (cipperdata.size() / BigNum::Num<Module>::Size); block++)
 			{
-				BigNum::Num<1024> cipper(0);
-				for (int i = 0; i < BigNum::Num<1024>::Size; ++i)
-					cipper[i] = cipperdata[block * BigNum::Num<1024>::Size + i];
+				BigNum::Num<Module> cipper(0);
+				for (int i = 0; i < BigNum::Num<Module>::Size; ++i)
+					cipper[i] = cipperdata[block * BigNum::Num<Module>::Size + i];
 
-				BigNum::Num<1024> data = BigNum::CRT(cipper, p, q, dp, dq, qinvp);
-				for (int i = 0; i < BigNum::Num<1024>::Size / 2; ++i)
+				BigNum::Num<Module> data = BigNum::CRT(cipper, p, q, dp, dq, qinvp);
+				for (int i = 0; i < BigNum::Num<Module>::Size / 2; ++i)
 					decrypted.push_back(data[i]);
 			}
 

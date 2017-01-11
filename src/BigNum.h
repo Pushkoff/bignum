@@ -929,10 +929,10 @@ namespace BigNum
 	template<int N>
 	const Num<2*N> CRT(const Num<2*N>& m, const Num<N>& p, const Num<N>& q, const Num<N>& dp, const Num<N>& dq, const Num<N>& qinvp) noexcept
 	{
-		BigNum::Num<N> mp = BigNum::monModExp(m, dp, p);
-		BigNum::Num<N> mq = BigNum::monModExp(m, dq, q);
+		BigNum::Num<N> mp = BigNum::monModExp2ary(m, dp, p);
+		BigNum::Num<N> mq = BigNum::monModExp2ary(m, dq, q);
 
-		return BigNum::Num<1024>(mq) + (((mp - mq) * qinvp) % p) * q;
+		return BigNum::Num<2*N>(mq) + (((mp - mq) * qinvp) % p) * q;
 	}
 
 	template<int N>
