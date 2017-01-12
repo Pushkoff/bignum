@@ -112,6 +112,68 @@ int main()
 	//srand(time(nullptr));
 	try
 	{
+		{
+			bool passed = true;
+			BigNum::Num<64> bn(1);
+			for (int i = 0; i < 64; i++)
+			{
+				BigNum::Num<64> testbn = bn << i;
+				passed = passed && (testbn[i / BigNum::WordSizeBits] == (1u << i%BigNum::WordSizeBits));
+			}
+			test(passed == true && "Left shifts");
+		}
+
+		{
+			bool passed = true;
+			BigNum::Num<64> bn = BigNum::Num<64>(1) << 63;
+			for (int i = 0; i < 64; i++)
+			{
+				BigNum::Num<64> testbn = bn >> i;
+				passed = passed && (testbn[(63 - i) / BigNum::WordSizeBits] == (1u << ((BigNum::WordSizeBits - 1) - i%BigNum::WordSizeBits)));
+				assert(passed);
+			}
+			test(passed == true && "Rignt shift");
+		}
+
+		{
+			bool passed = true;
+			BigNum::Num<64> bn1 = BigNum::Num<64>(0) - 1;
+			for (int i = 0; i < 64; i++)
+			{
+				BigNum::Num<64> testbn1 = bn1 << i;
+				passed = passed && (testbn1 == (BigNum::Num<64>(0) - BigNum::Num<64>(1) << i));
+				assert(passed);
+			}
+			test(passed == true && "Left shifts");
+		}
+
+		{
+			bool passed = true;
+			BigNum::Num<64> bn1 = BigNum::Num<64>(255);
+			BigNum::Num<64> bn2 = BigNum::Num<64>(255) << 56;
+			for (int i = 0; i < 56; i++)
+			{
+				BigNum::Num<64> testbn1 = bn1 << i;
+				BigNum::Num<64> testbn2 = bn2 >> (56 - i);
+				passed = passed && (testbn1 == testbn2);
+				assert(passed);
+			}
+			test(passed == true && "Both shifts");
+		}
+
+		{
+			bool passed = true;
+			BigNum::Num<64> bn(3);
+			for (int i = 0; i < 64; i++)
+			{
+				BigNum::Num<64> testbn = BigNum::Num<64>(3) << i;
+				passed = passed && (testbn == bn);
+
+				bn = bn * 2;
+			}
+			test(passed == true && "Left shifts");
+		}
+
 		test(BigNum::Num<256>(fromString<128>("118802731")) == fromString<256>("118802731"));
 		test(BigNum::Num<256>(fromString<128>("118802731")) == 118802731_bn2048);
 		test(BigNum::Num<256>(fromString<128>("118802731")) == 118802731_bn1024);
@@ -182,66 +244,7 @@ int main()
 		test((BigNum::Num<64>(13505675 >> 15) == BigNum::Num<64>(13505675) >> 15));
 		test((BigNum::Num<64>(13505675 >> 22) == BigNum::Num<64>(13505675) >> 22));
 		test(toString(89884656743115795386465259539451236680898848947115328636715040578866337902750481566354238661203768010560056939935696678829394884407208311246423715319737062188883946712432742638151109800623047059726541476042502884419075341171231440736956555270413618581675255342293149119973622969239858152417678164812112068608_bn1024) == "89884656743115795386465259539451236680898848947115328636715040578866337902750481566354238661203768010560056939935696678829394884407208311246423715319737062188883946712432742638151109800623047059726541476042502884419075341171231440736956555270413618581675255342293149119973622969239858152417678164812112068608")
-			test(BigNum::Num<1024>(1) << 1023 == 89884656743115795386465259539451236680898848947115328636715040578866337902750481566354238661203768010560056939935696678829394884407208311246423715319737062188883946712432742638151109800623047059726541476042502884419075341171231440736956555270413618581675255342293149119973622969239858152417678164812112068608_bn1024);
-
-		{
-			bool passed = true;
-			BigNum::Num<64> bn(1);
-			for (int i = 0; i < 64; i++)
-			{
-				BigNum::Num<64> testbn = bn << i;
-				passed = passed && (testbn[i / BigNum::WordSizeBits] == (1u << i%BigNum::WordSizeBits));
-			}
-			test(passed == true);
-		}
-
-		{
-			bool passed = true;
-			BigNum::Num<64> bn(1);
-			for (int i = 0; i < 64; i++)
-			{
-				BigNum::Num<64> testbn = BigNum::Num<64>(1) << i;
-				passed = passed && (testbn == bn);
-
-				bn = bn * 2;
-			}
-			test(passed == true);
-		}
-
-		{
-			bool passed = true;
-			BigNum::Num<64> bn = BigNum::Num<64>(1) << 63;
-			for (int i = 0; i < 64; i++)
-			{
-				BigNum::Num<64> testbn = bn >> i;
-				passed = passed && (testbn[(63 - i) / BigNum::WordSizeBits] == (1u << ((BigNum::WordSizeBits - 1) - i%BigNum::WordSizeBits)));
-			}
-			test(passed == true && "Rignt shift");
-		}
-
-		{
-			bool passed = true;
-			BigNum::Num<64> bn1 = BigNum::Num<64>(255);
-			BigNum::Num<64> bn2 = BigNum::Num<64>(255) << 56;
-			for (int i = 0; i < 56; i++)
-			{
-				BigNum::Num<64> testbn1 = bn1 << i;
-				BigNum::Num<64> testbn2 = bn2 >> (56 - i);
-				passed = passed && (testbn1 == testbn2);
-			}
-			test(passed == true && "shifts");
-		}
-
-		{
-			bool passed = true;
-			BigNum::Num<64> bn1 = BigNum::Num<64>(0) - 1;
-			for (int i = 0; i < 64; i++)
-			{
-				BigNum::Num<64> testbn1 = bn1 << i;
-				passed = passed && (testbn1 == (BigNum::Num<64>(0) - BigNum::Num<64>(1) << i));
-			}
-			test(passed == true && "shifts");
-		}
+		test(BigNum::Num<1024>(1) << 1023 == 89884656743115795386465259539451236680898848947115328636715040578866337902750481566354238661203768010560056939935696678829394884407208311246423715319737062188883946712432742638151109800623047059726541476042502884419075341171231440736956555270413618581675255342293149119973622969239858152417678164812112068608_bn1024);
 
 		test(((BigNum::Num<64>(1) << 63) + 1) / (BigNum::Num<64>(1) << 63) == 1);
 		test(((BigNum::Num<64>(1) << 63) + 1) % (BigNum::Num<64>(1) << 63) == 1);
@@ -428,7 +431,9 @@ int main()
 			elapsed = stop - start;
 			printf(" duration - %lld ms\n", (long long)std::chrono::duration_cast<std::chrono::milliseconds>(elapsed).count());
 
-			printf("%s\n", (decrypted == testdata) ? "Ok" : "Fail");
+			bool ret = decrypted == testdata;
+			printf("%s\n", (ret) ? "Ok" : "Fail");
+			if (!ret) throw(1);
 		}
 		printf("Passed %d tests\nFailed %d tests\nPress any key...", TestsPass, TestsFailed);
 	}

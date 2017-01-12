@@ -192,51 +192,44 @@ namespace BigNum
 		{
 			assert(count < N*sizeof(Word)*8);
 
-			const unsigned int bytes = count / WordSizeBits;
-			const unsigned int bits = count % WordSizeBits;
+			const int bytes = count / WordSizeBits;
+			const int bits = count % WordSizeBits;
 			if (bits == 0)
 			{
-				for (unsigned int i = N; i --> bytes;)
+				for (int i = N; i --> bytes;)
 				{
 					rez[i] = v[i - bytes];
 				}
 			}
 			else
 			{
-				DWord carry = 0;
-				for (unsigned int i = bytes; i < N; i++)
-				{
-					DWord val = static_cast<DWord>(v[i - bytes]) << bits;
-					rez[i] = static_cast<Word>(val | carry);
-					carry = val >> WordSizeBits;
-				}
+				int i = 0;
+				for (; i < bytes; i++)
+					rez[i] = 0;
+				for (; i < N; i++)
+					rez[i] = (v[i - bytes] << (bits)) | ( ((i - bytes - 1 >= 0) ? v[i - bytes - 1] : 0) >> (sizeof(Word) * 8 - bits));
 			}
 		}
 		
-		template<unsigned int N>
+		template<int N>
 		void shr(Word (&rez)[N], const Word (&v)[N], unsigned int count) noexcept
 		{
 			assert(count < N*sizeof(Word)*8);
 			
-			const unsigned int bytes = count / WordSizeBits;
-			const unsigned int bits = count % WordSizeBits;
+			const int bytes = count / WordSizeBits;
+			const int bits = count % WordSizeBits;
 			if (bits == 0)
 			{
-				for (unsigned int i = 0; i < N - bytes; i++)
-				{
+				for (int i = 0; i < N - bytes; i++)
 					rez[i] = v[i + bytes];
-				}
 			}
 			else
 			{
-				DWord carry = v[bytes];
-				for (unsigned int i = 0; i < N - bytes; i++)
-				{
-					DWord val = (static_cast<DWord>(((i + bytes + 1) < N) ? v[i + bytes + 1] : 0) << WordSizeBits);
-					val = (val | carry);
-					rez[i] = static_cast<Word>(val >> bits);
-					carry = val >> (WordSizeBits);
-				}
+				int i = 0;
+				for (; i < N - bytes; i++)
+					rez[i] = (((i + bytes + 1 < N) ? v[i + bytes + 1] : 0) << (sizeof(Word) * 8 - bits)) | (v[i + bytes] >> bits);
+				for (; i < N; i++)
+					rez[i] = 0;
 			}
 		}
 	}
