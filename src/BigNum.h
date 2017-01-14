@@ -6,10 +6,12 @@
 namespace BigNum
 {
 	typedef unsigned int Word;
+	constexpr size_t kWordSizeBits = sizeof(Word) * 8;
+	constexpr size_t kHalfWordSizeBits = kWordSizeBits / 2;
+	constexpr Word kHalfWordMaskBits = (Word(1) << (kHalfWordSizeBits)) - Word(1);
+	
 	typedef unsigned long long DWord;
-	constexpr size_t WordSizeBits = sizeof(Word) * 8;
-	constexpr DWord WordMaskBits = ((1ull << WordSizeBits) - 1ull);
-
+	constexpr DWord kWordMaskBits = (DWord(1) << (kWordSizeBits)) - DWord(1);
 	static_assert(sizeof(DWord) > sizeof(Word), "cant detect overflow");
 
 	namespace Core
@@ -49,9 +51,22 @@ namespace BigNum
 
 		Word adc(Word& ret, const Word v1, const Word v2, const Word carry) noexcept
 		{
+			//assert(carry >= 0 && carry <= 1);
+
+			//const Word v1l = v1 & kHalfWordMaskBits, v2l = v2 & kHalfWordMaskBits;
+			//const Word retl = v1l + v2l + carry;
+			//const Word retlc = retl >> kHalfWordSizeBits;
+
+			//const Word v1h = v1 >> kHalfWordSizeBits, v2h = v2 >> kHalfWordSizeBits;
+			//const Word reth = v1h + v2h + retlc;
+			//const Word rethc = reth >> kHalfWordSizeBits;
+
+			//ret = (retl & kHalfWordMaskBits) | (reth << kHalfWordSizeBits);
+			//return rethc;
+
 			const DWord sum = DWord(v1) + v2 + carry;
-			ret = sum & WordMaskBits;
-			return Word(sum >> WordSizeBits);
+			ret = sum & kWordMaskBits;
+			return Word(sum >> kWordSizeBits);
 		}
 
 		Word add(Word* rezbegin, Word* rezend, const Word* v1begin, const Word* v1end, const Word* v2begin, const Word* v2end) noexcept
@@ -99,9 +114,22 @@ namespace BigNum
 
 		Word sbc(Word& ret, const Word v1, const Word v2, const Word carry) noexcept
 		{
+			//assert(carry >= 0 && carry <= 1);
+
+			//const Word v1l = v1 & kHalfWordMaskBits, v2l = v2 & kHalfWordMaskBits;
+			//const Word retl = v1l - v2l - carry;
+			//const Word retlc = (retl >> kHalfWordSizeBits) ? 1 : 0;
+
+			//const Word v1h = v1 >> kHalfWordSizeBits, v2h = v2 >> kHalfWordSizeBits;
+			//const Word reth = v1h - v2h - retlc;
+			//const Word rethc = (reth >> kHalfWordSizeBits) ? 1 : 0;
+
+			//ret = (retl & kHalfWordMaskBits) | (reth << kHalfWordSizeBits);
+			//return rethc;
+
 			const DWord sum = DWord(v1) - v2 - carry;
-			ret = sum & WordMaskBits;
-			return (sum >> WordSizeBits) ? 1 : 0;
+			ret = sum & kWordMaskBits;
+			return (sum >> kWordSizeBits) ? 1 : 0;
 		}
 
 		Word sub(Word* rezbegin, Word* rezend, const Word* v1begin, const Word* v1end, const Word* v2begin, const Word* v2end) noexcept
@@ -147,6 +175,42 @@ namespace BigNum
 			return carry;
 		}
 
+		//Word _mulhi(Word& ret, const Word v1, const Word v2)
+		//{
+		//	Word v1l = v1 & kHalfWordMaskBits;
+		//	Word v1h = v1 >> kHalfWordSizeBits;
+		//	Word v2l = v2 & kHalfWordMaskBits;
+		//	Word v2h = v2 >> kHalfWordSizeBits;
+
+		//	Word z0 = v1l * v2l;
+		//	Word z1 = v1l * v2h;
+		//	Word z2 = v1h * v2l;
+		//	Word z3 = v1h * v2h;
+
+		//	Word carry1 = adc(ret, z0, z1 << kHalfWordSizeBits, 0);
+		//	Word carry2 = adc(ret, ret, z2 << kHalfWordSizeBits, 0);
+		//	Word hi = 0;
+		//	adc(hi, z1 >> kHalfWordSizeBits, z2 >> kHalfWordSizeBits, carry1);
+		//	adc(hi, hi, z3, carry2);
+		//	return hi;
+		//	//DWord m = DWord(v1) * DWord(v2);
+		//	//ret = Word(m);
+		//	//return Word(m >> kWordSizeBits);
+		//}
+
+		inline Word madd(Word& ret, const Word v1, const Word v2, const Word carry)
+		{
+			//Word ml = 0;
+			//Word mh = _mulhi(ml, v1, v2);
+			//Word mc = adc(ret, ret, ml, 0);
+			//mc += adc(ret, ret, carry, 0);
+			//return mh + mc;
+
+			DWord m = DWord(ret) + DWord(v1) * DWord(v2) + carry;
+			ret = Word(m);
+			return Word(m >> kWordSizeBits);
+		}
+
 		void mul(Word* rezbegin, Word* rezend, const Word* v1begin, const Word* v1end, const Word* v2begin, const Word* v2end) noexcept
 		{
 			const std::ptrdiff_t v1len = v1end - v1begin;
@@ -157,17 +221,20 @@ namespace BigNum
 
 			for (std::ptrdiff_t v1it = 0; v1it < v1len; ++v1it)
 			{
-				DWord carry = 0;
+				Word carry = 0;
 				for (std::ptrdiff_t v2it = 0; v2it < v2len; ++v2it)
 				{
-					carry += DWord(rezbegin[v1it + v2it]) + DWord(v1begin[v1it]) * DWord(v2begin[v2it]);
-					rezbegin[v1it + v2it] = Word(carry & WordMaskBits);
-					carry >>= WordSizeBits;
+					carry = madd(rezbegin[v1it + v2it], v1begin[v1it], v2begin[v2it], carry);
 				}
-				rezbegin[v1it + v2len] = Word(carry & WordMaskBits);
+				rezbegin[v1it + v2len] = carry;
 			}
 		}
 		
+		void mul(Word(&rez)[1], const Word(&v1)[1], const Word(&v2)[1]) noexcept
+		{
+			rez[0] = v1[0] * v2[0];
+		}
+
 		template<int N, int M, int K>
         void mul(Word (&rez)[N], const Word (&v1)[M], const Word (&v2)[K]) noexcept
 		{
@@ -176,14 +243,12 @@ namespace BigNum
 
 			for (int v1it = 0; v1it < M; ++v1it)
 			{
-				DWord carry = 0;
+				Word carry = 0;
 				for (int v2it = 0; v2it < K; ++v2it)
 				{
-					carry += DWord(rez[v1it + v2it]) + DWord(v1[v1it]) * DWord(v2[v2it]);
-					rez[v1it + v2it] = Word(carry & WordMaskBits);
-					carry >>= WordSizeBits;
+					carry = madd(rez[v1it + v2it], v1[v1it], v2[v2it], carry);
 				}
-				rez[v1it + K] = Word(carry & WordMaskBits);
+				rez[v1it + K] = carry;
 			}
 		}
 		
@@ -191,14 +256,12 @@ namespace BigNum
 		void shl(Word (&rez)[N], const Word (&v)[N], unsigned int count) noexcept
 		{
 			assert(count < N*sizeof(Word)*8);
-			const unsigned int bytes = count / WordSizeBits;
-			const unsigned int bits = count % WordSizeBits;
+			const unsigned int bytes = count / kWordSizeBits;
+			const unsigned int bits = count % kWordSizeBits;
 			if (bits == 0)
 			{
 				for (unsigned int i = N; i --> bytes;)
-				{
 					rez[i] = v[i - bytes];
-				}
 			}
 			else
 			{
@@ -216,8 +279,8 @@ namespace BigNum
 		void shr(Word (&rez)[N], const Word (&v)[N], unsigned int count) noexcept
 		{
 			assert(count < N*sizeof(Word)*8);
-			const unsigned int bytes = count / WordSizeBits;
-			const unsigned int bits = count % WordSizeBits;
+			const unsigned int bytes = count / kWordSizeBits;
+			const unsigned int bits = count % kWordSizeBits;
 			if (bits == 0)
 			{
 				for (unsigned int i = 0; i < N - bytes; i++)
@@ -242,7 +305,7 @@ namespace BigNum
 	public:
 		enum
 		{
-			Size = (N + (WordSizeBits) - 1) / (WordSizeBits),
+			Size = (N + (kWordSizeBits) - 1) / (kWordSizeBits),
 		};
 
 		Word data[Size];
@@ -253,25 +316,27 @@ namespace BigNum
 				data[i] = 0;
 		}
 
-		explicit Num(int num) noexcept
+		explicit Num(Word num) noexcept
+		{
+			data[0] = Word(num);
+			for (int i = 1; i < Size; i++)
+				data[i] = 0;
+		}
+
+		explicit Num(unsigned long long num) noexcept
 		{
 			for (int i = 0; i < Size; i++)
 			{
-				data[i] = num & ((1ull << WordSizeBits) - 1ull);
-				num >>= WordSizeBits/2;
-				num >>= WordSizeBits/2;
+				data[i] = Word(num);
+				num >>= kWordSizeBits;
 			}
 		}
 
-		template<typename T>
-		explicit Num(T num) noexcept
+		explicit Num(int num) noexcept
 		{
-			for (int i = 0; i < Size; i++)
-			{
-				data[i] = num & ((1ull << WordSizeBits) - 1ull);
-				num >>= WordSizeBits/2;
-				num >>= WordSizeBits/2;
-			}
+			data[0] = Word(num);
+			for (int i = 1; i < Size; i++)
+				data[i] = 0;
 		}
 
 		template<int M>
@@ -313,9 +378,9 @@ namespace BigNum
 			bool ret = false;
 			if (i >= 0 && i < N)
 			{
-				const int byte = i / WordSizeBits;
-				const int bit = i % WordSizeBits;
-				ret = ((*this)[byte] & (1 << bit)) != 0;
+				const int byte = i / kWordSizeBits;
+				const int bit = i % kWordSizeBits;
+				ret = ((*this)[byte] & (Word(1) << bit)) != 0;
 			}
 			return ret;
 		}
@@ -376,9 +441,9 @@ namespace BigNum
 	}
 
 	template<int N>
-	const Num<N + WordSizeBits> operator * (const Num<N>& v1, Word v2) noexcept
+	const Num<N + kWordSizeBits> operator * (const Num<N>& v1, Word v2) noexcept
 	{
-		Num<N + WordSizeBits> rez(0);
+		Num<N + kWordSizeBits> rez(0);
 		const Word a2[] = { v2 };
 		Core::mul(rez.data, v1.data, a2);
 		return rez;
@@ -480,11 +545,11 @@ namespace BigNum
 	}
 
 	template<int N>
-	std::array<Num<N + WordSizeBits>, WordSizeBits> calcShiftedD(const Num<N>& d) noexcept
+	std::array<Num<N + kWordSizeBits>, kWordSizeBits> calcShiftedD(const Num<N>& d) noexcept
 	{
-		std::array<Num<N + WordSizeBits>, WordSizeBits> ret;
+		std::array<Num<N + kWordSizeBits>, kWordSizeBits> ret;
 		ret[0] = d;
-		for (unsigned int i = 1; i < WordSizeBits; i++)
+		for (unsigned int i = 1; i < kWordSizeBits; i++)
 			ret[i] = ret[0] << i;
 		return ret;
 	}
@@ -494,7 +559,7 @@ namespace BigNum
 	{
 		Num<N> q;
 
-		const std::array<Num<M + WordSizeBits>, WordSizeBits> shiftedD = calcShiftedD(d);
+		const std::array<Num<M + kWordSizeBits>, kWordSizeBits> shiftedD = calcShiftedD(d);
 
 		Word* qbeg = n.end();
 		Word* qend = n.end();
@@ -505,12 +570,12 @@ namespace BigNum
 			Word val = 0;
 			if (Core::cmp(qbeg, qend, d.begin(), d.end()) >= 0)
 			{
-				for (int j = WordSizeBits; j-- > 0;)
+				for (int j = kWordSizeBits; j-- > 0;)
 				{
 					if (Core::cmp(qbeg, qend, shiftedD[j].begin(), shiftedD[j].end()) >= 0)
 					{
 						Core::sub(qbeg, qend, shiftedD[j].begin(), shiftedD[j].end());
-						val += 1 << j;
+						val += Word(1) << j;
 					}
 				}
 			}
@@ -522,7 +587,7 @@ namespace BigNum
 	template<int N, int M>
 	Num<M> mod(Num<N> n, const Num<M>& d) noexcept
 	{
-		const std::array<Num<M + WordSizeBits>, WordSizeBits> shiftedD = calcShiftedD(d);
+		const std::array<Num<M + kWordSizeBits>, kWordSizeBits> shiftedD = calcShiftedD(d);
 
 		Word* qbeg = n.end();
 		Word* qend = n.end();
@@ -532,7 +597,7 @@ namespace BigNum
 			qbeg--;
 			if (Core::cmp(qbeg, qend, d.begin(), d.end()) >= 0)
 			{
-				for (int j = WordSizeBits; j-- > 0;)
+				for (int j = kWordSizeBits; j-- > 0;)
 				{
 					if (Core::cmp(qbeg, qend, shiftedD[j].begin(), shiftedD[j].end()) >= 0)
 					{
@@ -552,7 +617,7 @@ namespace BigNum
 		DWord rest = 0;
 		for (int i = Num<N>::Size; i--> 0;)
 		{
-			rest = rest << WordSizeBits;
+			rest = rest << kWordSizeBits;
 			rest += n[i];
 			n[i] = 0;
 			q[i] = (Word)(rest / d);
@@ -568,7 +633,7 @@ namespace BigNum
 		DWord rest = 0;
 		for (int i = Num<N>::Size; i--> 0;)
 		{
-			rest = rest << WordSizeBits;
+			rest = rest << kWordSizeBits;
 			rest += n[i];
 			rest = rest % d;
 		}
@@ -782,10 +847,10 @@ namespace BigNum
 
 		int realExpSize = Num<N>::Size;
 		// skip leading zeros
-		while (realExpSize >= 0 && exp[realExpSize - 1] == 0)
+		while (realExpSize > 0 && exp[realExpSize - 1] == 0)
 			realExpSize--;
 
-		for (int i = realExpSize * WordSizeBits; i-->0;)
+		for (int i = std::min(N, int(realExpSize * kWordSizeBits)); i-->0;)
 		{
 			result = (result * result) % modulo;
 			if (exp.bit(i))
@@ -878,7 +943,7 @@ namespace BigNum
 		while (realExpSize > 0 && exp[realExpSize - 1] == 0)
 			realExpSize--;
 
-		for (int i = realExpSize * WordSizeBits; i --> 0;)
+		for (int i = std::min(N, int(realExpSize * kWordSizeBits)); i --> 0;)
 		{
 			ret = monMod(ret, ret);
 			if (exp.bit(i))
@@ -902,7 +967,7 @@ namespace BigNum
 		while (realExpSize > 0 && exp[realExpSize - 1] == 0)
 			realExpSize--;
 
-		for (int i = realExpSize * WordSizeBits/2; i--> 0;)
+		for (int i = std::min(N, int(realExpSize * kWordSizeBits))/2; i--> 0;)
 		{
 			ret = monMod(ret, ret);
 			ret = monMod(ret, ret);
@@ -1166,7 +1231,7 @@ namespace BigNum
 			{{2, 2, 2, 2, 2, 6, 2}, {2, 2, 2, 2, 2, 6, 2}, {2, 2, 2, 2, 2, 6, 2}, {6, 8, 6, 6, 6, 6, 6}, {2, 2, 2, 2, 2, 8, 2}}
 		};
 
-		unsigned rest3 = prime % 3, rest5 = prime % 5, rest7 = prime % 7;
+		unsigned rest3 = unsigned(prime % 3), rest5 = unsigned(prime % 5), rest7 = unsigned(prime % 7);
 		
 		if (rest3 == 0 || rest5 == 0 || rest7 == 0)
 		{
@@ -1203,7 +1268,7 @@ namespace BigNum
 			{{{2, 2, 2, 2, 2, 2, 2, 2, 2, 6, 2},  {2, 2, 2, 2, 2, 2, 2, 2, 2, 8, 2},  {2, 2, 2, 2, 2, 2, 2, 2, 2, 6, 2},  {2, 2, 2, 2, 2, 2, 2, 2, 2, 6, 2},  {2, 2, 2, 2, 2, 2, 2, 2, 2, 6, 2},  {6, 6, 6, 6, 6, 8, 6, 6, 6, 6, 6},  {2, 2, 2, 2, 2, 2, 2, 2, 2, 6, 2}},  {  {2, 2, 2, 2, 2, 2, 2, 2, 2, 6, 2},  {2, 2, 2, 2, 2, 2, 2, 2, 2, 8, 2},  {2, 2, 2, 2, 2, 2, 2, 2, 2, 6, 2},  {2, 2, 2, 2, 2, 2, 2, 2, 2, 6, 2},  {2, 2, 2, 2, 2, 2, 2, 2, 2, 6, 2},  {6, 6, 6, 6, 6, 8, 6, 6, 6, 6, 6},  {2, 2, 2, 2, 2, 2, 2, 2, 2, 6, 2}},  {  {2, 2, 2, 2, 2, 2, 2, 2, 2, 6, 2},  {2, 2, 2, 2, 2, 2, 2, 2, 2, 12, 2},  {2, 2, 2, 2, 2, 2, 2, 2, 2, 6, 2},  {2, 2, 2, 2, 2, 2, 2, 2, 2, 6, 2},  {2, 2, 2, 2, 2, 2, 2, 2, 2, 6, 2},  {6, 6, 6, 6, 6, 12, 6, 6, 6, 6, 6},  {2, 2, 2, 2, 2, 2, 2, 2, 2, 6, 2}},  {  {6, 6, 6, 6, 6, 8, 6, 6, 6, 6, 6},  {8, 8, 8, 14, 8, 8, 8, 8, 8, 8, 8},  {6, 6, 6, 6, 6, 8, 6, 6, 6, 6, 6},  {6, 6, 6, 6, 6, 8, 6, 6, 6, 6, 6},  {6, 6, 6, 6, 6, 8, 6, 6, 6, 6, 6},  {6, 6, 6, 6, 6, 8, 6, 6, 6, 6, 6},  {6, 6, 6, 6, 6, 14, 6, 6, 6, 6, 6}},  {  {2, 2, 2, 2, 2, 2, 2, 2, 2, 8, 2},  {2, 2, 2, 2, 2, 2, 2, 2, 2, 8, 2},  {2, 2, 2, 2, 2, 2, 2, 2, 2, 8, 2},  {2, 2, 2, 2, 2, 2, 2, 2, 2, 8, 2},  {2, 2, 2, 2, 2, 2, 2, 2, 2, 8, 2},  {8, 8, 8, 12, 8, 8, 8, 8, 8, 8, 8},  {2, 2, 2, 2, 2, 2, 2, 2, 2, 12, 2}}}
 		};
 
-		unsigned rest3 = prime % 3, rest5 = prime % 5, rest7 = prime % 7, rest11 = prime % 11;
+		unsigned rest3 = unsigned(prime % 3), rest5 = unsigned(prime % 5), rest7 = unsigned(prime % 7), rest11 = unsigned(prime % 11);
 		
 		if (rest3 == 0 || rest5 == 0 || rest7 == 0 || rest11 == 0)
 		{
@@ -1347,7 +1412,7 @@ namespace BigNum
 		{{2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 12, 2},{2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 12, 2},{2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 12, 2},{2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 12, 2},{2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 12, 2},{2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 12, 2},{2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 12, 2},{2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 12, 2},{2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 12, 2},{12, 14, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12},{2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 14, 2}}
 		}}};
 
-		unsigned rest3 = prime % 3, rest5 = prime % 5, rest7 = prime % 7, rest11 = prime % 11, rest13 = prime % 13;
+		unsigned rest3 = unsigned(prime % 3), rest5 = unsigned(prime % 5), rest7 = unsigned(prime % 7), rest11 = unsigned(prime % 11), rest13 = unsigned(prime % 13);
 		
 		if (rest3 == 0 || rest5 == 0 || rest7 == 0 || rest11 == 0 || rest13 == 0)
 		{

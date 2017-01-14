@@ -18,7 +18,7 @@ std::string toString(const BigNum::Num<N>& num)
 		auto R = Q % 10;
 		assert(R < 10);
 		Q = Q / 10;
-		ret.push_back(R + '0');
+		ret.push_back(char(R + '0'));
 	}
 	std::reverse(ret.begin(), ret.end());
 	return ret;
@@ -118,7 +118,7 @@ int main()
 			for (int i = 0; i < 64; i++)
 			{
 				BigNum::Num<64> testbn = bn << i;
-				passed = passed && (testbn[i / BigNum::WordSizeBits] == (1u << i%BigNum::WordSizeBits));
+				passed = passed && (testbn[i / BigNum::kWordSizeBits] == (1ull << i%BigNum::kWordSizeBits));
 			}
 			test(passed == true && "Left shifts");
 		}
@@ -129,7 +129,7 @@ int main()
 			for (int i = 0; i < 64; i++)
 			{
 				BigNum::Num<64> testbn = bn >> i;
-				passed = passed && (testbn[(63 - i) / BigNum::WordSizeBits] == (1u << ((BigNum::WordSizeBits - 1) - i%BigNum::WordSizeBits)));
+				passed = passed && (testbn[(63 - i) / BigNum::kWordSizeBits] == (1ull << ((BigNum::kWordSizeBits - 1) - i%BigNum::kWordSizeBits)));
 				assert(passed);
 			}
 			test(passed == true && "Rignt shift");
@@ -202,6 +202,7 @@ int main()
 
 		test(BigNum::Num<64>(20) * BigNum::Num<64>(45) == BigNum::Num<64>(20 * 45));
 		test(BigNum::Num<32>(0xFFFFFFFFu) * BigNum::Num<32>(0xFFFFFFFFu) == BigNum::Num<64>(0xFFFFFFFFull * 0xFFFFFFFFull));
+		test(BigNum::Num<64>(0xFFFFFFFFFFFFFFFFull) * BigNum::Num<64>(0xFFFFFFFFFFFFFFFFull) == fromHex<128>("FFFFFFFFFFFFFFFE0000000000000001"));
 
 		BigNum::Num<1024> fact(1);
 		for (BigNum::Word i = 2; i <= 100; i++)
