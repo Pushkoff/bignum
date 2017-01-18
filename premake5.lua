@@ -20,8 +20,7 @@ project "BigInt"
    filter "configurations:Release"
       flags { "LinkTimeOptimization", "StaticRuntime" }
       defines { "NDEBUG" }
-      optimize "On"
-      --linkoptions {"/NODEFAULTLIB:MSVCRT"}
+      optimize "Full"
       runtime("Release")
       
       

@@ -2,6 +2,8 @@
 
 #include <algorithm>
 #include <array>
+#include <type_traits>
+#include <cstddef>
 
 namespace BigNum
 {
@@ -215,18 +217,19 @@ namespace BigNum
 		{
 			const std::ptrdiff_t v1len = v1end - v1begin;
 			const std::ptrdiff_t v2len = v2end - v2begin;
+			const std::ptrdiff_t rezlen = rezend - rezbegin;
 
-			assert((rezend - rezbegin) >= (v1end - v1begin) + (v2end - v2begin));
+			assert((rezlen) >= (v1len) + (v2len));
 			assert(std::any_of(rezbegin, rezend, [&](Word w) { return w > 0; }) == false);
 
-			for (std::ptrdiff_t v1it = 0; v1it < v1len; ++v1it)
+			const ptrdiff_t v1last = std::min(rezlen, v1len);
+			for (std::ptrdiff_t v1it = 0; v1it < v1last; ++v1it)
 			{
+				const ptrdiff_t v2last = std::min(v2len, rezlen - v1it);
 				Word carry = 0;
-				for (std::ptrdiff_t v2it = 0; v2it < v2len; ++v2it)
-				{
+				for (std::ptrdiff_t v2it = 0; v2it < v2last; ++v2it)
 					carry = madd(rezbegin[v1it + v2it], v1begin[v1it], v2begin[v2it], carry);
-				}
-				rezbegin[v1it + v2len] = carry;
+				rezbegin[v1it + v2last] = carry;
 			}
 		}
 		
@@ -236,19 +239,32 @@ namespace BigNum
 		}
 
 		template<int N, int M, int K>
-        void mul(Word (&rez)[N], const Word (&v1)[M], const Word (&v2)[K]) noexcept
+		void mul(Word (&rez)[N], const Word (&v1)[M], const Word (&v2)[K], typename std::enable_if<N >= M + K>::type* = 0) noexcept
 		{
-			static_assert((N) >= (M) + (K), "");
 			assert(std::any_of(std::begin(rez), std::end(rez), [&](Word w) { return w > 0; }) == false);
 
 			for (int v1it = 0; v1it < M; ++v1it)
 			{
 				Word carry = 0;
 				for (int v2it = 0; v2it < K; ++v2it)
-				{
 					carry = madd(rez[v1it + v2it], v1[v1it], v2[v2it], carry);
-				}
 				rez[v1it + K] = carry;
+			}
+		}
+
+		template<int N, int M, int K>
+		void mul(Word(&rez)[N], const Word(&v1)[M], const Word(&v2)[K], typename std::enable_if<N < M + K>::type* = 0) noexcept
+		{
+			assert(std::any_of(std::begin(rez), std::end(rez), [&](Word w) { return w > 0; }) == false);
+
+			const int v1last = std::min(N, M);
+			for (int v1it = 0; v1it < v1last; ++v1it)
+			{
+				const int v2last = std::min(K, N - v1it);
+				Word carry = 0;
+				for (int v2it = 0; v2it < v2last; ++v2it)
+					carry = madd(rez[v1it + v2it], v1[v1it], v2[v2it], carry);
+				rez[v1it + v2last] = carry;
 			}
 		}
 		
@@ -296,6 +312,96 @@ namespace BigNum
 				for (; i < N; i++)
 					rez[i] = 0;
 			}
+		}
+
+		template<int N>
+		void calcShiftedD(Word(&ret)[kWordSizeBits][N + 1], const Word(&d)[N]) noexcept
+		{
+			for(unsigned i = 0; i < N; i++)
+				ret[0][i] = d[i];
+			ret[0][N] = 0;
+
+			for (unsigned i = 1; i < kWordSizeBits; i++)
+				shl(ret[i], ret[0], i);
+		}
+
+		template<int N, int M>
+		void div(Word(&q)[N], Word(&n)[N], const Word(&d)[M]) noexcept
+		{
+			Word shiftedD[kWordSizeBits][M + 1];
+			calcShiftedD(shiftedD, d);
+
+			Word* rbeg = std::end(n);
+			Word* rend = std::end(n);
+
+			for (int i = N; i-->0;)
+			{
+				rbeg--;
+				Word val = 0;
+				if (Core::cmp(rbeg, rend, std::begin(d), std::end(d)) >= 0)
+				{
+					for (int j = kWordSizeBits; j-- > 0;)
+					{
+						if (Core::cmp(rbeg, rend, std::begin(shiftedD[j]), std::end(shiftedD[j])) >= 0)
+						{
+							Core::sub(rbeg, rend, std::begin(shiftedD[j]), std::end(shiftedD[j]));
+							val += Word(1) << j;
+						}
+					}
+				}
+				q[i] = val;
+			}
+		}
+
+		template<int N>
+		void div(Word(&q)[N], Word(&n)[N], const Word d) noexcept
+		{
+			DWord rest = 0;
+			for (int i = N; i--> 0;)
+			{
+				rest = rest << kWordSizeBits;
+				rest += n[i];
+				n[i] = 0;
+				q[i] = Word(rest / d);
+				rest = rest % d;
+			}
+			n[0] = (Word)rest;
+		}
+
+		template<int N, int M>
+		void mod(Word(&n)[N], const Word(&d)[M]) noexcept
+		{
+			Word shiftedD[kWordSizeBits][M + 1];
+			calcShiftedD(shiftedD, d);
+
+			Word* rbeg = std::end(n);
+			Word* rend = std::end(n);
+
+			for (int i = N; i-->0;)
+			{
+				rbeg--;
+				if (Core::cmp(rbeg, rend, std::begin(d), std::end(d)) >= 0)
+				{
+					for (int j = kWordSizeBits; j-- > 0;)
+					{
+						if (Core::cmp(rbeg, rend, std::begin(shiftedD[j]), std::end(shiftedD[j])) >= 0)
+							Core::sub(rbeg, rend, std::begin(shiftedD[j]), std::end(shiftedD[j]));
+					}
+				}
+			}
+		}
+
+		template<int N>
+		Word mod(const Word(&n)[N], const Word d) noexcept
+		{
+			DWord rest = 0;
+			for (int i = N; i--> 0;)
+			{
+				rest = rest << kWordSizeBits;
+				rest += n[i];
+				rest = rest % d;
+			}
+			return (Word)rest;
 		}
 	}
 	
@@ -433,7 +539,7 @@ namespace BigNum
 	}
 
 	template<int N, int M>
-	const Num<N+M> operator * (const Num<N>& v1, const Num<M>& v2) noexcept
+	const Num<N + M> operator * (const Num<N>& v1, const Num<M>& v2) noexcept
 	{
 		Num<N + M> rez(0);
 		Core::mul(rez.data, v1.data, v2.data);
@@ -544,129 +650,40 @@ namespace BigNum
 		return ret;
 	}
 
-	template<int N>
-	std::array<Num<N + kWordSizeBits>, kWordSizeBits> calcShiftedD(const Num<N>& d) noexcept
-	{
-		std::array<Num<N + kWordSizeBits>, kWordSizeBits> ret;
-		ret[0] = d;
-		for (unsigned int i = 1; i < kWordSizeBits; i++)
-			ret[i] = ret[0] << i;
-		return ret;
-	}
-
-	template<int N, int M>
-	Num<N> div(Num<N>& n, const Num<M>& d) noexcept
-	{
-		Num<N> q;
-
-		const std::array<Num<M + kWordSizeBits>, kWordSizeBits> shiftedD = calcShiftedD(d);
-
-		Word* qbeg = n.end();
-		Word* qend = n.end();
-
-		for (int i = Num<N>::Size; i-->0;)
-		{
-			qbeg--;
-			Word val = 0;
-			if (Core::cmp(qbeg, qend, d.begin(), d.end()) >= 0)
-			{
-				for (int j = kWordSizeBits; j-- > 0;)
-				{
-					if (Core::cmp(qbeg, qend, shiftedD[j].begin(), shiftedD[j].end()) >= 0)
-					{
-						Core::sub(qbeg, qend, shiftedD[j].begin(), shiftedD[j].end());
-						val += Word(1) << j;
-					}
-				}
-			}
-			q[i] = val;
-		}
-		return q;
-	}
-
-	template<int N, int M>
-	Num<M> mod(Num<N> n, const Num<M>& d) noexcept
-	{
-		const std::array<Num<M + kWordSizeBits>, kWordSizeBits> shiftedD = calcShiftedD(d);
-
-		Word* qbeg = n.end();
-		Word* qend = n.end();
-
-		for (int i = Num<N>::Size; i-->0;)
-		{
-			qbeg--;
-			if (Core::cmp(qbeg, qend, d.begin(), d.end()) >= 0)
-			{
-				for (int j = kWordSizeBits; j-- > 0;)
-				{
-					if (Core::cmp(qbeg, qend, shiftedD[j].begin(), shiftedD[j].end()) >= 0)
-					{
-						Core::sub(qbeg, qend, shiftedD[j].begin(), shiftedD[j].end());
-					}
-				}
-			}
-		}
-		assert(qbeg == n.begin());
-		return n;
-	}
-
-	template<int N>
-	Num<N> div(Num<N>& n, const Word d) noexcept
-	{
-		Num<N> q(0);
-		DWord rest = 0;
-		for (int i = Num<N>::Size; i--> 0;)
-		{
-			rest = rest << kWordSizeBits;
-			rest += n[i];
-			n[i] = 0;
-			q[i] = (Word)(rest / d);
-			rest = rest % d;
-		}
-		n[0] = (Word)rest;
-		return q;
-	}
-
-	template<int N>
-	Word mod(const Num<N>& n, const Word d) noexcept
-	{
-		DWord rest = 0;
-		for (int i = Num<N>::Size; i--> 0;)
-		{
-			rest = rest << kWordSizeBits;
-			rest += n[i];
-			rest = rest % d;
-		}
-		return (Word)rest;
-	}
-
 	template<int N, int M>
 	const Num<N> operator / (const Num<N>& v1, const Num<M>& v2) noexcept
 	{
 		if (v1 < v2)
 			return Num<N>(0);
 
-		Num<N> q = v1;
-		return div(q, v2);
+		Num<N> q, r = v1;
+		Core::div(q.data, r.data, v2.data);
+		return q;
 	}
 
 	template<int N>
 	const Num<N> operator / (const Num<N>& v1, const Word v2) noexcept
 	{
-		Num<N> q = v1;
-		return div(q, v2);
+		Num<N> q, r = v1;
+		Core::div(q.data, r.data, v2);
+		return q;
 	}
 
 	template<int N, int M>
 	const Num<M> operator % (const Num<N>& v1, const Num<M>& v2) noexcept
 	{
-		return mod(v1, v2);
+		if (v1 < v2)
+			return Num<M>(v1);
+
+		Num<N> r = v1;
+		Core::mod(r.data, v2.data);
+		return r;
 	}
 
 	template<int N>
 	const Word operator % (const Num<N>& v1, const Word v2) noexcept
 	{
-		return mod(v1, v2);
+		return Core::mod(v1.data, v2);
 	}
 
 	template<int N, int M>
