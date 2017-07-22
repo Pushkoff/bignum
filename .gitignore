@@ -2,3 +2,4 @@
 /build
 .*
 *.TMP
+/tools/premake5.exe
