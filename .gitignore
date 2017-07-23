@@ -3,3 +3,4 @@
 .*
 *.TMP
 /tools/premake5.exe
+/tools/premake5

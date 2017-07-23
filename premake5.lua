@@ -12,13 +12,14 @@ project "BigInt"
    debugdir "bin/%{cfg.platform}_%{cfg.buildcfg}"
    files { "src/**.h", "test/**.cpp" }
    includedirs { "src/" }
+   flags { "C++11", "StaticRuntime" }
    
    filter "configurations:Debug"
       defines { "DEBUG" }
       symbols "On"
       
    filter "configurations:Release"
-      flags { "LinkTimeOptimization", "StaticRuntime" }
+      flags { "LinkTimeOptimization" }
       defines { "NDEBUG" }
       optimize "Full"
       runtime("Release")
@@ -31,8 +32,6 @@ project "BigInt"
         buildoptions { "-fPIC" }
         -- Enables some additional warnings.
         buildoptions { "-Wall" }
-        -- Enables C++11 support.
-        buildoptions { "-std=c++11" }
         -- Disable some warnings.
         buildoptions 
         { 

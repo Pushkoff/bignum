@@ -1,5 +1,5 @@
 #pragma once
-
+#include <assert.h>
 #include <algorithm>
 #include <array>
 #include <type_traits>
@@ -8,8 +8,8 @@
 namespace BigNum
 {
 	typedef unsigned int Word;
-	constexpr size_t kWordSizeBits = sizeof(Word) * 8;
-	constexpr size_t kHalfWordSizeBits = kWordSizeBits / 2;
+	constexpr unsigned int kWordSizeBits = sizeof(Word) * 8;
+	constexpr unsigned int kHalfWordSizeBits = kWordSizeBits / 2;
 	constexpr Word kHalfWordMaskBits = (Word(1) << (kHalfWordSizeBits)) - Word(1);
 	
 	typedef unsigned long long DWord;
@@ -18,6 +18,20 @@ namespace BigNum
 
 	namespace Core
 	{
+		template<typename T, int N>
+		void zero(T (&to)[N]) noexcept
+		{
+			for (int i = 0; i < N; i++)
+				to[i] = 0;
+		}
+
+		template<typename T, int N, int M>
+		void copy(T (&to)[N], const T (&from)[M]) noexcept
+		{
+			for (int i = 0; i < N; i++)
+				to[i] = (i < M) ? from[i] : 0;
+		}
+
 		int cmp(const Word* v1begin, const Word* v1end, const Word* v2begin, const Word* v2end) noexcept
 		{
 			const std::ptrdiff_t v1len = v1end - v1begin;
@@ -34,17 +48,34 @@ namespace BigNum
 			return 0;
 		}
 
-        template<int N, int M>
-      	int cmp(const Word (&v1)[N], const Word (&v2)[M]) noexcept
+        template<typename T, int N, int M>
+      	int cmp(const T(&v1)[N], const T(&v2)[M]) noexcept
 		{
-			const int v1len = N;
-			const int v2len = M;
-			const int vmax = (v1len > v2len)? v1len : v2len;
+			constexpr int v1len = N;
+			constexpr int v2len = M;
+			constexpr int vmax = (v1len > v2len)? v1len : v2len;
 
 			for(int i = vmax; i-->0;)
 			{
-				const Word v1v = (i < v1len) ? v1[i] : 0;
-				const Word v2v = (i < v2len) ? v2[i] : 0;
+				const T v1v = (i < v1len) ? v1[i] : 0;
+				const T v2v = (i < v2len) ? v2[i] : 0;
+				if (v1v != v2v)
+					return v1v > v2v ? 1 : -1;
+			}
+			return 0;
+		}
+
+		template<typename T, int N>
+		int cmp(const T(&v1)[N], const T v2) noexcept
+		{
+			constexpr int v1len = N;
+			constexpr int v2len = 1;
+			constexpr int vmax = v1len;
+
+			for (int i = vmax; i-->0;)
+			{
+				const T v1v = (i < v1len) ? v1[i] : 0;
+				const T v2v = (i < v2len) ? v2 : 0;
 				if (v1v != v2v)
 					return v1v > v2v ? 1 : -1;
 			}
@@ -87,14 +118,14 @@ namespace BigNum
 			return carry;
 		}
 		
-		template<int N, int M, int K>
-		Word add(Word (&rez)[N], const Word (&v1)[M], const Word (&v2)[K]) noexcept
+		template<typename T, int N, int M, int K>
+		Word add(T (&rez)[N], const Word (&v1)[M], const T (&v2)[K]) noexcept
 		{
-			Word carry = 0;
+			T carry = 0;
 			for (int i = 0; i < N; i++)
 			{
-				const Word v1v = (i < M) ? v1[i] : 0;
-				const Word v2v = (i < K) ? v2[i] : 0;
+				const T v1v = (i < M) ? v1[i] : 0;
+				const T v2v = (i < K) ? v2[i] : 0;
 				carry = adc(rez[i], v1v, v2v, carry);
 			}
 			return carry;
@@ -150,14 +181,14 @@ namespace BigNum
 			return carry;
 		}
 
-		template<int N, int M, int K>
-		Word sub(Word (&rez)[N], const Word (&v1)[M], const Word (&v2)[K]) noexcept
+		template<typename T, int N, int M, int K>
+		Word sub(T (&rez)[N], const T (&v1)[M], const T (&v2)[K]) noexcept
 		{
-			Word carry = 0;
+			T carry = 0;
 			for (int i = 0; i < N; i++)
 			{
-				const Word v1v = (i < M) ? v1[i] : 0;
-				const Word v2v = (i < K) ? v2[i] : 0;
+				const T v1v = (i < M) ? v1[i] : 0;
+				const T v2v = (i < K) ? v2[i] : 0;
 				carry = sbc(rez[i], v1v, v2v, carry);
 			}
 			return carry;
@@ -233,45 +264,46 @@ namespace BigNum
 			}
 		}
 		
-		void mul(Word(&rez)[1], const Word(&v1)[1], const Word(&v2)[1]) noexcept
+		template<typename T>
+		void mul(T(&rez)[1], const T(&v1)[1], const T(&v2)[1]) noexcept
 		{
 			rez[0] = v1[0] * v2[0];
 		}
 
-		template<int N, int M, int K>
-		void mul(Word (&rez)[N], const Word (&v1)[M], const Word (&v2)[K], typename std::enable_if<N >= M + K>::type* = 0) noexcept
+		template<typename T, int N, int M, int K>
+		void mul(T (&rez)[N], const T (&v1)[M], const T (&v2)[K], typename std::enable_if<N >= M + K>::type* = 0) noexcept
 		{
-			assert(std::any_of(std::begin(rez), std::end(rez), [&](Word w) { return w > 0; }) == false);
+			assert(std::any_of(std::begin(rez), std::end(rez), [&](T w) { return w > 0; }) == false);
 
 			for (int v1it = 0; v1it < M; ++v1it)
 			{
-				Word carry = 0;
+				T carry = 0;
 				for (int v2it = 0; v2it < K; ++v2it)
 					carry = madd(rez[v1it + v2it], v1[v1it], v2[v2it], carry);
 				rez[v1it + K] = carry;
 			}
 		}
 
-		template<int N, int M, int K>
-		void mul(Word(&rez)[N], const Word(&v1)[M], const Word(&v2)[K], typename std::enable_if<N < M + K>::type* = 0) noexcept
+		template<typename T, int N, int M, int K>
+		void mul(T(&rez)[N], const T(&v1)[M], const T(&v2)[K], typename std::enable_if<N < M + K>::type* = 0) noexcept
 		{
-			assert(std::any_of(std::begin(rez), std::end(rez), [&](Word w) { return w > 0; }) == false);
+			assert(std::any_of(std::begin(rez), std::end(rez), [&](T w) { return w > 0; }) == false);
 
 			const int v1last = std::min(N, M);
 			for (int v1it = 0; v1it < v1last; ++v1it)
 			{
 				const int v2last = std::min(K, N - v1it);
-				Word carry = 0;
+				T carry = 0;
 				for (int v2it = 0; v2it < v2last; ++v2it)
 					carry = madd(rez[v1it + v2it], v1[v1it], v2[v2it], carry);
 				rez[v1it + v2last] = carry;
 			}
 		}
 		
-		template<unsigned int N>
-		void shl(Word (&rez)[N], const Word (&v)[N], unsigned int count) noexcept
+		template<typename T, unsigned int N>
+		void shl(T (&rez)[N], const T (&v)[N], unsigned int count) noexcept
 		{
-			assert(count < N*sizeof(Word)*8);
+			assert(count < N*sizeof(T)*8);
 			const unsigned int bytes = count / kWordSizeBits;
 			const unsigned int bits = count % kWordSizeBits;
 			if (bits == 0)
@@ -287,14 +319,14 @@ namespace BigNum
 				rez[i] = (v[i - bytes] << (bits));
 				i++;
 				for (; i < N; i++)
-					rez[i] = (v[i - bytes] << (bits)) | (v[i - bytes - 1] >> (sizeof(Word) * 8 - bits));
+					rez[i] = (v[i - bytes] << (bits)) | (v[i - bytes - 1] >> (sizeof(T) * 8 - bits));
 			}
 		}
 		
-		template<unsigned int N>
-		void shr(Word (&rez)[N], const Word (&v)[N], unsigned int count) noexcept
+		template<typename T, unsigned int N>
+		void shr(T (&rez)[N], const T (&v)[N], unsigned int count) noexcept
 		{
-			assert(count < N*sizeof(Word)*8);
+			assert(count < N*sizeof(T)*8);
 			const unsigned int bytes = count / kWordSizeBits;
 			const unsigned int bits = count % kWordSizeBits;
 			if (bits == 0)
@@ -306,7 +338,7 @@ namespace BigNum
 			{
 				unsigned int i = 0;
 				for (; i < N - bytes - 1; i++)
-					rez[i] = (v[i + bytes + 1] << (sizeof(Word) * 8 - bits)) | (v[i + bytes] >> bits);
+					rez[i] = (v[i + bytes + 1] << (sizeof(T) * 8 - bits)) | (v[i + bytes] >> bits);
 				rez[i] = (v[i + bytes] >> bits);
 				i++;
 				for (; i < N; i++)
@@ -314,8 +346,8 @@ namespace BigNum
 			}
 		}
 
-		template<int N>
-		void calcShiftedD(Word(&ret)[kWordSizeBits][N + 1], const Word(&d)[N]) noexcept
+		template<typename T, int N>
+		void calcShiftedD(T(&ret)[kWordSizeBits][N + 1], const T(&d)[N]) noexcept
 		{
 			for(unsigned i = 0; i < N; i++)
 				ret[0][i] = d[i];
@@ -325,19 +357,19 @@ namespace BigNum
 				shl(ret[i], ret[0], i);
 		}
 
-		template<int N, int M>
-		void div(Word(&q)[N], Word(&n)[N], const Word(&d)[M]) noexcept
+		template<typename T, int N, int M>
+		void div(T(&q)[N], T(&n)[N], const T(&d)[M]) noexcept
 		{
-			Word shiftedD[kWordSizeBits][M + 1];
+			T shiftedD[kWordSizeBits][M + 1];
 			calcShiftedD(shiftedD, d);
 
-			Word* rbeg = std::end(n);
-			Word* rend = std::end(n);
+			T* rbeg = std::end(n);
+			T* rend = std::end(n);
 
 			for (int i = N; i-->0;)
 			{
 				rbeg--;
-				Word val = 0;
+				T val = 0;
 				if (Core::cmp(rbeg, rend, std::begin(d), std::end(d)) >= 0)
 				{
 					for (int j = kWordSizeBits; j-- > 0;)
@@ -345,7 +377,7 @@ namespace BigNum
 						if (Core::cmp(rbeg, rend, std::begin(shiftedD[j]), std::end(shiftedD[j])) >= 0)
 						{
 							Core::sub(rbeg, rend, std::begin(shiftedD[j]), std::end(shiftedD[j]));
-							val += Word(1) << j;
+							val += T(1) << j;
 						}
 					}
 				}
@@ -353,29 +385,30 @@ namespace BigNum
 			}
 		}
 
-		template<int N>
-		void div(Word(&q)[N], Word(&n)[N], const Word d) noexcept
+		template<typename T, int N>
+		void div(T(&q)[N], T(&n)[N], const T d) noexcept
 		{
-			DWord rest = 0;
+			static_assert(sizeof(unsigned long long) > sizeof(T), "T have to be smaller size than unsigned long long");
+			unsigned long long rest = 0;
 			for (int i = N; i--> 0;)
 			{
 				rest = rest << kWordSizeBits;
 				rest += n[i];
 				n[i] = 0;
-				q[i] = Word(rest / d);
+				q[i] = T(rest / d);
 				rest = rest % d;
 			}
-			n[0] = (Word)rest;
+			n[0] = (T)rest;
 		}
 
-		template<int N, int M>
-		void mod(Word(&n)[N], const Word(&d)[M]) noexcept
+		template<typename T, int N, int M>
+		void mod(T(&n)[N], const T(&d)[M]) noexcept
 		{
-			Word shiftedD[kWordSizeBits][M + 1];
+			T shiftedD[kWordSizeBits][M + 1];
 			calcShiftedD(shiftedD, d);
 
-			Word* rbeg = std::end(n);
-			Word* rend = std::end(n);
+			T* rbeg = std::end(n);
+			T* rend = std::end(n);
 
 			for (int i = N; i-->0;)
 			{
@@ -391,17 +424,47 @@ namespace BigNum
 			}
 		}
 
-		template<int N>
-		Word mod(const Word(&n)[N], const Word d) noexcept
+		template<typename T, int N>
+		T mod(const T(&n)[N], const T d) noexcept
 		{
-			DWord rest = 0;
+			static_assert(sizeof(unsigned long long) > sizeof(T), "T have to be smaller size than unsigned long long");
+			unsigned long long rest = 0;
 			for (int i = N; i--> 0;)
 			{
 				rest = rest << kWordSizeBits;
 				rest += n[i];
 				rest = rest % d;
 			}
-			return (Word)rest;
+			return (T)rest;
+		}
+
+		template<typename T, int N>
+		void gcd(T(&rez)[N], const T(&v1)[N], const T(&v2)[N]) noexcept
+		{
+			int cmprez = cmp(v1, v2);
+			if (cmprez > 0)
+				copy(rez, v1);
+			else
+				copy(rez, v2);
+			
+			if (cmprez == 0)
+				return;
+
+			T b[N];
+			if (cmprez > 0)
+				copy(b, v2);
+			else
+				copy(b, v1);
+
+			while (cmp(b, T(0)))
+			{
+				T t[N], m[N];
+				copy(t, b);
+				copy(m, rez);
+				mod(m, b);
+				copy(b, m);
+				copy(rez, t);
+			}
 		}
 	}
 	
@@ -774,19 +837,9 @@ namespace BigNum
 	template<int N>
 	const Num<N> gcd(const Num<N>& v1, const Num<N>& v2) noexcept
 	{
-		if (v1 == v2)
-			return v1;
-			
-		Num<N> a = (v1 > v2) ? v1 : v2;
-		Num<N> b = (v1 > v2) ? v2 : v1; 
-		
-		while(b != 0)
-		{
-			Num<N> t = b;
-			b = a % b;
-			a = t;
-		}
-		return a;
+		Num<N> ret;
+		Core::gcd(ret.data, v1.data, v2.data);
+		return ret;
 	}
 
 	template<int N>
