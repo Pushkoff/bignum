@@ -162,7 +162,7 @@ namespace BigNum
 
 			const DWord sum = DWord(v1) - v2 - carry;
 			ret = sum & kWordMaskBits;
-			return (sum >> kWordSizeBits) ? 1 : 0;
+			return (sum >> kWordSizeBits) ? 1u : 0u;
 		}
 
 		Word sub(Word* rezbegin, Word* rezend, const Word* v1begin, const Word* v1end, const Word* v2begin, const Word* v2end) noexcept
@@ -251,7 +251,7 @@ namespace BigNum
 			const std::ptrdiff_t rezlen = rezend - rezbegin;
 
 			assert((rezlen) >= (v1len) + (v2len));
-			assert(std::any_of(rezbegin, rezend, [&](Word w) { return w > 0; }) == false);
+			assert(std::any_of(rezbegin, rezend, [&](Word w) { return w > 0u; }) == false);
 
 			const ptrdiff_t v1last = std::min(rezlen, v1len);
 			for (std::ptrdiff_t v1it = 0; v1it < v1last; ++v1it)
@@ -472,29 +472,26 @@ namespace BigNum
 	class Num
 	{
 	public:
-		enum
-		{
-			Size = (N + (kWordSizeBits) - 1) / (kWordSizeBits),
-		};
-
+		static constexpr unsigned int Size = (N + (kWordSizeBits)-1) / (kWordSizeBits);
+		
 		Word data[Size];
 
 		Num() noexcept
 		{
-			for (int i = 0; i < Size; i++)
+			for (unsigned int i = 0; i < Size; i++)
 				data[i] = 0;
 		}
 
 		explicit Num(Word num) noexcept
 		{
 			data[0] = Word(num);
-			for (int i = 1; i < Size; i++)
+			for (unsigned int i = 1; i < Size; i++)
 				data[i] = 0;
 		}
 
 		explicit Num(unsigned long long num) noexcept
 		{
-			for (int i = 0; i < Size; i++)
+			for (unsigned int i = 0; i < Size; i++)
 			{
 				data[i] = Word(num);
 				num >>= kWordSizeBits;
@@ -504,7 +501,7 @@ namespace BigNum
 		explicit Num(int num) noexcept
 		{
 			data[0] = Word(num);
-			for (int i = 1; i < Size; i++)
+			for (unsigned int i = 1; i < Size; i++)
 				data[i] = 0;
 		}
 
@@ -514,23 +511,29 @@ namespace BigNum
 			*this = other;
 		}
 
-		Num& operator = (const Num& other) noexcept
+		template<int M>
+		Num(Num<M>&& other) noexcept
+		{
+			*this = other;
+		}
+
+		Num<N>& operator = (const Num<N>& other) noexcept
 		{
 			if (this != &other)
 			{
-				for (int i = 0; i < Size; i++)
+				for (unsigned int i = 0; i < Size; i++)
 					data[i] = other[i];
 			}
 			return *this;
 		}
 
 		template<int M>
-		Num& operator = (const Num<M>& other) noexcept
+		Num<N>& operator = (const Num<M>& other) noexcept
 		{
-			for (int i = 0; i < std::min<int>(Size, Num<M>::Size); i++)
+			for (unsigned int i = 0; i < std::min(Size, Num<M>::Size); i++)
 				data[i] = other[i];
 
-			for (int i = std::min<int>(Size, Num<M>::Size); i < Size; i++)
+			for (unsigned int i = std::min(Size, Num<M>::Size); i < Size; i++)
 				data[i] = 0;
 				
 			//assert(std::none_of(&other[std::min<int>(Size, Num<M>::Size)],&other[Num<M>::Size], [](unsigned char x){ return x != 0; }));
@@ -538,17 +541,17 @@ namespace BigNum
 			return *this;
 		}
 
-		Word& operator[](int i) noexcept { return data[i]; }
-		const Word& operator[](int i) const noexcept { return data[i]; }
+		Word& operator[](unsigned int i) noexcept { return data[i]; }
+		const Word& operator[](unsigned int i) const noexcept { return data[i]; }
 
-		bool bit(int i) const noexcept
+		bool bit(unsigned int i) const noexcept
 		{
 			assert(i >= 0 && i < N);
 			bool ret = false;
 			if (i >= 0 && i < N)
 			{
-				const int byte = i / kWordSizeBits;
-				const int bit = i % kWordSizeBits;
+				const unsigned int byte = i / kWordSizeBits;
+				const unsigned int bit = i % kWordSizeBits;
 				ret = ((*this)[byte] & (Word(1) << bit)) != 0;
 			}
 			return ret;
@@ -787,7 +790,7 @@ namespace BigNum
 	{
 		Num<N> rez;
 
-		for (int i = 0; i < Num<N>::Size; i++)
+		for (unsigned int i = 0; i < Num<N>::Size; i++)
 		{
 			rez[i] = v1[i] | v2[i];
 		}
@@ -808,7 +811,7 @@ namespace BigNum
 	{
 		Num<N> rez;
 
-		for (int i = 0; i < Num<N>::Size; i++)
+		for (unsigned int i = 0; i < Num<N>::Size; i++)
 		{
 			rez[i] = ~v[i];
 		}
@@ -915,12 +918,12 @@ namespace BigNum
 		Num<N> result(1);
 		Num<N> power = base;
 
-		int realExpSize = Num<N>::Size;
+		auto realExpSize = Num<N>::Size;
 		// skip leading zeros
 		while (realExpSize > 0 && exp[realExpSize - 1] == 0)
 			realExpSize--;
 
-		for (int i = std::min(N, int(realExpSize * kWordSizeBits)); i-->0;)
+		for (auto i = std::min<unsigned int>(N, realExpSize * kWordSizeBits); i-->0;)
 		{
 			result = (result * result) % modulo;
 			if (exp.bit(i))
@@ -1009,11 +1012,11 @@ namespace BigNum
 		Num<N> ret = monMod.In(Num<N>(1));
 		Num<N> power = monMod.In(base);
 
-		int realExpSize = Num<M>::Size;
+		auto realExpSize = Num<M>::Size;
 		while (realExpSize > 0 && exp[realExpSize - 1] == 0)
 			realExpSize--;
 
-		for (int i = std::min(N, int(realExpSize * kWordSizeBits)); i --> 0;)
+		for (auto i = std::min<unsigned int>(N, realExpSize * kWordSizeBits); i --> 0;)
 		{
 			ret = monMod(ret, ret);
 			if (exp.bit(i))
@@ -1033,11 +1036,11 @@ namespace BigNum
 		power[1] = monMod(baseIn, baseIn);
 		power[2] = monMod(power[1], baseIn);
 
-		int realExpSize = Num<M>::Size;
+		auto realExpSize = Num<M>::Size;
 		while (realExpSize > 0 && exp[realExpSize - 1] == 0)
 			realExpSize--;
 
-		for (int i = std::min(N, int(realExpSize * kWordSizeBits))/2; i--> 0;)
+		for (auto i = std::min<unsigned int>(N, realExpSize * kWordSizeBits)/2; i--> 0;)
 		{
 			ret = monMod(ret, ret);
 			ret = monMod(ret, ret);
@@ -1069,9 +1072,9 @@ namespace BigNum
 	const Num<N> rand() noexcept
 	{
 		BigNum::Num<N> ret;
-		for (int i = 0; i < BigNum::Num<N>::Size; ++i)
+		for (auto i = 0u; i < BigNum::Num<N>::Size; ++i)
 		{
-			ret[i] = std::rand() % 256;
+			ret[i] = (unsigned)(std::rand() % 256u);
 		}
 		return ret;
 	}
@@ -1083,7 +1086,7 @@ namespace BigNum
 	{
 		BigNum::Num<N> d = num - 1;
 
-		int s = 0;
+		unsigned int s = 0u;
 		while (d.bit(s) == false)
 			s++;
 
@@ -1093,7 +1096,7 @@ namespace BigNum
 		if (a_to_power == 1)
 			return true;
 
-		for (int i = 0; i < s - 1; i++)
+		for (unsigned int i = 0; i < s - 1; i++)
 		{
 			if (a_to_power == num - 1)
 				return true;
@@ -1226,10 +1229,10 @@ namespace BigNum
 	template<int N>
 	const Num<N> nextPrime(const BigNum::Num<N>& from) noexcept
 	{
-		BigNum::Num<N> prime = from | 1;
+		BigNum::Num<N> prime = from | 1u;
 
 		while (!(simpleTest(prime) && millerRabinTest(prime)))
-			prime = prime + 2;
+			prime = prime + 2u;
 
 		return prime;
 	}
@@ -1237,23 +1240,23 @@ namespace BigNum
 	template<int N>
 	const Num<N> nextPrimeOpt3(const BigNum::Num<N>& from) noexcept
 	{
-		BigNum::Num<N> prime = from | 1;
+		BigNum::Num<N> prime = from | 1u;
 		
 		constexpr unsigned char steps[3] = {2, 4, 2};
 
-		unsigned char rest3 = (unsigned char)(prime % 3);
+		unsigned char rest3 = (unsigned char)(prime % 3u);
 		if (rest3 == 0)
 		{
 			const unsigned char step = steps[rest3];
-			rest3 = (rest3 + step) % 3;
+			rest3 = (rest3 + step) % 3u;
 			prime = prime + step;
 		}
 
 		while (!(simpleTest(prime, 1) && millerRabinTest(prime)))
 		{
-			assert(prime % 3 != 0);
+			assert(prime % 3u != 0);
 			const unsigned char step = steps[rest3];
-			rest3 = (rest3 + step) % 3;
+			rest3 = (rest3 + step) % 3u;
 			prime = prime + step;
 		}
 
@@ -1263,26 +1266,26 @@ namespace BigNum
 	template<int N>
 	const Num<N> nextPrimeOpt35(const BigNum::Num<N>& from) noexcept
 	{
-		BigNum::Num<N> prime = from | 1;
+		BigNum::Num<N> prime = from | 1u;
 		
 		constexpr unsigned char steps[3][5] = {{2, 2, 2, 4, 2}, {4, 6, 4, 4, 4}, {2, 2, 2, 6, 2}};
 
-		unsigned char rest3 = (unsigned char)(prime % 3), rest5 = (unsigned char)(prime % 5);
+		unsigned char rest3 = (unsigned char)(prime % 3u), rest5 = (unsigned char)(prime % 5u);
 		if (rest3 == 0 || rest5 == 0)
 		{
 			const unsigned char step = steps[rest3][rest5];
-			rest3 = (rest3 + step) % 3;
-			rest5 = (rest5 + step) % 5;
+			rest3 = (rest3 + step) % 3u;
+			rest5 = (rest5 + step) % 5u;
 			prime = prime + step;
 		}
 
 		while (!(simpleTest(prime, 2) && millerRabinTest(prime)))
 		{
-			assert(prime % 3 != 0);
-			assert(prime % 5 != 0);
+			assert(prime % 3u != 0);
+			assert(prime % 5u != 0);
 			const unsigned char step = steps[rest3][rest5];
-			rest3 = (rest3 + step) % 3;
-			rest5 = (rest5 + step) % 5;
+			rest3 = (rest3 + step) % 3u;
+			rest5 = (rest5 + step) % 5u;
 			prime = prime + step;
 		}
 
@@ -1300,26 +1303,26 @@ namespace BigNum
 			{{2, 2, 2, 2, 2, 6, 2}, {2, 2, 2, 2, 2, 6, 2}, {2, 2, 2, 2, 2, 6, 2}, {6, 8, 6, 6, 6, 6, 6}, {2, 2, 2, 2, 2, 8, 2}}
 		};
 
-		unsigned char rest3 = (unsigned char)(prime % 3), rest5 = (unsigned char)(prime % 5), rest7 = (unsigned char)(prime % 7);
+		unsigned char rest3 = (unsigned char)(prime % 3u), rest5 = (unsigned char)(prime % 5u), rest7 = (unsigned char)(prime % 7u);
 		
 		if (rest3 == 0 || rest5 == 0 || rest7 == 0)
 		{
 			const unsigned char step = steps[rest3][rest5][rest7];
-			rest3 = (rest3 + step) % 3;
-			rest5 = (rest5 + step) % 5;
-			rest7 = (rest7 + step) % 7;
+			rest3 = (rest3 + step) % 3u;
+			rest5 = (rest5 + step) % 5u;
+			rest7 = (rest7 + step) % 7u;
 			prime = prime + step;
 		}
 
 		while (!(simpleTest(prime, 3) && millerRabinTest(prime)))
 		{
-			assert(prime % 3 != 0);
-			assert(prime % 5 != 0);
-			assert(prime % 7 != 0);
+			assert(prime % 3u != 0);
+			assert(prime % 5u != 0);
+			assert(prime % 7u != 0);
 			const unsigned char step = steps[rest3][rest5][rest7];
-			rest3 = (rest3 + step) % 3;
-			rest5 = (rest5 + step) % 5;
-			rest7 = (rest7 + step) % 7;
+			rest3 = (rest3 + step) % 3u;
+			rest5 = (rest5 + step) % 5u;
+			rest7 = (rest7 + step) % 7u;
 			prime = prime + step;
 		}
 
@@ -1337,29 +1340,29 @@ namespace BigNum
 			{{{2, 2, 2, 2, 2, 2, 2, 2, 2, 6, 2},  {2, 2, 2, 2, 2, 2, 2, 2, 2, 8, 2},  {2, 2, 2, 2, 2, 2, 2, 2, 2, 6, 2},  {2, 2, 2, 2, 2, 2, 2, 2, 2, 6, 2},  {2, 2, 2, 2, 2, 2, 2, 2, 2, 6, 2},  {6, 6, 6, 6, 6, 8, 6, 6, 6, 6, 6},  {2, 2, 2, 2, 2, 2, 2, 2, 2, 6, 2}},  {  {2, 2, 2, 2, 2, 2, 2, 2, 2, 6, 2},  {2, 2, 2, 2, 2, 2, 2, 2, 2, 8, 2},  {2, 2, 2, 2, 2, 2, 2, 2, 2, 6, 2},  {2, 2, 2, 2, 2, 2, 2, 2, 2, 6, 2},  {2, 2, 2, 2, 2, 2, 2, 2, 2, 6, 2},  {6, 6, 6, 6, 6, 8, 6, 6, 6, 6, 6},  {2, 2, 2, 2, 2, 2, 2, 2, 2, 6, 2}},  {  {2, 2, 2, 2, 2, 2, 2, 2, 2, 6, 2},  {2, 2, 2, 2, 2, 2, 2, 2, 2, 12, 2},  {2, 2, 2, 2, 2, 2, 2, 2, 2, 6, 2},  {2, 2, 2, 2, 2, 2, 2, 2, 2, 6, 2},  {2, 2, 2, 2, 2, 2, 2, 2, 2, 6, 2},  {6, 6, 6, 6, 6, 12, 6, 6, 6, 6, 6},  {2, 2, 2, 2, 2, 2, 2, 2, 2, 6, 2}},  {  {6, 6, 6, 6, 6, 8, 6, 6, 6, 6, 6},  {8, 8, 8, 14, 8, 8, 8, 8, 8, 8, 8},  {6, 6, 6, 6, 6, 8, 6, 6, 6, 6, 6},  {6, 6, 6, 6, 6, 8, 6, 6, 6, 6, 6},  {6, 6, 6, 6, 6, 8, 6, 6, 6, 6, 6},  {6, 6, 6, 6, 6, 8, 6, 6, 6, 6, 6},  {6, 6, 6, 6, 6, 14, 6, 6, 6, 6, 6}},  {  {2, 2, 2, 2, 2, 2, 2, 2, 2, 8, 2},  {2, 2, 2, 2, 2, 2, 2, 2, 2, 8, 2},  {2, 2, 2, 2, 2, 2, 2, 2, 2, 8, 2},  {2, 2, 2, 2, 2, 2, 2, 2, 2, 8, 2},  {2, 2, 2, 2, 2, 2, 2, 2, 2, 8, 2},  {8, 8, 8, 12, 8, 8, 8, 8, 8, 8, 8},  {2, 2, 2, 2, 2, 2, 2, 2, 2, 12, 2}}}
 		};
 
-		unsigned char rest3 = (unsigned char)(prime % 3), rest5 = (unsigned char)(prime % 5), rest7 = (unsigned char)(prime % 7), rest11 = (unsigned char)(prime % 11);
+		unsigned char rest3 = (unsigned char)(prime % 3u), rest5 = (unsigned char)(prime % 5u), rest7 = (unsigned char)(prime % 7u), rest11 = (unsigned char)(prime % 11u);
 		
 		if (rest3 == 0 || rest5 == 0 || rest7 == 0 || rest11 == 0)
 		{
 			const unsigned char step = steps[rest3][rest5][rest7][rest11];
-			rest3 = (rest3 + step) % 3;
-			rest5 = (rest5 + step) % 5;
-			rest7 = (rest7 + step) % 7;
-			rest11 = (rest11 + step) % 11;
+			rest3 = (rest3 + step) % 3u;
+			rest5 = (rest5 + step) % 5u;
+			rest7 = (rest7 + step) % 7u;
+			rest11 = (rest11 + step) % 11u;
 			prime = prime + step;
 		}
 
-		while (!(simpleTest(prime, 4) && millerRabinTest(prime)))
+		while (!(simpleTest(prime, 4u) && millerRabinTest(prime)))
 		{
-			assert(prime % 3 != 0);
-			assert(prime % 5 != 0);
-			assert(prime % 7 != 0);
-			assert(prime % 11 != 0);
+			assert(prime % 3u != 0);
+			assert(prime % 5u != 0);
+			assert(prime % 7u != 0);
+			assert(prime % 11u != 0);
 			const unsigned char step = steps[rest3][rest5][rest7][rest11];
-			rest3 = (rest3 + step) % 3;
-			rest5 = (rest5 + step) % 5;
-			rest7 = (rest7 + step) % 7;
-			rest11 = (rest11 + step) % 11;
+			rest3 = (rest3 + step) % 3u;
+			rest5 = (rest5 + step) % 5u;
+			rest7 = (rest7 + step) % 7u;
+			rest11 = (rest11 + step) % 11u;
 			prime = prime + step;
 		}
 
@@ -1403,7 +1406,7 @@ namespace BigNum
 		void m10add(BigNum::Num<N>& ret, const char arg) noexcept
 		{
 			assert(arg >= '0' && arg <= '9' && "Must be number");
-			ret = ret * 10 + (arg - '0');
+			ret = ret * 10u + (unsigned)(arg - '0');
 		}
 
 		template <int N>

@@ -48,8 +48,8 @@ const BigNum::Num<N> fromString(const char* str)
 	BigNum::Num<N> ret;
 	while (*str && isdigit(*str))
 	{
-		ret = ret * 10;
-		ret = ret + (*str - '0');
+		ret = ret * 10u;
+		ret = ret + (unsigned)(*str - '0');
 		str++;
 	}
 	return ret;
@@ -83,7 +83,7 @@ int TestsPass = 0;
 int TestsFailed = 0;
 
 template<typename Fn>
-void doTest(Fn fn, const char* testName, const char* filename = "",  int fileLine = 0)
+void doTest(Fn fn, const char* testName, int fileLine = 0)
 {
 	srand(0);
 	printf("%3d  %s\n", fileLine, testName);
@@ -99,7 +99,7 @@ void doTest(Fn fn, const char* testName, const char* filename = "",  int fileLin
 
 
 
-#define test(a) do{  doTest([&](){ return (a); }, #a, __FILE__, __LINE__); }while(false);
+#define test(a) do{  doTest([&](){ return (a); }, #a, __LINE__); }while(false);
 
 #define PROFILING 0
 
@@ -107,7 +107,7 @@ int main()
 {
 #if PROFILING
 		test(BigNum::nextPrime<2048>(1_bn2048 << 2047) > 0 ); 
-		test(BigNum::nextPrimeOpt3571113<2048>(1_bn2048 << 2047) > 0);
+		test(BigNum::nextPrimeOpt35711<2048>(1_bn2048 << 2047) > 0);
 #else
 	//srand(time(nullptr));
 	try
@@ -115,7 +115,7 @@ int main()
 		{
 			bool passed = true;
 			BigNum::Num<64> bn(1);
-			for (int i = 0; i < 64; i++)
+			for (unsigned int i = 0u; i < 64u; i++)
 			{
 				BigNum::Num<64> testbn = bn << i;
 				passed = passed && (testbn[i / BigNum::kWordSizeBits] == (1ull << i%BigNum::kWordSizeBits));
@@ -125,8 +125,8 @@ int main()
 
 		{
 			bool passed = true;
-			BigNum::Num<64> bn = BigNum::Num<64>(1) << 63;
-			for (int i = 0; i < 64; i++)
+			BigNum::Num<64> bn = BigNum::Num<64>(1) << 63u;
+			for (unsigned int i = 0u; i < 64u; i++)
 			{
 				BigNum::Num<64> testbn = bn >> i;
 				passed = passed && (testbn[(63 - i) / BigNum::kWordSizeBits] == (1ull << ((BigNum::kWordSizeBits - 1) - i%BigNum::kWordSizeBits)));
@@ -137,8 +137,8 @@ int main()
 
 		{
 			bool passed = true;
-			BigNum::Num<64> bn1 = BigNum::Num<64>(0) - 1;
-			for (int i = 0; i < 64; i++)
+			BigNum::Num<64> bn1 = BigNum::Num<64>(0) - 1u;
+			for (unsigned int i = 0; i < 64u; i++)
 			{
 				BigNum::Num<64> testbn1 = bn1 << i;
 				passed = passed && (testbn1 == (BigNum::Num<64>(0) - BigNum::Num<64>(1) << i));
@@ -151,7 +151,7 @@ int main()
 			bool passed = true;
 			BigNum::Num<64> bn1 = BigNum::Num<64>(255);
 			BigNum::Num<64> bn2 = BigNum::Num<64>(255) << 56;
-			for (int i = 0; i < 56; i++)
+			for (unsigned int i = 0; i < 56; i++)
 			{
 				BigNum::Num<64> testbn1 = bn1 << i;
 				BigNum::Num<64> testbn2 = bn2 >> (56 - i);
@@ -164,7 +164,7 @@ int main()
 		{
 			bool passed = true;
 			BigNum::Num<64> bn(3);
-			for (int i = 0; i < 64; i++)
+			for (unsigned int i = 0; i < 64; i++)
 			{
 				BigNum::Num<64> testbn = BigNum::Num<64>(3) << i;
 				passed = passed && (testbn == bn);
@@ -400,12 +400,12 @@ int main()
 			for (std::size_t block = 0; block < (testdata.size() / (BigNum::Num<Module>::Size / 2)); block++)
 			{
 				BigNum::Num<Module> data(0);
-				for (int i = 0; i < BigNum::Num<Module>::Size / 2; ++i)
+				for (unsigned int i = 0; i < BigNum::Num<Module>::Size / 2; ++i)
 					data[i] = testdata[block * BigNum::Num<Module>::Size / 2 + i];
 
 				BigNum::Num<Module> cipper = BigNum::monModExp(data, e, N);
 
-				for (int i = 0; i < BigNum::Num<Module>::Size; ++i)
+				for (unsigned int i = 0; i < BigNum::Num<Module>::Size; ++i)
 					cipperdata.push_back(cipper[i]);
 			}
 			stop = std::chrono::high_resolution_clock::now();
@@ -418,11 +418,11 @@ int main()
 			for (std::size_t block = 0; block < (cipperdata.size() / BigNum::Num<Module>::Size); block++)
 			{
 				BigNum::Num<Module> cipper(0);
-				for (int i = 0; i < BigNum::Num<Module>::Size; ++i)
+				for (unsigned int i = 0; i < BigNum::Num<Module>::Size; ++i)
 					cipper[i] = cipperdata[block * BigNum::Num<Module>::Size + i];
 
 				BigNum::Num<Module> data = BigNum::CRT(cipper, p, q, dp, dq, qinvp);
-				for (int i = 0; i < BigNum::Num<Module>::Size / 2; ++i)
+				for (unsigned int i = 0; i < BigNum::Num<Module>::Size / 2; ++i)
 					decrypted.push_back(data[i]);
 			}
 
