@@ -82,24 +82,30 @@ namespace BigNum
 			return 0;
 		}
 
+		template<typename T>
+		T adc(T& ret, const T a, const T b) noexcept
+		{
+			ret = a + b;
+			return (ret < a) ? 1 : 0;
+		}
+
+		unsigned long long int adc(unsigned long long int& ret, const unsigned long long int v1, const unsigned long long int v2, const unsigned long long int carry) noexcept
+		{
+			unsigned long long int retCarry = adc(ret, v1, v2);
+			retCarry = adc(ret, ret, carry) + retCarry;
+			return retCarry;
+		}
+
+		template <typename Word>
 		Word adc(Word& ret, const Word v1, const Word v2, const Word carry) noexcept
 		{
-			//assert(carry >= 0 && carry <= 1);
-
-			//const Word v1l = v1 & kHalfWordMaskBits, v2l = v2 & kHalfWordMaskBits;
-			//const Word retl = v1l + v2l + carry;
-			//const Word retlc = retl >> kHalfWordSizeBits;
-
-			//const Word v1h = v1 >> kHalfWordSizeBits, v2h = v2 >> kHalfWordSizeBits;
-			//const Word reth = v1h + v2h + retlc;
-			//const Word rethc = reth >> kHalfWordSizeBits;
-
-			//ret = (retl & kHalfWordMaskBits) | (reth << kHalfWordSizeBits);
-			//return rethc;
-
-			const DWord sum = DWord(v1) + v2 + carry;
-			ret = sum & kWordMaskBits;
-			return Word(sum >> kWordSizeBits);
+			constexpr unsigned int kWordSizeBits = sizeof(Word) * 8;
+			constexpr unsigned long long int kWordMaskBits = (1ull << (kWordSizeBits)) - 1ull;
+			static_assert(sizeof(unsigned long long int) > sizeof(Word), "cant detect overflow");
+			
+            const unsigned long long int sum = (unsigned long long int)(v1) + v2 + carry;
+            ret = sum & kWordMaskBits;
+            return Word(sum >> kWordSizeBits);
 		}
 
 		Word add(Word* rezbegin, Word* rezend, const Word* v1begin, const Word* v1end, const Word* v2begin, const Word* v2end) noexcept
@@ -147,19 +153,6 @@ namespace BigNum
 
 		Word sbc(Word& ret, const Word v1, const Word v2, const Word carry) noexcept
 		{
-			//assert(carry >= 0 && carry <= 1);
-
-			//const Word v1l = v1 & kHalfWordMaskBits, v2l = v2 & kHalfWordMaskBits;
-			//const Word retl = v1l - v2l - carry;
-			//const Word retlc = (retl >> kHalfWordSizeBits) ? 1 : 0;
-
-			//const Word v1h = v1 >> kHalfWordSizeBits, v2h = v2 >> kHalfWordSizeBits;
-			//const Word reth = v1h - v2h - retlc;
-			//const Word rethc = (reth >> kHalfWordSizeBits) ? 1 : 0;
-
-			//ret = (retl & kHalfWordMaskBits) | (reth << kHalfWordSizeBits);
-			//return rethc;
-
 			const DWord sum = DWord(v1) - v2 - carry;
 			ret = sum & kWordMaskBits;
 			return (sum >> kWordSizeBits) ? 1u : 0u;
