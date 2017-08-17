@@ -7,15 +7,6 @@
 
 namespace BigNum
 {
-	typedef unsigned int Word;
-	constexpr unsigned int kWordSizeBits = sizeof(Word) * 8;
-	constexpr unsigned int kHalfWordSizeBits = kWordSizeBits / 2;
-	constexpr Word kHalfWordMaskBits = (Word(1) << (kHalfWordSizeBits)) - Word(1);
-	
-	typedef unsigned long long DWord;
-	constexpr DWord kWordMaskBits = (DWord(1) << (kWordSizeBits)) - DWord(1);
-	static_assert(sizeof(DWord) > sizeof(Word), "cant detect overflow");
-
 	namespace Core
 	{
 		template<typename T, int N>
@@ -32,7 +23,8 @@ namespace BigNum
 				to[i] = (i < M) ? from[i] : 0;
 		}
 
-		int cmp(const Word* v1begin, const Word* v1end, const Word* v2begin, const Word* v2end) noexcept
+		template<typename T>
+		int cmp(const T* v1begin, const T* v1end, const T* v2begin, const T* v2end) noexcept
 		{
 			const std::ptrdiff_t v1len = v1end - v1begin;
 			const std::ptrdiff_t v2len = v2end - v2begin;
@@ -40,8 +32,8 @@ namespace BigNum
 
 			for(std::ptrdiff_t i = vmax; i-->0;)
 			{
-				const Word v1 = (i < v1len) ? v1begin[i] : 0;
-				const Word v2 = (i < v2len) ? v2begin[i] : 0;
+				const T v1 = (i < v1len) ? v1begin[i] : 0;
+				const T v2 = (i < v2len) ? v2begin[i] : 0;
 				if (v1 != v2)
 					return v1 > v2 ? 1 : -1;
 			}
@@ -96,36 +88,37 @@ namespace BigNum
 			return retCarry;
 		}
 
-		template <typename Word>
-		Word adc(Word& ret, const Word v1, const Word v2, const Word carry) noexcept
+		template <typename T>
+		T adc(T& ret, const T v1, const T v2, const T carry, typename std::enable_if<(sizeof(unsigned long long int) > sizeof(T))>::type* = 0) noexcept
 		{
-			constexpr unsigned int kWordSizeBits = sizeof(Word) * 8;
+			constexpr unsigned int kWordSizeBits = sizeof(T) * 8;
 			constexpr unsigned long long int kWordMaskBits = (1ull << (kWordSizeBits)) - 1ull;
-			static_assert(sizeof(unsigned long long int) > sizeof(Word), "cant detect overflow");
+			static_assert(sizeof(unsigned long long int) > sizeof(T), "cant detect overflow");
 			
             const unsigned long long int sum = (unsigned long long int)(v1) + v2 + carry;
             ret = sum & kWordMaskBits;
-            return Word(sum >> kWordSizeBits);
+            return T(sum >> kWordSizeBits);
 		}
 
-		Word add(Word* rezbegin, Word* rezend, const Word* v1begin, const Word* v1end, const Word* v2begin, const Word* v2end) noexcept
+		template <typename T>
+		T add(T* rezbegin, T* rezend, const T* v1begin, const T* v1end, const T* v2begin, const T* v2end) noexcept
 		{
 			const std::ptrdiff_t rezlen = rezend - rezbegin;
 			const std::ptrdiff_t v1len = v1end - v1begin;
 			const std::ptrdiff_t v2len = v2end - v2begin;
 
-			Word carry = 0;
+			T carry = 0;
 			for (std::ptrdiff_t i = 0; i < rezlen; i++)
 			{
-				const Word v1 = (i < v1len) ? v1begin[i] : 0;
-				const Word v2 = (i < v2len) ? v2begin[i] : 0;
+				const T v1 = (i < v1len) ? v1begin[i] : 0;
+				const T v2 = (i < v2len) ? v2begin[i] : 0;
 				carry = adc(rezbegin[i], v1, v2, carry);
 			}
 			return carry;
 		}
 		
 		template<typename T, int N, int M, int K>
-		Word add(T (&rez)[N], const Word (&v1)[M], const T (&v2)[K]) noexcept
+		T add(T (&rez)[N], const T (&v1)[M], const T (&v2)[K]) noexcept
 		{
 			T carry = 0;
 			for (int i = 0; i < N; i++)
@@ -137,45 +130,66 @@ namespace BigNum
 			return carry;
 		}
 
-		Word add(Word* rezbegin, Word* rezend, const Word* v2begin, const Word* v2end) noexcept
+		template<typename T>
+		T add(T* rezbegin, T* rezend, const T* v2begin, const T* v2end) noexcept
 		{
 			const std::ptrdiff_t rezlen = rezend - rezbegin;
 			const std::ptrdiff_t v2len = v2end - v2begin;
 
-			Word carry = 0;
+			T carry = 0;
 			for (std::ptrdiff_t i = 0; i < rezlen; i++)
 			{
-				const Word v2 = (i < v2len) ? v2begin[i] : 0;
+				const T v2 = (i < v2len) ? v2begin[i] : 0;
 				carry = adc(rezbegin[i], rezbegin[i], v2, carry);
 			}
 			return carry;
 		}
 
-		Word sbc(Word& ret, const Word v1, const Word v2, const Word carry) noexcept
+		template<typename T>
+		T sbc(T& ret, const T a, const T b) noexcept
 		{
-			const DWord sum = DWord(v1) - v2 - carry;
+			ret = a - b;
+			return (ret > a) ? 1 : 0;
+		}
+
+		unsigned long long int sbc(unsigned long long int& ret, const unsigned long long int v1, const unsigned long long int v2, const unsigned long long int carry) noexcept
+		{
+			unsigned long long int retCarry = sbc(ret, v1, v2);
+			retCarry = sbc(ret, ret, carry) + retCarry;
+			return retCarry;
+		}
+
+		template<typename T>
+		T sbc(T& ret, const T v1, const T v2, const T carry, typename std::enable_if<(sizeof(unsigned long long int) > sizeof(T))>::type* = 0) noexcept
+		{
+			constexpr unsigned int kWordSizeBits = sizeof(T) * 8;
+			constexpr unsigned long long int kWordMaskBits = (1ull << (kWordSizeBits)) - 1ull;
+			static_assert(sizeof(unsigned long long int) > sizeof(T), "cant detect overflow");
+			
+			const unsigned long long int sum = (unsigned long long int)(v1) - v2 - carry;
 			ret = sum & kWordMaskBits;
 			return (sum >> kWordSizeBits) ? 1u : 0u;
 		}
 
-		Word sub(Word* rezbegin, Word* rezend, const Word* v1begin, const Word* v1end, const Word* v2begin, const Word* v2end) noexcept
+		template<typename T>
+		T sub(T* rezbegin, T* rezend, const T* v1begin, const T* v1end, const T* v2begin, const T* v2end) noexcept
 		{
 			const std::ptrdiff_t rezlen = rezend - rezbegin;
 			const std::ptrdiff_t v1len = v1end - v1begin;
 			const std::ptrdiff_t v2len = v2end - v2begin;
 
-			Word carry = 0;
+			T carry = 0;
 			for (std::ptrdiff_t i = 0; i < rezlen; i++)
 			{
-				const Word v1 = (i < v1len) ? v1begin[i] : 0;
-				const Word v2 = (i < v2len) ? v2begin[i] : 0;
+				const T v1 = (i < v1len) ? v1begin[i] : 0;
+				const T v2 = (i < v2len) ? v2begin[i] : 0;
 				carry = sbc(rezbegin[i], v1, v2, carry);
 			}
 			return carry;
 		}
 
 		template<typename T, int N, int M, int K>
-		Word sub(T (&rez)[N], const T (&v1)[M], const T (&v2)[K]) noexcept
+		T sub(T (&rez)[N], const T (&v1)[M], const T (&v2)[K]) noexcept
 		{
 			T carry = 0;
 			for (int i = 0; i < N; i++)
@@ -187,70 +201,80 @@ namespace BigNum
 			return carry;
 		}
 
-		Word sub(Word* rezbegin, Word* rezend, const Word* v2begin, const Word* v2end) noexcept
+		template<typename T>
+		T sub(T* rezbegin, T* rezend, const T* v2begin, const T* v2end) noexcept
 		{
 			const std::ptrdiff_t rezlen = rezend - rezbegin;
 			const std::ptrdiff_t v2len = v2end - v2begin;
 
-			Word carry = 0;
+			T carry = 0;
 			for (std::ptrdiff_t i = 0; i < rezlen; i++)
 			{
-				const Word v2 = (i < v2len) ? v2begin[i] : 0;
+				const T v2 = (i < v2len) ? v2begin[i] : 0;
 				carry = sbc(rezbegin[i], rezbegin[i], v2, carry);
 			}
 			return carry;
 		}
 
-		//Word _mulhi(Word& ret, const Word v1, const Word v2)
-		//{
-		//	Word v1l = v1 & kHalfWordMaskBits;
-		//	Word v1h = v1 >> kHalfWordSizeBits;
-		//	Word v2l = v2 & kHalfWordMaskBits;
-		//	Word v2h = v2 >> kHalfWordSizeBits;
-
-		//	Word z0 = v1l * v2l;
-		//	Word z1 = v1l * v2h;
-		//	Word z2 = v1h * v2l;
-		//	Word z3 = v1h * v2h;
-
-		//	Word carry1 = adc(ret, z0, z1 << kHalfWordSizeBits, 0);
-		//	Word carry2 = adc(ret, ret, z2 << kHalfWordSizeBits, 0);
-		//	Word hi = 0;
-		//	adc(hi, z1 >> kHalfWordSizeBits, z2 >> kHalfWordSizeBits, carry1);
-		//	adc(hi, hi, z3, carry2);
-		//	return hi;
-		//	//DWord m = DWord(v1) * DWord(v2);
-		//	//ret = Word(m);
-		//	//return Word(m >> kWordSizeBits);
-		//}
-
-		inline Word madd(Word& ret, const Word v1, const Word v2, const Word carry)
+		unsigned long long int _mulhi(unsigned long long int& ret, const unsigned long long int v1, const unsigned long long int v2)
 		{
-			//Word ml = 0;
-			//Word mh = _mulhi(ml, v1, v2);
-			//Word mc = adc(ret, ret, ml, 0);
-			//mc += adc(ret, ret, carry, 0);
-			//return mh + mc;
+			constexpr unsigned int kWordSizeBits = sizeof(unsigned long long int) * 8;
+			constexpr unsigned int kHalfWordSizeBits = kWordSizeBits / 2;
+			constexpr unsigned long long int kHalfWordMaskBits = (1ull << (kHalfWordSizeBits)) - 1ull;
+			
+			unsigned long long int v1l = v1 & kHalfWordMaskBits;
+			unsigned long long int v1h = v1 >> kHalfWordSizeBits;
+			unsigned long long int v2l = v2 & kHalfWordMaskBits;
+			unsigned long long int v2h = v2 >> kHalfWordSizeBits;
 
-			DWord m = DWord(ret) + DWord(v1) * DWord(v2) + carry;
-			ret = Word(m);
-			return Word(m >> kWordSizeBits);
+			unsigned long long int z0 = v1l * v2l;
+			unsigned long long int z1 = v1l * v2h;
+			unsigned long long int z2 = v1h * v2l;
+			unsigned long long int z3 = v1h * v2h;
+
+			unsigned long long int carry1 = adc(ret, z0, z1 << kHalfWordSizeBits);
+			unsigned long long int carry2 = adc(ret, ret, z2 << kHalfWordSizeBits);
+			unsigned long long int hi = 0;
+			adc(hi, z1 >> kHalfWordSizeBits, z2 >> kHalfWordSizeBits, carry1);
+			adc(hi, hi, z3, carry2);
+			return hi;
 		}
 
-		void mul(Word* rezbegin, Word* rezend, const Word* v1begin, const Word* v1end, const Word* v2begin, const Word* v2end) noexcept
+		template<typename T>
+		inline T madd(T& ret, const T v1, const T v2, const T carry, typename std::enable_if<sizeof(unsigned long long int) == sizeof(T)>::type* = 0)
+		{
+			T ml = 0;
+			T mh = _mulhi(ml, v1, v2);
+			T mc = adc(ret, ret, ml);
+			mc += adc(ret, ret, carry);
+			return mh + mc;	
+		}
+
+		template<typename T>
+		inline T madd(T& ret, const T v1, const T v2, const T carry, typename std::enable_if<(sizeof(unsigned long long int) > sizeof(T))>::type* = 0)
+		{
+			constexpr unsigned int kWordSizeBits = sizeof(T) * 8;
+
+			unsigned long long int m = (unsigned long long int)(ret) + (unsigned long long int)(v1) * (unsigned long long int)(v2) + carry;
+			ret = T(m);
+			return T(m >> kWordSizeBits);
+		}
+
+		template<typename T>
+		void mul(T* rezbegin, T* rezend, const T* v1begin, const T* v1end, const T* v2begin, const T* v2end) noexcept
 		{
 			const std::ptrdiff_t v1len = v1end - v1begin;
 			const std::ptrdiff_t v2len = v2end - v2begin;
 			const std::ptrdiff_t rezlen = rezend - rezbegin;
 
 			assert((rezlen) >= (v1len) + (v2len));
-			assert(std::any_of(rezbegin, rezend, [&](Word w) { return w > 0u; }) == false);
+			assert(std::any_of(rezbegin, rezend, [&](T w) { return w > 0u; }) == false);
 
 			const ptrdiff_t v1last = std::min(rezlen, v1len);
 			for (std::ptrdiff_t v1it = 0; v1it < v1last; ++v1it)
 			{
 				const ptrdiff_t v2last = std::min(v2len, rezlen - v1it);
-				Word carry = 0;
+				T carry = 0;
 				for (std::ptrdiff_t v2it = 0; v2it < v2last; ++v2it)
 					carry = madd(rezbegin[v1it + v2it], v1begin[v1it], v2begin[v2it], carry);
 				rezbegin[v1it + v2last] = carry;
@@ -296,6 +320,8 @@ namespace BigNum
 		template<typename T, unsigned int N>
 		void shl(T (&rez)[N], const T (&v)[N], unsigned int count) noexcept
 		{
+			constexpr unsigned int kWordSizeBits = sizeof(T) * 8;
+			
 			assert(count < N*sizeof(T)*8);
 			const unsigned int bytes = count / kWordSizeBits;
 			const unsigned int bits = count % kWordSizeBits;
@@ -319,6 +345,7 @@ namespace BigNum
 		template<typename T, unsigned int N>
 		void shr(T (&rez)[N], const T (&v)[N], unsigned int count) noexcept
 		{
+			constexpr unsigned int kWordSizeBits = sizeof(T) * 8;
 			assert(count < N*sizeof(T)*8);
 			const unsigned int bytes = count / kWordSizeBits;
 			const unsigned int bits = count % kWordSizeBits;
@@ -340,8 +367,10 @@ namespace BigNum
 		}
 
 		template<typename T, int N>
-		void calcShiftedD(T(&ret)[kWordSizeBits][N + 1], const T(&d)[N]) noexcept
+		void calcShiftedD(T(&ret)[sizeof(T) * 8][N + 1], const T(&d)[N]) noexcept
 		{
+			constexpr unsigned int kWordSizeBits = sizeof(T) * 8;
+			
 			for(unsigned i = 0; i < N; i++)
 				ret[0][i] = d[i];
 			ret[0][N] = 0;
@@ -353,6 +382,8 @@ namespace BigNum
 		template<typename T, int N, int M>
 		void div(T(&q)[N], T(&n)[N], const T(&d)[M]) noexcept
 		{
+			constexpr unsigned int kWordSizeBits = sizeof(T) * 8;
+			
 			T shiftedD[kWordSizeBits][M + 1];
 			calcShiftedD(shiftedD, d);
 
@@ -379,9 +410,11 @@ namespace BigNum
 		}
 
 		template<typename T, int N>
-		void div(T(&q)[N], T(&n)[N], const T d) noexcept
+		void div(T(&q)[N], T(&n)[N], const T d, typename std::enable_if<(sizeof(unsigned long long int) > sizeof(T))>::type* = 0) noexcept
 		{
 			static_assert(sizeof(unsigned long long) > sizeof(T), "T have to be smaller size than unsigned long long");
+			constexpr unsigned int kWordSizeBits = sizeof(T) * 8;
+			
 			unsigned long long rest = 0;
 			for (int i = N; i--> 0;)
 			{
@@ -393,10 +426,19 @@ namespace BigNum
 			}
 			n[0] = (T)rest;
 		}
+		
+		template<typename T, int N>
+		void div(T(&q)[N], T(&n)[N], const T d, typename std::enable_if<(sizeof(unsigned long long int) == sizeof(T))>::type* = 0) noexcept
+		{
+			const T converted_d[] = { d };
+			div(q, n, converted_d);
+		}
 
 		template<typename T, int N, int M>
 		void mod(T(&n)[N], const T(&d)[M]) noexcept
 		{
+			constexpr unsigned int kWordSizeBits = sizeof(T) * 8;
+			
 			T shiftedD[kWordSizeBits][M + 1];
 			calcShiftedD(shiftedD, d);
 
@@ -418,8 +460,9 @@ namespace BigNum
 		}
 
 		template<typename T, int N>
-		T mod(const T(&n)[N], const T d) noexcept
+		T mod(const T(&n)[N], const T d, typename std::enable_if<(sizeof(unsigned long long int) > sizeof(T))>::type* = 0) noexcept
 		{
+			constexpr unsigned int kWordSizeBits = sizeof(T) * 8;
 			static_assert(sizeof(unsigned long long) > sizeof(T), "T have to be smaller size than unsigned long long");
 			unsigned long long rest = 0;
 			for (int i = N; i--> 0;)
@@ -429,6 +472,16 @@ namespace BigNum
 				rest = rest % d;
 			}
 			return (T)rest;
+		}
+		
+		template<typename T, int N>
+		T mod(const T(&n)[N], const T d, typename std::enable_if<(sizeof(unsigned long long int) == sizeof(T))>::type* = 0) noexcept
+		{
+			const T tmp_d[] = { d };
+			T tmp_n[N];
+			copy(tmp_n, n);
+			mod(tmp_n, tmp_d);
+			return tmp_n[0];
 		}
 
 		template<typename T, int N>
@@ -461,10 +514,14 @@ namespace BigNum
 		}
 	}
 	
+	typedef unsigned long long int Word;
+	constexpr unsigned int kWordSizeBits = sizeof(Word) * 8;
+	
 	template<int N>
 	class Num
 	{
 	public:
+		static constexpr unsigned int kWordSizeBits = sizeof(Word) * 8;
 		static constexpr unsigned int Size = (N + (kWordSizeBits)-1) / (kWordSizeBits);
 		
 		Word data[Size];
@@ -475,29 +532,23 @@ namespace BigNum
 				data[i] = 0;
 		}
 
-		explicit Num(Word num) noexcept
+		template<typename T>
+		Num(T num, typename std::enable_if<(sizeof(T) > sizeof(Word))>::type* = 0) noexcept
 		{
-			data[0] = Word(num);
-			for (unsigned int i = 1; i < Size; i++)
-				data[i] = 0;
-		}
-
-		explicit Num(unsigned long long num) noexcept
-		{
-			for (unsigned int i = 0; i < Size; i++)
-			{
+			for (unsigned int i = 0; i < Size; i++) {
 				data[i] = Word(num);
 				num >>= kWordSizeBits;
 			}
 		}
-
-		explicit Num(int num) noexcept
+		
+		template<typename T>
+		Num(T num, typename std::enable_if<(sizeof(T) <= sizeof(Word))>::type* = 0) noexcept
 		{
 			data[0] = Word(num);
 			for (unsigned int i = 1; i < Size; i++)
 				data[i] = 0;
 		}
-
+		
 		template<int M>
 		Num(const Num<M>& other) noexcept
 		{
