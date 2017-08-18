@@ -21,6 +21,8 @@ std::string toString(const BigNum::Num<N>& num)
 		ret.push_back(char(R + '0'));
 	}
 	std::reverse(ret.begin(), ret.end());
+	if (ret.empty()) 
+		ret = "0";
 	return ret;
 }
 

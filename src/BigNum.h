@@ -382,6 +382,12 @@ namespace BigNum
 		template<typename T, int N, int M>
 		void div(T(&q)[N], T(&n)[N], const T(&d)[M]) noexcept
 		{
+			if (cmp(n,d) < 0)
+			{
+				zero(q);
+				return;
+			}
+			
 			constexpr unsigned int kWordSizeBits = sizeof(T) * 8;
 			
 			T shiftedD[kWordSizeBits][M + 1];
@@ -511,6 +517,94 @@ namespace BigNum
 				copy(b, m);
 				copy(rez, t);
 			}
+		}
+		
+		template<typename T, int N>
+		void lcm(T(&rez)[2*N], const T(&v1)[N], const T(&v2)[N]) noexcept
+		{
+			T m[2 * N];
+			zero(m);
+			mul(m, v1, v2);
+			T g[N];
+			gcd(g, v1, v2);
+			div(rez, m, g);
+		}
+		
+		template<typename T>
+		const T modInv(const T& a, const T& n) noexcept
+		{
+			T t(0), newt(1);
+			T r = n, newr = a;
+			while (newr != T(0))
+			{
+				T quotient = r / newr;
+				{
+					//(t, newt) := (newt, t - quotient * newt) 
+					T tmp = newt;
+					newt = t - quotient * newt;
+					t = tmp;
+				}
+				{
+					//(r, newr) := (newr, r - quotient * newr)
+					T tmp = newr;
+					newr = r - quotient * newr;
+					r = tmp;
+				}
+			}
+			if (r > T(1)) return T(0);
+			if (t < 0 || t > n) t = t + n;
+			return t;
+		}
+		
+		template<typename T, int N>
+		void modInv(T(&rez)[N], const T(&a)[N], const T(&n)[N]) noexcept
+		{
+		    T t[N], newt[N];
+		    zero(t);
+		    zero(newt);
+		    newt[0] = T(1);
+		    
+		    T r[N], newr[N];
+		    copy(r, n);
+		    copy(newr, a);
+		    
+		    while (cmp(newr, T(0)) != 0)
+		    {
+		        T quotient[N];
+		        T tmpr[N];
+		        copy(tmpr, r);
+		        div(quotient, tmpr, newr);
+		        {
+		        	//(t, newt) := (newt, t - quotient * newt) 
+		        	T tmp[N];
+		        	copy(tmp, newt);
+		        	T qn[2*N];
+		        	zero(qn);
+		        	mul(qn, quotient, newt);
+		        	sub(newt, t, qn);
+		        	copy(t,tmp);
+		        }
+		        {
+		        	//(r, newr) := (newr, r - quotient * newr)
+		        	T tmp[N];
+		        	copy(tmp, newr);
+		        	T qn[2*N];
+		        	zero(qn);
+		        	mul(qn, quotient, newr);
+		        	sub(newr, r, qn);
+		        	copy(r,tmp);
+		        }
+		    }
+		    if (cmp(r, T(1)) > 0)
+		    {
+		    	zero(rez);
+		    	return;
+		    }
+			if (cmp(t, n) > 0)
+			{
+				add(t, t, n);
+			}
+		    copy(rez, t);
 		}
 	}
 	
@@ -892,39 +986,17 @@ namespace BigNum
 	template<int N>
 	const Num<2*N> lcm(const Num<N>& v1, const Num<N>& v2) noexcept
 	{
-		Num<2 * N> m = v1 * v2;
-		Num<N> g = gcd(v1, v2);
-		return m / g;
+		Num<2 * N> ret;
+		Core::lcm(ret.data, v1.data, v2.data);
+		return ret;
 	}
 
 	template<int N>
 	const Num<N> modInv(const Num<N>& a, const Num<N>& n) noexcept
 	{
-	    Num<N> t(0), newt(1);    
-	    Num<N> r = n, newr = a;    
-	    while (newr != 0)
-	    {
-	        Num<N> quotient = r / newr;
-	        {
-	        	//(t, newt) := (newt, t - quotient * newt) 
-	        	Num<N> tmp = newt;
-	        	newt = t - quotient * newt;
-	        	t = tmp;
-	        }
-	        {
-	        	//(r, newr) := (newr, r - quotient * newr)
-	        	Num<N> tmp = newr;
-	        	newr = r - quotient * newr;
-	        	r = tmp;
-	        }
-	    }
-	    if (r > Num<N>(1)) return Num<N>(0);
-		if (t > n)
-		{
-			// signed < 0
-			t = t + n;
-		}
-	    return t;
+	    Num<N> rez;
+	    Core::modInv(rez.data, a.data, n.data);
+	    return rez;
 	}
 
 	template<typename T>
