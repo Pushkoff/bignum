@@ -606,6 +606,43 @@ namespace BigNum
 			}
 		    copy(rez, t);
 		}
+		
+		template<typename T, int N, int M, unsigned int K>
+		void modExp(T (&result)[N], const T (&base)[N], const T (&exp)[K], const T (&modulo)[M]) noexcept
+		{
+			constexpr unsigned int kWordSizeBits = sizeof(T) * 8;
+			
+			zero(result);
+			if (cmp(modulo,T(1)) == 0)
+				return;
+	
+			result[0] = T(1);
+
+			unsigned int realExpSize = K;
+			// skip leading zeros
+			while (realExpSize > 0 && exp[realExpSize - 1] == 0)
+				realExpSize--;
+	
+			for (unsigned int i = realExpSize; i-->0;)
+			{
+				for (unsigned int j = (kWordSizeBits); j-->0;)
+				{
+					T tmp[2*N], q[2*N];
+					zero(tmp); zero(q);
+					mul(tmp, result, result);
+					div(q, tmp, modulo);
+					copy(result, tmp);
+
+					if ((exp[i] >> j) & T(1))
+					{
+						zero(tmp); zero(q);
+						mul(tmp, result, base);
+						div(q, tmp, modulo);
+						copy(result, tmp);
+					}
+				}
+			}
+		}
 	}
 	
 	typedef unsigned long long int Word;
@@ -1002,50 +1039,14 @@ namespace BigNum
 	template<typename T>
 	const T modInv(const T& a, const T& n) noexcept
 	{
-		T t(0), newt(1);
-		T r = n, newr = a;
-		while (newr != T(0))
-		{
-			T quotient = r / newr;
-			{
-				//(t, newt) := (newt, t - quotient * newt) 
-				T tmp = newt;
-				newt = t - quotient * newt;
-				t = tmp;
-			}
-			{
-				//(r, newr) := (newr, r - quotient * newr)
-				T tmp = newr;
-				newr = r - quotient * newr;
-				r = tmp;
-			}
-		}
-		if (r > T(1)) return T(0);
-		if (t < 0) t = t + n;
-		return t;
+		return Core::modInv(a, n);
 	}
 
 	template<int N>
 	const Num<N> modExp(const Num<N>& base, const Num<N>& exp, const Num<N>& modulo) noexcept
 	{
-		if (modulo == 1)
-			return Num<N>(0);
-
-		Num<N> result(1);
-		Num<N> power = base;
-
-		auto realExpSize = Num<N>::Size;
-		// skip leading zeros
-		while (realExpSize > 0 && exp[realExpSize - 1] == 0)
-			realExpSize--;
-
-		for (auto i = std::min<unsigned int>(N, realExpSize * kWordSizeBits); i-->0;)
-		{
-			result = (result * result) % modulo;
-			if (exp.bit(i))
-				result = (result * power) % modulo;
-		}
-
+		Num<N> result;
+		Core::modExp(result.data, base.data, exp.data, modulo.data);
 		return result;
 	}
 
