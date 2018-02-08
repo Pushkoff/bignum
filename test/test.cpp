@@ -370,6 +370,15 @@ int main()
 		}
 
 		{
+			unsigned char data[128] = {0};
+			std::generate(&data[0], &data[128], []() {return rand() % 256; });
+			BigNum::Num<2048> packed = BigNum::d2i<2048>(&data[0], &data[128]);
+			unsigned char unpacked[128] = {0};
+			BigNum::i2d(packed, &unpacked[0], &unpacked[128]);
+			test(memcmp(data, unpacked, 128) == 0);
+		}
+
+		{
 			printf("Generate RSA keys.");
 			constexpr int Module = 2048;
 
@@ -390,25 +399,23 @@ int main()
 			auto elapsed = stop - start;
 			printf(" duration - %lld ms\n", (long long)std::chrono::duration_cast<std::chrono::milliseconds>(elapsed).count());
 
-			std::vector<BigNum::Word> testdata(32);
+			std::vector<unsigned char> testdata(256);
 			std::generate(std::begin(testdata), std::end(testdata), []() {return rand() % 256; });
 
-			std::vector<BigNum::Word> decrypted;
+			std::vector<unsigned char> decrypted;
 
-			std::vector<BigNum::Word> cipperdata;
+			std::vector<BigNum::Num<Module>> cipperdata;
 
+			constexpr unsigned int blockSize = (Module/2)/8;
+			static_assert(blockSize % sizeof(BigNum::Word) == 0, "Module have to be power of 2");
 			printf("Encrypt");
 			start = std::chrono::high_resolution_clock::now();
-			for (std::size_t block = 0; block < (testdata.size() / (BigNum::Num<Module>::Size / 2)); block++)
+			for (std::size_t block = 0; block < testdata.size(); block+=blockSize)
 			{
-				BigNum::Num<Module> data(0);
-				for (unsigned int i = 0; i < BigNum::Num<Module>::Size / 2; ++i)
-					data[i] = testdata[block * BigNum::Num<Module>::Size / 2 + i];
-
+				BigNum::Num<Module> data = BigNum::d2i<Module>(&testdata[block], &testdata[block + blockSize]);
 				BigNum::Num<Module> cipper = BigNum::monModExp(data, e, N);
 
-				for (unsigned int i = 0; i < BigNum::Num<Module>::Size; ++i)
-					cipperdata.push_back(cipper[i]);
+				cipperdata.push_back(cipper);
 			}
 			stop = std::chrono::high_resolution_clock::now();
 			elapsed = stop - start;
@@ -417,15 +424,12 @@ int main()
 			printf("Decrypt");
 			start = std::chrono::high_resolution_clock::now();
 
-			for (std::size_t block = 0; block < (cipperdata.size() / BigNum::Num<Module>::Size); block++)
+			for (std::size_t block = 0; block < cipperdata.size(); block++)
 			{
-				BigNum::Num<Module> cipper(0);
-				for (unsigned int i = 0; i < BigNum::Num<Module>::Size; ++i)
-					cipper[i] = cipperdata[block * BigNum::Num<Module>::Size + i];
-
-				BigNum::Num<Module> data = BigNum::CRT(cipper, p, q, dp, dq, qinvp);
-				for (unsigned int i = 0; i < BigNum::Num<Module>::Size / 2; ++i)
-					decrypted.push_back(data[i]);
+				BigNum::Num<Module> data = BigNum::CRT(cipperdata[block], p, q, dp, dq, qinvp);
+				unsigned char decrypted_data[blockSize];
+				BigNum::i2d(data, &decrypted_data[0], &decrypted_data[blockSize]);
+				decrypted.insert(decrypted.end(), &decrypted_data[0], &decrypted_data[blockSize]);
 			}
 
 			stop = std::chrono::high_resolution_clock::now();
@@ -434,6 +438,18 @@ int main()
 
 			bool ret = decrypted == testdata;
 			printf("%s\n", (ret) ? "Ok" : "Fail");
+			if (!ret)
+			{
+				for(auto i : testdata)
+					printf("%02X ", i);
+				
+				printf("\n\n");
+				
+				for(auto i : decrypted)
+					printf("%02X ", i);
+				
+				printf("\n");
+			}
 			if (!ret) throw(1);
 		}
 		printf("Passed %d tests\nFailed %d tests\nPress any key...", TestsPass, TestsFailed);

@@ -1517,6 +1517,45 @@ namespace BigNum
 		//return nextPrime(num);
 	}
 
+	template<int N>
+	const Num<N> d2i(const unsigned char* from_begin, const unsigned char* from_end) noexcept
+	{
+		Num<N> ret(0);
+		auto it = from_begin;
+		for(unsigned int i = 0; i < Num<N>::Size; i++)
+		{
+			Word val = 0;
+			for(unsigned int j = 0; j < sizeof(Word); j++)
+			{
+				if (it != from_end)
+				{
+					val |= static_cast<Word>(*it) << (j * 8);
+					it++;
+				}
+			}
+			ret[i] = val;
+		}
+		return ret;
+	}
+
+	template<int N>
+	void i2d(const Num<N>& from, unsigned char* to_begin, unsigned char* to_end) noexcept
+	{
+		auto it = to_begin;
+		for(unsigned int i = 0; i < Num<N>::Size; i++)
+		{
+			Word val = from[i];
+			for(unsigned int j = 0; j < sizeof(val); j++)
+			{
+				if (it != to_end)
+				{
+					(*it) = (val >> (j * 8)) & 0xFF;
+					it++;
+				}
+			}
+		}
+	}
+
 	namespace operators
 	{
 		template <int N>
