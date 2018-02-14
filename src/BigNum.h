@@ -1054,9 +1054,7 @@ namespace BigNum
 	struct MonMul
 	{
 		const Num<N> n;
-		Num<N> rinv;
 		Num<N> ninv;
-		//Num<N> rmask;
 
 		explicit MonMul(const Num<N>& _n) noexcept : n(_n)
 		{
@@ -1064,13 +1062,13 @@ namespace BigNum
 
 			assert(gcd(Num<2 * N>(n), r) == 1);
 
-			rinv = Num<N>(modInv<2 * N>(r, n));
+			Num<2*N> rinv = modInv<2 * N>(r, n);
 
-			assert((Num<2 * N>(rinv) << N) % Num<2 * N>(n) == 1);
+			assert(((rinv) << N) % Num<2 * N>(n) == 1);
 
-			ninv = ((Num<2 * N>(rinv) << N) - 1) / n;
+			ninv = (((rinv) << N) - 1) / n;
 
-			assert((Num<2 * N>(rinv) << N) - (ninv*n) == 1);
+			assert(((rinv) << N) - (ninv*n) == 1);
 
 			//rmask = (r - 1);
 		}
@@ -1097,20 +1095,20 @@ namespace BigNum
 			return (*this)(x, Num<N>(1));
 		}
 
-		const Num<N> operator()(const Num<N>& a, const Num<N>& b) const noexcept
+		const Num<N> operator()(const Num<2*N>& t) const noexcept
 		{
-			Num<2*N> t = a * b;
 			Num<N> m = Num<N>(t) * ninv;
 			Num<N> u = (t + m * n) >> N;
 
-			//Num<2 * N> t1 = t;
-			//Core::muladd(t1.data, m.data, n.data);
-			//Num<N> u1 = (t1) >> N;
-			//assert(u == u1);
-
-			while (u >= n)
-				u = u - n;
+			if (u >= n)
+				u = u % n;
 			return Num<N>(u);
+		}
+
+		const Num<N> operator()(const Num<N>& a, const Num<N>& b) const noexcept
+		{
+			Num<2*N> t = a * b;
+			return (*this)(t);
 		}
 	};
 
