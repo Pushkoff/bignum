@@ -4,23 +4,56 @@
 #include <array>
 #include <type_traits>
 #include <cstddef>
+#include <climits>
 
 namespace BigNum
 {
 	namespace Core
 	{
+		template<typename T>
+		struct bitsize
+		{
+			enum : unsigned
+			{
+				value = sizeof(T) * CHAR_BIT
+			};
+		};
+
 		template<typename T, int N>
-		void zero(T (&to)[N]) noexcept
+		inline void zero(T(&to)[N]) noexcept
 		{
 			for (int i = 0; i < N; i++)
 				to[i] = 0;
 		}
 
+		template<typename T, int N>
+		inline void one(T(&to)[N]) noexcept
+		{
+			to[0] = 1;
+			if (N > 1)
+			{
+				for (int i = 1; i < N; i++)
+					to[i] = 0;
+			}
+		}
+
+		template<typename T>
+		inline void one(T(&to)[1]) noexcept
+		{
+			to[0] = 1;
+		}
+
+		template<typename T, int N>
+		inline T get(const T(&from)[N], unsigned int pos) noexcept
+		{
+			return (pos < N) ? from[pos] : T(0);
+		}
+
 		template<typename T, int N, int M>
-		void copy(T (&to)[N], const T (&from)[M]) noexcept
+		inline void copy(T(&to)[N], const T(&from)[M]) noexcept
 		{
 			for (int i = 0; i < N; i++)
-				to[i] = (i < M) ? from[i] : 0;
+				to[i] = get(from, i);
 		}
 
 		template<typename T>
@@ -28,9 +61,9 @@ namespace BigNum
 		{
 			const std::ptrdiff_t v1len = v1end - v1begin;
 			const std::ptrdiff_t v2len = v2end - v2begin;
-			const std::ptrdiff_t vmax = (v1len > v2len)? v1len : v2len;
+			const std::ptrdiff_t vmax = (v1len > v2len) ? v1len : v2len;
 
-			for(std::ptrdiff_t i = vmax; i-->0;)
+			for (std::ptrdiff_t i = vmax; i-- > 0;)
 			{
 				const T v1 = (i < v1len) ? v1begin[i] : 0;
 				const T v2 = (i < v2len) ? v2begin[i] : 0;
@@ -40,17 +73,17 @@ namespace BigNum
 			return 0;
 		}
 
-        template<typename T, int N, int M>
-      	int cmp(const T(&v1)[N], const T(&v2)[M]) noexcept
+		template<typename T, int N, int M>
+		int cmp(const T(&v1)[N], const T(&v2)[M]) noexcept
 		{
 			constexpr int v1len = N;
 			constexpr int v2len = M;
-			constexpr int vmax = (v1len > v2len)? v1len : v2len;
+			constexpr int vmax = (v1len > v2len) ? v1len : v2len;
 
-			for(int i = vmax; i-->0;)
+			for (int i = vmax; i-- > 0;)
 			{
-				const T v1v = (i < v1len) ? v1[i] : 0;
-				const T v2v = (i < v2len) ? v2[i] : 0;
+				const T v1v = get(v1, i);
+				const T v2v = get(v2, i);
 				if (v1v != v2v)
 					return v1v > v2v ? 1 : -1;
 			}
@@ -60,18 +93,8 @@ namespace BigNum
 		template<typename T, int N>
 		int cmp(const T(&v1)[N], const T v2) noexcept
 		{
-			constexpr int v1len = N;
-			constexpr int v2len = 1;
-			constexpr int vmax = v1len;
-
-			for (int i = vmax; i-->0;)
-			{
-				const T v1v = (i < v1len) ? v1[i] : 0;
-				const T v2v = (i < v2len) ? v2 : 0;
-				if (v1v != v2v)
-					return v1v > v2v ? 1 : -1;
-			}
-			return 0;
+			const T v2arr[] = { v2 };
+			return cmp(v1, v2arr);
 		}
 
 		template<typename T>
@@ -94,10 +117,10 @@ namespace BigNum
 			constexpr unsigned int kWordSizeBits = sizeof(T) * 8;
 			constexpr unsigned long long int kWordMaskBits = (1ull << (kWordSizeBits)) - 1ull;
 			static_assert(sizeof(unsigned long long int) > sizeof(T), "cant detect overflow");
-			
-            const unsigned long long int sum = (unsigned long long int)(v1) + v2 + carry;
-            ret = sum & kWordMaskBits;
-            return T(sum >> kWordSizeBits);
+
+			const unsigned long long int sum = (unsigned long long int)(v1) + v2 + carry;
+			ret = sum & kWordMaskBits;
+			return T(sum >> kWordSizeBits);
 		}
 
 		template <typename T>
@@ -116,9 +139,9 @@ namespace BigNum
 			}
 			return carry;
 		}
-		
+
 		template<typename T, int N, int M, int K>
-		T add(T (&rez)[N], const T (&v1)[M], const T (&v2)[K]) noexcept
+		T add(T(&rez)[N], const T(&v1)[M], const T(&v2)[K]) noexcept
 		{
 			T carry = 0;
 			for (int i = 0; i < N; i++)
@@ -128,6 +151,19 @@ namespace BigNum
 				carry = adc(rez[i], v1v, v2v, carry);
 			}
 			return carry;
+		}
+
+		template<typename T, int N, int K>
+		T add(T(&rez)[N], const T(&v2)[K]) noexcept
+		{
+			return add(rez, rez, v2);
+		}
+
+		template<typename T, int N>
+		T add(T(&rez)[N], T v2) noexcept
+		{
+			const T v2arr[1] = { v2 };
+			return add(rez, rez, v2arr);
 		}
 
 		template<typename T>
@@ -162,10 +198,10 @@ namespace BigNum
 		template<typename T>
 		T sbc(T& ret, const T v1, const T v2, const T carry, typename std::enable_if<(sizeof(unsigned long long int) > sizeof(T))>::type* = 0) noexcept
 		{
-			constexpr unsigned int kWordSizeBits = sizeof(T) * 8;
+			constexpr unsigned int kWordSizeBits = bitsize<T>::value;
 			constexpr unsigned long long int kWordMaskBits = (1ull << (kWordSizeBits)) - 1ull;
 			static_assert(sizeof(unsigned long long int) > sizeof(T), "cant detect overflow");
-			
+
 			const unsigned long long int sum = (unsigned long long int)(v1) - v2 - carry;
 			ret = sum & kWordMaskBits;
 			return (sum >> kWordSizeBits) ? 1u : 0u;
@@ -189,7 +225,7 @@ namespace BigNum
 		}
 
 		template<typename T, int N, int M, int K>
-		T sub(T (&rez)[N], const T (&v1)[M], const T (&v2)[K]) noexcept
+		T sub(T(&rez)[N], const T(&v1)[M], const T(&v2)[K]) noexcept
 		{
 			T carry = 0;
 			for (int i = 0; i < N; i++)
@@ -199,6 +235,19 @@ namespace BigNum
 				carry = sbc(rez[i], v1v, v2v, carry);
 			}
 			return carry;
+		}
+
+		template<typename T, int N, int K>
+		T sub(T(&rez)[N], const T(&v2)[K]) noexcept
+		{
+			return sub(rez, rez, v2);
+		}
+
+		template<typename T, int N>
+		T sub(T(&rez)[N], const T v2) noexcept
+		{
+			const T v2arr[] = { v2 };
+			return sub(rez, rez, v2arr);
 		}
 
 		template<typename T>
@@ -218,10 +267,10 @@ namespace BigNum
 
 		unsigned long long int _mulhi(unsigned long long int& ret, const unsigned long long int v1, const unsigned long long int v2)
 		{
-			constexpr unsigned int kWordSizeBits = sizeof(unsigned long long int) * 8;
+			constexpr unsigned int kWordSizeBits = bitsize<unsigned long long int>::value;
 			constexpr unsigned int kHalfWordSizeBits = kWordSizeBits / 2;
 			constexpr unsigned long long int kHalfWordMaskBits = (1ull << (kHalfWordSizeBits)) - 1ull;
-			
+
 			unsigned long long int v1l = v1 & kHalfWordMaskBits;
 			unsigned long long int v1h = v1 >> kHalfWordSizeBits;
 			unsigned long long int v2l = v2 & kHalfWordMaskBits;
@@ -240,24 +289,21 @@ namespace BigNum
 			return hi;
 		}
 
-		template<typename T>
-		inline T madd(T& ret, const T v1, const T v2, const T carry, typename std::enable_if<sizeof(unsigned long long int) == sizeof(T)>::type* = 0)
+		inline unsigned long long int madd(unsigned long long int& ret, const unsigned long long int v1, const unsigned long long int v2, const unsigned long long int carry) noexcept
 		{
-			T ml = 0;
-			T mh = _mulhi(ml, v1, v2);
-			T mc = adc(ret, ret, ml);
+			unsigned long long int ml = 0;
+			unsigned long long int mh = _mulhi(ml, v1, v2);
+			unsigned long long int mc = adc(ret, ret, ml);
 			mc += adc(ret, ret, carry);
-			return mh + mc;	
+			return mh + mc;
 		}
 
 		template<typename T>
 		inline T madd(T& ret, const T v1, const T v2, const T carry, typename std::enable_if<(sizeof(unsigned long long int) > sizeof(T))>::type* = 0)
 		{
-			constexpr unsigned int kWordSizeBits = sizeof(T) * 8;
-
 			unsigned long long int m = (unsigned long long int)(ret) + (unsigned long long int)(v1) * (unsigned long long int)(v2) + carry;
 			ret = T(m);
-			return T(m >> kWordSizeBits);
+			return T(m >> bitsize<T>::value);
 		}
 
 		template<typename T>
@@ -267,7 +313,7 @@ namespace BigNum
 			const std::ptrdiff_t v2len = v2end - v2begin;
 			const std::ptrdiff_t rezlen = rezend - rezbegin;
 
-			assert((rezlen) >= (v1len) + (v2len));
+			assert((rezlen) >= (v1len)+(v2len));
 			assert(std::any_of(rezbegin, rezend, [&](T w) { return w > 0u; }) == false);
 
 			const ptrdiff_t v1last = std::min(rezlen, v1len);
@@ -280,133 +326,106 @@ namespace BigNum
 				rezbegin[v1it + v2last] = carry;
 			}
 		}
-		
+
 		template<typename T>
 		void mul(T(&rez)[1], const T(&v1)[1], const T(&v2)[1]) noexcept
 		{
-			rez[0] = v1[0] * v2[0];
+			rez[0] = T(v1[0] * v2[0]);
 		}
 
 		template<typename T, int N, int M, int K>
-		void mul(T (&rez)[N], const T (&v1)[M], const T (&v2)[K], typename std::enable_if<N >= M + K>::type* = 0) noexcept
+		void mul(T(&rez)[N], const T(&v1)[M], const T(&v2)[K]) noexcept
 		{
-			assert(std::any_of(std::begin(rez), std::end(rez), [&](T w) { return w > 0; }) == false);
+			assert(std::any_of(std::begin(rez), std::end(rez), [&](T w) { return w != 0; }) == false);
 
-			for (int v1it = 0; v1it < M; ++v1it)
+			if (N >= M + K)
 			{
-				T carry = 0;
-				for (int v2it = 0; v2it < K; ++v2it)
-					carry = madd(rez[v1it + v2it], v1[v1it], v2[v2it], carry);
-				rez[v1it + K] = carry;
-			}
-		}
-
-		template<typename T, int N, int M, int K>
-		void mul(T(&rez)[N], const T(&v1)[M], const T(&v2)[K], typename std::enable_if<N < M + K>::type* = 0) noexcept
-		{
-			assert(std::any_of(std::begin(rez), std::end(rez), [&](T w) { return w > 0; }) == false);
-
-			const int v1last = std::min(N, M);
-			for (int v1it = 0; v1it < v1last; ++v1it)
-			{
-				const int v2last = std::min(K, N - v1it);
-				T carry = 0;
-				for (int v2it = 0; v2it < v2last; ++v2it)
-					carry = madd(rez[v1it + v2it], v1[v1it], v2[v2it], carry);
-				rez[v1it + v2last] = carry;
-			}
-		}
-		
-		template<typename T, unsigned int N>
-		void shl(T (&rez)[N], const T (&v)[N], unsigned int count) noexcept
-		{
-			constexpr unsigned int kWordSizeBits = sizeof(T) * 8;
-			
-			assert(count < N*sizeof(T)*8);
-			const unsigned int bytes = count / kWordSizeBits;
-			const unsigned int bits = count % kWordSizeBits;
-			if (bits == 0)
-			{
-				for (unsigned int i = N; i --> bytes;)
-					rez[i] = v[i - bytes];
+				for (int v1it = 0; v1it < M; ++v1it)
+				{
+					T carry = 0;
+					for (int v2it = 0; v2it < K; ++v2it)
+						carry = madd(rez[v1it + v2it], v1[v1it], v2[v2it], carry);
+					rez[v1it + K] = carry;
+				}
 			}
 			else
 			{
-				unsigned int i = 0;
-				for (; i < bytes; i++)
-					rez[i] = 0;
-				rez[i] = (v[i - bytes] << (bits));
-				i++;
-				for (; i < N; i++)
-					rez[i] = (v[i - bytes] << (bits)) | (v[i - bytes - 1] >> (sizeof(T) * 8 - bits));
+				T ret[M + K] = { 0 };
+				mul(ret, v1, v2);
+				copy(rez, ret);
+				/* const int v1last = std::min(N, M);
+				for (int v1it = 0; v1it < v1last; ++v1it)
+				{
+					const int v2last = std::min(K, N - v1it);
+					T carry = 0;
+					for (int v2it = 0; v2it < v2last; ++v2it)
+						carry = madd(rez[v1it + v2it], v1[v1it], v2[v2it], carry);
+					rez[v1it + v2last] = carry;
+				}*/
 			}
 		}
-		
-		template<typename T, unsigned int N>
-		void shr(T (&rez)[N], const T (&v)[N], unsigned int count) noexcept
+
+		template<typename T, unsigned int N, unsigned int M>
+		void shl(T(&rez)[N], const T(&v)[M], unsigned int count) noexcept
 		{
-			constexpr unsigned int kWordSizeBits = sizeof(T) * 8;
-			assert(count < N*sizeof(T)*8);
-			const unsigned int bytes = count / kWordSizeBits;
-			const unsigned int bits = count % kWordSizeBits;
+			// assert(count < N*kWordSizeBits);
+			const unsigned int bytes = count / bitsize<T>::value;
+			const unsigned int bits = count % bitsize<T>::value;
 			if (bits == 0)
 			{
-				for (unsigned int i = 0; i < N - bytes; i++)
-					rez[i] = v[i + bytes];
+				for (unsigned int i = 0; i < N; i++)
+					rez[i] = get(v, i - bytes); // unsigned - unsigned -> unsigned 
 			}
 			else
 			{
-				unsigned int i = 0;
-				for (; i < N - bytes - 1; i++)
-					rez[i] = (v[i + bytes + 1] << (sizeof(T) * 8 - bits)) | (v[i + bytes] >> bits);
-				rez[i] = (v[i + bytes] >> bits);
-				i++;
-				for (; i < N; i++)
-					rez[i] = 0;
+				for (unsigned int i = 0; i < N; i++)
+					rez[i] = (get(v, i - bytes) << (bits)) | (get(v, i - bytes - 1) >> (bitsize<T>::value - bits));
 			}
 		}
 
-		template<typename T, int N>
-		void calcShiftedD(T(&ret)[sizeof(T) * 8][N + 1], const T(&d)[N]) noexcept
+		template<typename T, unsigned int N, unsigned int M>
+		void shr(T(&rez)[N], const T(&v)[M], unsigned int count) noexcept
 		{
-			constexpr unsigned int kWordSizeBits = sizeof(T) * 8;
-			
-			for(unsigned i = 0; i < N; i++)
-				ret[0][i] = d[i];
-			ret[0][N] = 0;
-
-			for (unsigned i = 1; i < kWordSizeBits; i++)
-				shl(ret[i], ret[0], i);
+			// assert(count < N*kWordSizeBits);
+			const unsigned int bytes = count / bitsize<T>::value;
+			const unsigned int bits = count % bitsize<T>::value;
+			if (bits == 0)
+			{
+				for (unsigned int i = 0; i < N; i++)
+					rez[i] = get(v, i + bytes);
+			}
+			else
+			{
+				for (unsigned int i = 0; i < N; i++)
+					rez[i] = (get(v, i + bytes + 1) << (bitsize<T>::value - bits)) | (get(v, i + bytes) >> bits);
+			}
 		}
 
 		template<typename T, int N, int M>
 		void div(T(&q)[N], T(&n)[N], const T(&d)[M]) noexcept
 		{
-			if (cmp(n,d) < 0)
+			if (cmp(n, d) < 0)
 			{
 				zero(q);
 				return;
 			}
-			
-			constexpr unsigned int kWordSizeBits = sizeof(T) * 8;
-			
-			T shiftedD[kWordSizeBits][M + 1];
-			calcShiftedD(shiftedD, d);
 
 			T* rbeg = std::end(n);
 			T* rend = std::end(n);
 
-			for (int i = N; i-->0;)
+			for (int i = N; i-- > 0;)
 			{
 				rbeg--;
 				T val = 0;
 				if (Core::cmp(rbeg, rend, std::begin(d), std::end(d)) >= 0)
 				{
-					for (int j = kWordSizeBits; j-- > 0;)
+					for (int j = bitsize<T>::value; j-- > 0;)
 					{
-						if (Core::cmp(rbeg, rend, std::begin(shiftedD[j]), std::end(shiftedD[j])) >= 0)
+						T shiftedD[M + 1] = { 0 };
+						shl(shiftedD, d, j);
+						if (Core::cmp(rbeg, rend, std::begin(shiftedD), std::end(shiftedD)) >= 0)
 						{
-							Core::sub(rbeg, rend, std::begin(shiftedD[j]), std::end(shiftedD[j]));
+							Core::sub(rbeg, rend, std::begin(shiftedD), std::end(shiftedD));
 							val += T(1) << j;
 						}
 					}
@@ -419,12 +438,11 @@ namespace BigNum
 		void div(T(&q)[N], T(&n)[N], const T d, typename std::enable_if<(sizeof(unsigned long long int) > sizeof(T))>::type* = 0) noexcept
 		{
 			static_assert(sizeof(unsigned long long) > sizeof(T), "T have to be smaller size than unsigned long long");
-			constexpr unsigned int kWordSizeBits = sizeof(T) * 8;
-			
+
 			unsigned long long rest = 0;
-			for (int i = N; i--> 0;)
+			for (int i = N; i-- > 0;)
 			{
-				rest = rest << kWordSizeBits;
+				rest = rest << bitsize<T>::value;
 				rest += n[i];
 				n[i] = 0;
 				q[i] = T(rest / d);
@@ -432,7 +450,7 @@ namespace BigNum
 			}
 			n[0] = (T)rest;
 		}
-		
+
 		template<typename T, int N>
 		void div(T(&q)[N], T(&n)[N], const T d, typename std::enable_if<(sizeof(unsigned long long int) == sizeof(T))>::type* = 0) noexcept
 		{
@@ -443,23 +461,20 @@ namespace BigNum
 		template<typename T, int N, int M>
 		void mod(T(&n)[N], const T(&d)[M]) noexcept
 		{
-			constexpr unsigned int kWordSizeBits = sizeof(T) * 8;
-			
-			T shiftedD[kWordSizeBits][M + 1];
-			calcShiftedD(shiftedD, d);
-
 			T* rbeg = std::end(n);
 			T* rend = std::end(n);
 
-			for (int i = N; i-->0;)
+			for (int i = N; i-- > 0;)
 			{
 				rbeg--;
 				if (Core::cmp(rbeg, rend, std::begin(d), std::end(d)) >= 0)
 				{
-					for (int j = kWordSizeBits; j-- > 0;)
+					for (int j = bitsize<T>::value; j-- > 0;)
 					{
-						if (Core::cmp(rbeg, rend, std::begin(shiftedD[j]), std::end(shiftedD[j])) >= 0)
-							Core::sub(rbeg, rend, std::begin(shiftedD[j]), std::end(shiftedD[j]));
+						T shiftedD[M + 1] = { 0 };
+						shl(shiftedD, d, j);
+						if (Core::cmp(rbeg, rend, std::begin(shiftedD), std::end(shiftedD)) >= 0)
+							Core::sub(rbeg, rend, std::begin(shiftedD), std::end(shiftedD));
 					}
 				}
 			}
@@ -468,18 +483,17 @@ namespace BigNum
 		template<typename T, int N>
 		T mod(const T(&n)[N], const T d, typename std::enable_if<(sizeof(unsigned long long int) > sizeof(T))>::type* = 0) noexcept
 		{
-			constexpr unsigned int kWordSizeBits = sizeof(T) * 8;
 			static_assert(sizeof(unsigned long long) > sizeof(T), "T have to be smaller size than unsigned long long");
 			unsigned long long rest = 0;
-			for (int i = N; i--> 0;)
+			for (int i = N; i-- > 0;)
 			{
-				rest = rest << kWordSizeBits;
+				rest = rest << bitsize<T>::value;
 				rest += n[i];
 				rest = rest % d;
 			}
 			return (T)rest;
 		}
-		
+
 		template<typename T, int N>
 		T mod(const T(&n)[N], const T d, typename std::enable_if<(sizeof(unsigned long long int) == sizeof(T))>::type* = 0) noexcept
 		{
@@ -498,7 +512,7 @@ namespace BigNum
 				copy(rez, v1);
 			else
 				copy(rez, v2);
-			
+
 			if (cmprez == 0)
 				return;
 
@@ -518,9 +532,9 @@ namespace BigNum
 				copy(rez, t);
 			}
 		}
-		
+
 		template<typename T, int N>
-		void lcm(T(&rez)[2*N], const T(&v1)[N], const T(&v2)[N]) noexcept
+		void lcm(T(&rez)[2 * N], const T(&v1)[N], const T(&v2)[N]) noexcept
 		{
 			T m[2 * N];
 			zero(m);
@@ -529,7 +543,7 @@ namespace BigNum
 			gcd(g, v1, v2);
 			div(rez, m, g);
 		}
-		
+
 		template<typename T>
 		const T modInv(const T& a, const T& n) noexcept
 		{
@@ -555,80 +569,74 @@ namespace BigNum
 			if (t < 0 || t > n) t = t + n;
 			return t;
 		}
-		
-		template<typename T, int N>
-		void modInv(T(&rez)[N], const T(&a)[N], const T(&n)[N]) noexcept
+
+		template<typename T, int M, int N>
+		void modInv(T(&rez)[M], const T(&a)[N], const T(&n)[N]) noexcept
 		{
-		    T t[N], newt[N];
-		    zero(t);
-		    zero(newt);
-		    newt[0] = T(1);
-		    
-		    T r[N], newr[N];
-		    copy(r, n);
-		    copy(newr, a);
-		    
-		    while (cmp(newr, T(0)) != 0)
-		    {
-		        T quotient[N];
-		        T tmpr[N];
-		        copy(tmpr, r);
-		        div(quotient, tmpr, newr);
-		        {
-		        	//(t, newt) := (newt, t - quotient * newt) 
-		        	T tmp[N];
-		        	copy(tmp, newt);
-		        	T qn[2*N];
-		        	zero(qn);
-		        	mul(qn, quotient, newt);
-		        	sub(newt, t, qn);
-		        	copy(t,tmp);
-		        }
-		        {
-		        	//(r, newr) := (newr, r - quotient * newr)
-		        	T tmp[N];
-		        	copy(tmp, newr);
-		        	T qn[2*N];
-		        	zero(qn);
-		        	mul(qn, quotient, newr);
-		        	sub(newr, r, qn);
-		        	copy(r,tmp);
-		        }
-		    }
-		    if (cmp(r, T(1)) > 0)
-		    {
-		    	zero(rez);
-		    	return;
-		    }
+			T t[N] = { 0 }, newt[N];
+			one(newt);
+
+			T r[N], newr[N];
+			copy(r, n);
+			copy(newr, a);
+
+			// newr ≠ 0
+			while (cmp(newr, T(0)) != 0)
+			{
+				// quotient := r div newr
+				T quotient[N];
+				T tmpr[N];
+				copy(tmpr, r);
+				div(quotient, tmpr, newr);
+				{
+					//(t, newt) := (newt, t - quotient * newt) 
+					T tmp[N];
+					copy(tmp, newt);
+					T qn[2 * N] = { 0 };
+					mul(qn, quotient, newt);
+					sub(newt, t, qn);
+					copy(t, tmp);
+				}
+				{
+					//(r, newr) := (newr, r - quotient * newr)
+					T tmp[N];
+					copy(tmp, newr);
+					T qn[2 * N] = { 0 };
+					mul(qn, quotient, newr);
+					sub(newr, r, qn);
+					copy(r, tmp);
+				}
+			}
+			if (cmp(r, T(1)) > 0)
+			{
+				zero(rez);
+				return;
+			}
 			if (cmp(t, n) > 0)
 			{
 				add(t, t, n);
 			}
-		    copy(rez, t);
+			copy(rez, t);
+			assert(cmp(t, rez) == 0);
 		}
-		
+
 		template<typename T, int N, int M, unsigned int K>
-		void modExp(T (&result)[N], const T (&base)[N], const T (&exp)[K], const T (&modulo)[M]) noexcept
+		void modExp(T(&result)[N], const T(&base)[N], const T(&exp)[K], const T(&modulo)[M]) noexcept
 		{
-			constexpr unsigned int kWordSizeBits = sizeof(T) * 8;
-			
-			zero(result);
-			if (cmp(modulo,T(1)) == 0)
+			one(result);
+			if (cmp(modulo, T(1)) == 0)
 				return;
-	
-			result[0] = T(1);
 
 			unsigned int realExpSize = K;
 			// skip leading zeros
 			while (realExpSize > 0 && exp[realExpSize - 1] == 0)
 				realExpSize--;
-	
-			for (unsigned int i = realExpSize; i-->0;)
+
+			for (unsigned int i = realExpSize; i-- > 0;)
 			{
-				for (unsigned int j = (kWordSizeBits); j-->0;)
+				for (unsigned int j = (bitsize<T>::value); j-- > 0;)
 				{
-					T tmp[2*N], q[2*N];
-					zero(tmp); zero(q);
+					T tmp[2 * N] = { 0 }, q[2 * N] = { 0 };
 					mul(tmp, result, result);
 					div(q, tmp, modulo);
 					copy(result, tmp);
@@ -643,43 +651,194 @@ namespace BigNum
 				}
 			}
 		}
+
+		template<typename T, int N>
+		struct MonMul
+		{
+			static constexpr int Len = N;
+			T n[Len];
+			T ninv[Len];
+
+			explicit MonMul(const T(&_n)[N]) noexcept
+			{
+				copy(n, _n);
+				assert(mod(_n, T(2)) != 0);
+
+				T n2N[2 * Len];
+				copy(n2N, n);
+
+				const T val_one[] = { 1 };
+				// const T B[2] = { 0, 1 };
+				T R[2 * Len] = { 0 };
+				shl(R, val_one, N * bitsize<T>::value);
+
+				// const Num<2 * N> r(Num<2 * N>(1) << N);
+				// assert(gcd(Num<2 * N>(n), r) == 1);
+
+				T Rinv[2 * Len] = { 0 };
+				modInv(Rinv, R, n2N);
+				// Num<2*N> rinv = modInv<2 * N>(r, n);
+				// assert(((rinv) << N) % Num<2 * N>(n) == 1);
+
+				T Ninv2N[2 * Len] = { 0 }, tmp2N[2 * Len] = { 0 };
+				shl(tmp2N, Rinv, N*bitsize<T>::value);
+
+				sub(tmp2N, T(1));
+				div(Ninv2N, tmp2N, n);
+
+				copy(ninv, Ninv2N);
+				assert(cmp(ninv, Ninv2N) == 0);
+				// ninv = (((rinv) << N) - 1) / n;
+				// assert(((rinv) << N) - (ninv*n) == 1);
+			}
+
+			void In(T(&ret)[N], const T(&x)[N]) const noexcept
+			{
+				T tmp[2 * N] = { 0 };
+				shl(tmp, x, N*bitsize<T>::value);
+				mod(tmp, n);
+				copy(ret, tmp);
+			}
+
+			template<int M>
+			void In(T(&ret)[N], const T(&x)[M]) const noexcept
+			{
+				T tmp[N + M] = { 0 };
+				shl(tmp, x, N*bitsize<T>::value);
+				mod(tmp, n);
+				copy(ret, tmp);
+			}
+
+			void Out(T(&ret)[N], const T(&x)[N]) const noexcept
+			{
+				T val[2 * N];
+				copy(val, x);
+				REDC(ret, val);
+			}
+
+			void REDC(T(&ret)[N], const T(&t)[2 * N]) const noexcept
+			{
+				T m[Len] = { 0 };
+				mul(m, t, ninv);
+				//Num<N> m = Num<N>(t) * ninv;
+
+				T mn[2 * Len] = { 0 };
+				mul(mn, m, n);
+				add(mn, t);
+				shr(ret, mn, N*bitsize<T>::value);
+				//Num<N> u = (t + m * n) >> N;
+
+				while (cmp(ret, n) >= 0)
+					sub(ret, n);
+				//if (u >= n)
+				//	u = u % n;
+				//return Num<N>(u);
+			}
+
+			void Mul(T(&ret)[N], const T(&a)[N], const T(&b)[N])
+			{
+				T tmp[N + N] = { 0 };
+				mul(tmp, a, b);
+				REDC(ret, tmp);
+			}
+		};
+
+		template<typename T, int N>
+		void monModMul(T(&ret)[N], const T(&a)[N], const T(&b)[N], const T(&mod)[N]) noexcept
+		{
+			MonMul<T, N> monMod(mod);
+			T xa[N];
+			monMod.In(xa, a);
+			monMod.Mul(ret, xa, b);
+		}
+
+		template<typename T, int N, int M, int K>
+		void monModExp(T(&ret)[N], const T(&base)[K], const T(&exp)[M], const T(&mod)[N]) noexcept
+		{
+			MonMul<T, N> monMod(mod);
+			T tmp[N] = { 0 }, power[N] = { 0 }, val1[N] = { 0 };
+			one(val1);
+
+			monMod.In(tmp, val1);
+			monMod.In(power, base);
+
+			int realExpSize = M;
+			while (realExpSize > 0 && exp[realExpSize - 1] == 0)
+				realExpSize--;
+
+			for (auto i = realExpSize; i-- > 0;)
+			{
+				for (unsigned j = bitsize<T>::value; j-- > 0;)
+				{
+					monMod.Mul(tmp, tmp, tmp);
+					if (T(exp[i] >> j) & T(1))
+						monMod.Mul(tmp, tmp, power);
+				}
+			}
+			monMod.Out(ret, tmp);
+		}
+
+		template<typename T, int N, int M, int K>
+		void monModExp2ary(T(&ret)[N], const T(&base)[K], const T(&exp)[M], const T(&mod)[N]) noexcept
+		{
+			MonMul<T, N> monMod(mod);
+			T tmp[N] = { 0 }, power[3][N] = { { 0 },{ 0 },{ 0 } }, val1[N] = { 0 };
+			one(val1);
+
+			monMod.In(tmp, val1);
+			monMod.In(power[0], base);
+			monMod.Mul(power[1], power[0], power[0]);
+			monMod.Mul(power[2], power[1], power[0]);
+
+			int realExpSize = M;
+			while (realExpSize > 0 && exp[realExpSize - 1] == 0)
+				realExpSize--;
+
+			for (auto i = realExpSize; i-- > 0;)
+			{
+				for (unsigned j = bitsize<T>::value; j > 0; j -= 2)
+				{
+					monMod.Mul(tmp, tmp, tmp);
+					monMod.Mul(tmp, tmp, tmp);
+					int p = ((exp[i] >> (j - 1)) & T(1)) * 2 + ((exp[i] >> (j - 2)) & T(1));
+					if (p > 0)
+						monMod.Mul(tmp, tmp, power[p - 1]);
+				}
+			}
+			monMod.Out(ret, tmp);
+		}
 	}
-	
+
+	using Core::bitsize;
 	typedef unsigned long long int Word;
-	constexpr unsigned int kWordSizeBits = sizeof(Word) * 8;
-	
+	constexpr unsigned int kWordSizeBits = bitsize<Word>::value;
+
 	template<int N>
 	class Num
 	{
 	public:
-		static constexpr unsigned int kWordSizeBits = sizeof(Word) * 8;
-		static constexpr unsigned int Size = (N + (kWordSizeBits)-1) / (kWordSizeBits);
-		
-		Word data[Size];
+		enum {
+			Size = (N + (kWordSizeBits)-1) / (kWordSizeBits)
+		};
 
-		Num() noexcept
-		{
-			for (unsigned int i = 0; i < Size; i++)
-				data[i] = 0;
-		}
+		Word data[Size] = { 0 };
 
-		template<typename T>
-		Num(T num, typename std::enable_if<(sizeof(T) > sizeof(Word))>::type* = 0) noexcept
+		Num(unsigned long long int num = 0) noexcept
 		{
-			for (unsigned int i = 0; i < Size; i++) {
-				data[i] = Word(num);
-				num >>= kWordSizeBits;
+			if (bitsize<unsigned long long int>::value > bitsize<Word>::value)
+			{
+				for (unsigned int i = 0; i < Size; i++)
+				{
+					data[i] = Word(num);
+					num >>= bitsize<Word>::value;
+				}
+			}
+			else
+			{
+				data[0] = Word(num);
 			}
 		}
-		
-		template<typename T>
-		Num(T num, typename std::enable_if<(sizeof(T) <= sizeof(Word))>::type* = 0) noexcept
-		{
-			data[0] = Word(num);
-			for (unsigned int i = 1; i < Size; i++)
-				data[i] = 0;
-		}
-		
+
 		template<int M>
 		Num(const Num<M>& other) noexcept
 		{
@@ -695,24 +854,14 @@ namespace BigNum
 		Num<N>& operator = (const Num<N>& other) noexcept
 		{
 			if (this != &other)
-			{
-				for (unsigned int i = 0; i < Size; i++)
-					data[i] = other[i];
-			}
+				Core::copy(this->data, other.data);
 			return *this;
 		}
 
 		template<int M>
 		Num<N>& operator = (const Num<M>& other) noexcept
 		{
-			for (unsigned int i = 0; i < std::min(Size, Num<M>::Size); i++)
-				data[i] = other[i];
-
-			for (unsigned int i = std::min(Size, Num<M>::Size); i < Size; i++)
-				data[i] = 0;
-				
-			//assert(std::none_of(&other[std::min<int>(Size, Num<M>::Size)],&other[Num<M>::Size], [](unsigned char x){ return x != 0; }));
-
+			Core::copy(this->data, other.data);
 			return *this;
 		}
 
@@ -747,12 +896,27 @@ namespace BigNum
 		return ret;
 	}
 
+	template<int N, int M>
+	const Num<N> operator += (Num<N>& ret, const Num<M>& v2) noexcept
+	{
+		Core::add(ret.data, v2.data);
+		return ret;
+	}
+
 	template<int N>
 	const Num<N> operator + (const Num<N>& v1, Word v2) noexcept
 	{
 		Num<N> ret;
-		const Word a2[] = {v2};
+		const Word a2[] = { v2 };
 		Core::add(ret.data, v1.data, a2);
+		return ret;
+	}
+
+	template<int N>
+	const Num<N> operator += (Num<N>& ret, Word v2) noexcept
+	{
+		const Word a2[] = { v2 };
+		Core::add(ret.data, a2);
 		return ret;
 	}
 
@@ -770,12 +934,27 @@ namespace BigNum
 		return ret;
 	}
 
+	template<int N, int M>
+	const Num<N> operator -= (Num<N>& ret, const Num<M>& v2) noexcept
+	{
+		Core::sub(ret.data, v2.data);
+		return ret;
+	}
+
 	template<int N>
 	const Num<N> operator - (const Num<N>& v1, Word v2) noexcept
 	{
 		Num<N> ret;
 		const Word a2[] = { v2 };
 		Core::sub(ret.data, v1.data, a2);
+		return ret;
+	}
+
+	template<int N>
+	const Num<N> operator -= (Num<N>& ret, Word v2) noexcept
+	{
+		const Word a2[] = { v2 };
+		Core::sub(ret.data, a2);
 		return ret;
 	}
 
@@ -797,77 +976,77 @@ namespace BigNum
 	}
 
 	template<int N, int M>
-	const bool operator == (const Num<N>& v1, const Num<M>& v2) noexcept
+	bool operator == (const Num<N>& v1, const Num<M>& v2) noexcept
 	{
 		return Core::cmp(v1.data, v2.data) == 0;
 	}
 
 	template<int N>
-	const bool operator == (const Num<N>& v1, Word v2) noexcept
+	bool operator == (const Num<N>& v1, Word v2) noexcept
 	{
 		const Word a2[] = { v2 };
 		return Core::cmp(v1.data, a2) == 0;
 	}
 
 	template<int N, int M>
-	const bool operator != (const Num<N>& v1, const Num<M>& v2) noexcept
+	bool operator != (const Num<N>& v1, const Num<M>& v2) noexcept
 	{
 		return !(v1 == v2);
 	}
-	
+
 	template<int N>
-	const bool operator != (const Num<N>& v1, Word v2) noexcept
+	bool operator != (const Num<N>& v1, Word v2) noexcept
 	{
 		return !(v1 == v2);
 	}
 
 	template<int N, int M>
-	const bool operator > (const Num<N>& v1, const Num<M>& v2) noexcept
+	bool operator > (const Num<N>& v1, const Num<M>& v2) noexcept
 	{
 		return Core::cmp(v1.data, v2.data) > 0;
 	}
 
 	template<int N>
-	const bool operator > (const Num<N>& v1, Word v2) noexcept
+	bool operator > (const Num<N>& v1, Word v2) noexcept
 	{
 		const Word a2[] = { v2 };
 		return Core::cmp(v1.data, a2) > 0;
 	}
 
 	template<int N, int M>
-	const bool operator >= (const Num<N>& v1, const Num<M>& v2) noexcept
+	bool operator >= (const Num<N>& v1, const Num<M>& v2) noexcept
 	{
 		return Core::cmp(v1.data, v2.data) >= 0;
 	}
 
 	template<int N>
-	const bool operator >= (const Num<N>& v1, Word v2) noexcept
+	bool operator >= (const Num<N>& v1, Word v2) noexcept
 	{
 		const Word a2[] = { v2 };
 		return Core::cmp(v1.data, a2) >= 0;
 	}
 
 	template<int N, int M>
-	const bool operator < (const Num<N>& v1, const Num<M>& v2) noexcept
+	bool operator < (const Num<N>& v1, const Num<M>& v2) noexcept
 	{
 		return Core::cmp(v1.data, v2.data) < 0;
 	}
 
 	template<int N>
-	const bool operator < (const Num<N>& v1, Word v2) noexcept
+	bool operator < (const Num<N>& v1, Word v2) noexcept
 	{
 		const Word a2[] = { v2 };
 		return Core::cmp(v1.data, a2) < 0;
 	}
 
 	template<int N, int M>
-	const bool operator <= (const Num<N>& v1, const Num<M>& v2) noexcept
+	bool operator <= (const Num<N>& v1, const Num<M>& v2) noexcept
 	{
 		return Core::cmp(v1.data, v2.data) <= 0;
 	}
 
 	template<int N>
-	const bool operator <= (const Num<N>& v1, Word v2) noexcept
+	bool operator <= (const Num<N>& v1, Word v2) noexcept
 	{
 		const Word a2[] = { v2 };
 		return Core::cmp(v1.data, a2) <= 0;
@@ -922,7 +1101,7 @@ namespace BigNum
 	}
 
 	template<int N>
-	const Word operator % (const Num<N>& v1, const Word v2) noexcept
+	Word operator % (const Num<N>& v1, const Word v2) noexcept
 	{
 		return Core::mod(v1.data, v2);
 	}
@@ -1011,7 +1190,7 @@ namespace BigNum
 	{
 		return v == 0;
 	}
-	
+
 	template<int N>
 	const Num<N> gcd(const Num<N>& v1, const Num<N>& v2) noexcept
 	{
@@ -1021,7 +1200,7 @@ namespace BigNum
 	}
 
 	template<int N>
-	const Num<2*N> lcm(const Num<N>& v1, const Num<N>& v2) noexcept
+	const Num<2 * N> lcm(const Num<N>& v1, const Num<N>& v2) noexcept
 	{
 		Num<2 * N> ret;
 		Core::lcm(ret.data, v1.data, v2.data);
@@ -1031,9 +1210,9 @@ namespace BigNum
 	template<int N>
 	const Num<N> modInv(const Num<N>& a, const Num<N>& n) noexcept
 	{
-	    Num<N> rez;
-	    Core::modInv(rez.data, a.data, n.data);
-	    return rez;
+		Num<N> rez;
+		Core::modInv(rez.data, a.data, n.data);
+		return rez;
 	}
 
 	template<typename T>
@@ -1062,15 +1241,13 @@ namespace BigNum
 
 			assert(gcd(Num<2 * N>(n), r) == 1);
 
-			Num<2*N> rinv = modInv<2 * N>(r, n);
+			Num<2 * N> rinv = modInv<2 * N>(r, n);
 
 			assert(((rinv) << N) % Num<2 * N>(n) == 1);
 
 			ninv = (((rinv) << N) - 1) / n;
 
 			assert(((rinv) << N) - (ninv*n) == 1);
-
-			//rmask = (r - 1);
 		}
 
 		const Num<N> In(const Num<N>& x) const noexcept
@@ -1084,7 +1261,7 @@ namespace BigNum
 		template<int M>
 		const Num<N> In(const Num<M>& x) const noexcept
 		{
-			Num<N+M> ret(x);
+			Num<N + M> ret(x);
 			ret = ret << N;
 
 			return ret % n;
@@ -1095,7 +1272,7 @@ namespace BigNum
 			return (*this)(x, Num<N>(1));
 		}
 
-		const Num<N> operator()(const Num<2*N>& t) const noexcept
+		const Num<N> operator()(const Num<2 * N>& t) const noexcept
 		{
 			Num<N> m = Num<N>(t) * ninv;
 			Num<N> u = (t + m * n) >> N;
@@ -1107,7 +1284,7 @@ namespace BigNum
 
 		const Num<N> operator()(const Num<N>& a, const Num<N>& b) const noexcept
 		{
-			Num<2*N> t = a * b;
+			Num<2 * N> t = a * b;
 			return (*this)(t);
 		}
 	};
@@ -1115,59 +1292,29 @@ namespace BigNum
 	template<int N>
 	const Num<N> monModMul(const Num<N>& a, const Num<N>& b, const Num<N>& mod) noexcept
 	{
-		MonMul<N> monMod((mod));
-		Num<N> xa = monMod.In(a);
-		return monMod(xa, b);
+		Num<N> ret;
+		Core::monModMul(ret.data, a.data, b.data, mod.data);
+		return ret;
 	}
 
 	template<int N, int M, int K>
 	const Num<N> monModExp(const Num<K>& base, const Num<M>& exp, const Num<N>& mod) noexcept
 	{
-		MonMul<N> monMod((mod));
-		Num<N> ret = monMod.In(Num<N>(1));
-		Num<N> power = monMod.In(base);
-
-		auto realExpSize = Num<M>::Size;
-		while (realExpSize > 0 && exp[realExpSize - 1] == 0)
-			realExpSize--;
-
-		for (auto i = std::min<unsigned int>(N, realExpSize * kWordSizeBits); i --> 0;)
-		{
-			ret = monMod(ret, ret);
-			if (exp.bit(i))
-				ret = monMod(ret, power);
-		}
-		return monMod.Out(ret);
+		Num<N> ret;
+		Core::monModExp(ret.data, base.data, exp.data, mod.data);
+		return ret;
 	}
 
 	template<int N, int M, int K>
 	const Num<N> monModExp2ary(const Num<K>& base, const Num<M>& exp, const Num<N>& mod) noexcept
 	{
-		MonMul<N> monMod((mod));
-		Num<N> ret = monMod.In(Num<N>(1));
-		Num<N> baseIn = monMod.In(base);
-		Num<N> power[3];
-		power[0] = baseIn;
-		power[1] = monMod(baseIn, baseIn);
-		power[2] = monMod(power[1], baseIn);
-
-		auto realExpSize = Num<M>::Size;
-		while (realExpSize > 0 && exp[realExpSize - 1] == 0)
-			realExpSize--;
-
-		for (auto i = std::min<unsigned int>(N, realExpSize * kWordSizeBits)/2; i--> 0;)
-		{
-			ret = monMod(ret, ret);
-			ret = monMod(ret, ret);
-			int p = (exp.bit(i * 2 + 1) ? 1 : 0) * 2 + (exp.bit(i * 2) ? 1 : 0);
-			if (p > 0)
-				ret = monMod(ret, power[p - 1]);
-		}
-		return monMod.Out(ret);
+		Num<N> ret;
+		Core::monModExp2ary(ret.data, base.data, exp.data, mod.data);
+		return ret;
 	}
 
 	template<int N>
-	void CRT_init(const Num<N>& p, const Num<N>& q, const Num<2*N>& d, Num<N>& dp, Num<N>& dq, Num<N>& qinvp)
+	void CRT_init(const Num<N>& p, const Num<N>& q, const Num<2 * N>& d, Num<N>& dp, Num<N>& dq, Num<N>& qinvp)
 	{
 		qinvp = modInv(q, p);
 		dp = d % (p - 1);
@@ -1175,12 +1322,12 @@ namespace BigNum
 	}
 
 	template<int N>
-	const Num<2*N> CRT(const Num<2*N>& m, const Num<N>& p, const Num<N>& q, const Num<N>& dp, const Num<N>& dq, const Num<N>& qinvp) noexcept
+	const Num<2 * N> CRT(const Num<2 * N>& m, const Num<N>& p, const Num<N>& q, const Num<N>& dp, const Num<N>& dq, const Num<N>& qinvp) noexcept
 	{
 		BigNum::Num<N> mp = BigNum::monModExp2ary(m, dp, p);
 		BigNum::Num<N> mq = BigNum::monModExp2ary(m, dq, q);
 
-		return BigNum::Num<2*N>(mq) + (((mp - mq) * qinvp) % p) * q;
+		return BigNum::Num<2 * N>(mq) + (((mp - mq) * qinvp) % p) * q;
 	}
 
 	template<int N>
@@ -1206,7 +1353,7 @@ namespace BigNum
 			s++;
 
 		d = d >> s;
-		BigNum::Num<N> a_to_power = BigNum::monModExp<N>(a, d, num);
+		BigNum::Num<N> a_to_power = BigNum::monModExp2ary<N>(a, d, num);
 
 		if (a_to_power == 1)
 			return true;
@@ -1228,16 +1375,16 @@ namespace BigNum
 	//numbers from HAC table 4.3
 	int millerRabinProbes(int N) noexcept
 	{
-		if (N>=600) return 2; 
-		if (N>=550) return 4;
-		if (N>=500) return 5;
-		if (N>=400) return 6;
-		if (N>=350) return 7;
-		if (N>=300) return 9;
-		if (N>=250) return 12;
-		if (N>=200) return 15;
-		if (N>=150) return 18;
-		if (N>=100) return 27;
+		if (N >= 600) return 2;
+		if (N >= 550) return 4;
+		if (N >= 500) return 5;
+		if (N >= 400) return 6;
+		if (N >= 350) return 7;
+		if (N >= 300) return 9;
+		if (N >= 250) return 12;
+		if (N >= 200) return 15;
+		if (N >= 150) return 18;
+		if (N >= 100) return 27;
 		return 40;
 	}
 
@@ -1270,57 +1417,57 @@ namespace BigNum
 		739,    743,    751,    757,    761,    769,    773,    787,    797,    809,
 		811,    821,    823,    827,    829,    839,    853,    857,    859,    863,
 		877,    881,    883,    887,    907,    911,    919,    929,    937,    941,
-		947,    953,    967,    971,    977,    983,    991,    997,   1009,   1013, 
-	   1019,   1021,   /*1031,   1033,   1039,   1049,   1051,   1061,   1063,   1069, 
-	   1087,   1091,   1093,   1097,   1103,   1109,   1117,   1123,   1129,   1151, 
-	   1153,   1163,   1171,   1181,   1187,   1193,   1201,   1213,   1217,   1223, 
-	   1229,   1231,   1237,   1249,   1259,   1277,   1279,   1283,   1289,   1291, 
-	   1297,   1301,   1303,   1307,   1319,   1321,   1327,   1361,   1367,   1373, 
-	   1381,   1399,   1409,   1423,   1427,   1429,   1433,   1439,   1447,   1451, 
-	   1453,   1459,   1471,   1481,   1483,   1487,   1489,   1493,   1499,   1511, 
-	   1523,   1531,   1543,   1549,   1553,   1559,   1567,   1571,   1579,   1583, 
-	   1597,   1601,   1607,   1609,   1613,   1619,   1621,   1627,   1637,   1657, 
-	   1663,   1667,   1669,   1693,   1697,   1699,   1709,   1721,   1723,   1733, 
-	   1741,   1747,   1753,   1759,   1777,   1783,   1787,   1789,   1801,   1811, 
-	   1823,   1831,   1847,   1861,   1867,   1871,   1873,   1877,   1879,   1889, 
-	   1901,   1907,   1913,   1931,   1933,   1949,   1951,   1973,   1979,   1987, 
-	   1993,   1997,   1999,   2003,   2011,   2017,   2027,   2029,   2039,   2053,
-	   2063,   2069,   2081,   2083,   2087,   2089,   2099,   2111,   2113,   2129, 
-	   2131,   2137,   2141,   2143,   2153,   2161,   2179,   2203,   2207,   2213, 
-	   2221,   2237,   2239,   2243,   2251,   2267,   2269,   2273,   2281,   2287, 
-	   2293,   2297,   2309,   2311,   2333,   2339,   2341,   2347,   2351,   2357, 
-	   2371,   2377,   2381,   2383,   2389,   2393,   2399,   2411,   2417,   2423, 
-	   2437,   2441,   2447,   2459,   2467,   2473,   2477,   2503,   2521,   2531, 
-	   2539,   2543,   2549,   2551,   2557,   2579,   2591,   2593,   2609,   2617, 
-	   2621,   2633,   2647,   2657,   2659,   2663,   2671,   2677,   2683,   2687, 
-	   2689,   2693,   2699,   2707,   2711,   2713,   2719,   2729,   2731,   2741, 
-	   2749,   2753,   2767,   2777,   2789,   2791,   2797,   2801,   2803,   2819, 
-	   2833,   2837,   2843,   2851,   2857,   2861,   2879,   2887,   2897,   2903, 
-	   2909,   2917,   2927,   2939,   2953,   2957,   2963,   2969,   2971,   2999,
-       3001,   3011,   3019,   3023,   3037,   3041,   3049,   3061,   3067,   3079, 
-	   3083,   3089,   3109,   3119,   3121,   3137,   3163,   3167,   3169,   3181, 
-	   3187,   3191,   3203,   3209,   3217,   3221,   3229,   3251,   3253,   3257, 
-	   3259,   3271,   3299,   3301,   3307,   3313,   3319,   3323,   3329,   3331, 
-	   3343,   3347,   3359,   3361,   3371,   3373,   3389,   3391,   3407,   3413, 
-	   3433,   3449,   3457,   3461,   3463,   3467,   3469,   3491,   3499,   3511, 
-	   3517,   3527,   3529,   3533,   3539,   3541,   3547,   3557,   3559,   3571, 
-	   3581,   3583,   3593,   3607,   3613,   3617,   3623,   3631,   3637,   3643, 
-	   3659,   3671,   3673,   3677,   3691,   3697,   3701,   3709,   3719,   3727, 
-	   3733,   3739,   3761,   3767,   3769,   3779,   3793,   3797,   3803,   3821, 
-	   3823,   3833,   3847,   3851,   3853,   3863,   3877,   3881,   3889,   3907, 
-	   3911,   3917,   3919,   3923,   3929,   3931,   3943,   3947,   3967,   3989,
-	   4001,   4003,   4007,   4013,   4019,   4021,   4027,   4049,   4051,   4057, 
-	   4073,   4079,   4091,   4093,   4099,   4111,   4127,   4129,   4133,   4139, 
-	   4153,   4157,   4159,   4177,   4201,   4211,   4217,   4219,   4229,   4231, 
-	   4241,   4243,   4253,   4259,   4261,   4271,   4273,   4283,   4289,   4297, 
-	   4327,   4337,   4339,   4349,   4357,   4363,   4373,   4391,   4397,   4409, 
-	   4421,   4423,   4441,   4447,   4451,   4457,   4463,   4481,   4483,   4493, 
-	   4507,   4513,   4517,   4519,   4523,   4547,   4549,   4561,   4567,   4583, 
-	   4591,   4597,   4603,   4621,   4637,   4639,   4643,   4649,   4651,   4657, 
-	   4663,   4673,   4679,   4691,   4703,   4721,   4723,   4729,   4733,   4751, 
-	   4759,   4783,   4787,   4789,   4793,   4799,   4801,   4813,   4817,   4831, 
-	   4861,   4871,   4877,   4889,   4903,   4909,   4919,   4931,   4933,   4937, 
-	   4943,   4951,   4957,   4967,   4969,   4973,   4987,   4993,   4999,   5003,*/
+		947,    953,    967,    971,    977,    983,    991,    997,   1009,   1013,
+		1019,   1021,   /*1031,   1033,   1039,   1049,   1051,   1061,   1063,   1069,
+		1087,   1091,   1093,   1097,   1103,   1109,   1117,   1123,   1129,   1151,
+		1153,   1163,   1171,   1181,   1187,   1193,   1201,   1213,   1217,   1223,
+		1229,   1231,   1237,   1249,   1259,   1277,   1279,   1283,   1289,   1291,
+		1297,   1301,   1303,   1307,   1319,   1321,   1327,   1361,   1367,   1373,
+		1381,   1399,   1409,   1423,   1427,   1429,   1433,   1439,   1447,   1451,
+		1453,   1459,   1471,   1481,   1483,   1487,   1489,   1493,   1499,   1511,
+		1523,   1531,   1543,   1549,   1553,   1559,   1567,   1571,   1579,   1583,
+		1597,   1601,   1607,   1609,   1613,   1619,   1621,   1627,   1637,   1657,
+		1663,   1667,   1669,   1693,   1697,   1699,   1709,   1721,   1723,   1733,
+		1741,   1747,   1753,   1759,   1777,   1783,   1787,   1789,   1801,   1811,
+		1823,   1831,   1847,   1861,   1867,   1871,   1873,   1877,   1879,   1889,
+		1901,   1907,   1913,   1931,   1933,   1949,   1951,   1973,   1979,   1987,
+		1993,   1997,   1999,   2003,   2011,   2017,   2027,   2029,   2039,   2053,
+		2063,   2069,   2081,   2083,   2087,   2089,   2099,   2111,   2113,   2129,
+		2131,   2137,   2141,   2143,   2153,   2161,   2179,   2203,   2207,   2213,
+		2221,   2237,   2239,   2243,   2251,   2267,   2269,   2273,   2281,   2287,
+		2293,   2297,   2309,   2311,   2333,   2339,   2341,   2347,   2351,   2357,
+		2371,   2377,   2381,   2383,   2389,   2393,   2399,   2411,   2417,   2423,
+		2437,   2441,   2447,   2459,   2467,   2473,   2477,   2503,   2521,   2531,
+		2539,   2543,   2549,   2551,   2557,   2579,   2591,   2593,   2609,   2617,
+		2621,   2633,   2647,   2657,   2659,   2663,   2671,   2677,   2683,   2687,
+		2689,   2693,   2699,   2707,   2711,   2713,   2719,   2729,   2731,   2741,
+		2749,   2753,   2767,   2777,   2789,   2791,   2797,   2801,   2803,   2819,
+		2833,   2837,   2843,   2851,   2857,   2861,   2879,   2887,   2897,   2903,
+		2909,   2917,   2927,   2939,   2953,   2957,   2963,   2969,   2971,   2999,
+		3001,   3011,   3019,   3023,   3037,   3041,   3049,   3061,   3067,   3079,
+		3083,   3089,   3109,   3119,   3121,   3137,   3163,   3167,   3169,   3181,
+		3187,   3191,   3203,   3209,   3217,   3221,   3229,   3251,   3253,   3257,
+		3259,   3271,   3299,   3301,   3307,   3313,   3319,   3323,   3329,   3331,
+		3343,   3347,   3359,   3361,   3371,   3373,   3389,   3391,   3407,   3413,
+		3433,   3449,   3457,   3461,   3463,   3467,   3469,   3491,   3499,   3511,
+		3517,   3527,   3529,   3533,   3539,   3541,   3547,   3557,   3559,   3571,
+		3581,   3583,   3593,   3607,   3613,   3617,   3623,   3631,   3637,   3643,
+		3659,   3671,   3673,   3677,   3691,   3697,   3701,   3709,   3719,   3727,
+		3733,   3739,   3761,   3767,   3769,   3779,   3793,   3797,   3803,   3821,
+		3823,   3833,   3847,   3851,   3853,   3863,   3877,   3881,   3889,   3907,
+		3911,   3917,   3919,   3923,   3929,   3931,   3943,   3947,   3967,   3989,
+		4001,   4003,   4007,   4013,   4019,   4021,   4027,   4049,   4051,   4057,
+		4073,   4079,   4091,   4093,   4099,   4111,   4127,   4129,   4133,   4139,
+		4153,   4157,   4159,   4177,   4201,   4211,   4217,   4219,   4229,   4231,
+		4241,   4243,   4253,   4259,   4261,   4271,   4273,   4283,   4289,   4297,
+		4327,   4337,   4339,   4349,   4357,   4363,   4373,   4391,   4397,   4409,
+		4421,   4423,   4441,   4447,   4451,   4457,   4463,   4481,   4483,   4493,
+		4507,   4513,   4517,   4519,   4523,   4547,   4549,   4561,   4567,   4583,
+		4591,   4597,   4603,   4621,   4637,   4639,   4643,   4649,   4651,   4657,
+		4663,   4673,   4679,   4691,   4703,   4721,   4723,   4729,   4733,   4751,
+		4759,   4783,   4787,   4789,   4793,   4799,   4801,   4813,   4817,   4831,
+		4861,   4871,   4877,   4889,   4903,   4909,   4919,   4931,   4933,   4937,
+		4943,   4951,   4957,   4967,   4969,   4973,   4987,   4993,   4999,   5003,*/
 	};
 
 	constexpr unsigned int primesCount = sizeof(primes) / sizeof(primes[0]);
@@ -1356,8 +1503,8 @@ namespace BigNum
 	const Num<N> nextPrimeOpt3(const BigNum::Num<N>& from) noexcept
 	{
 		BigNum::Num<N> prime = from | 1u;
-		
-		constexpr unsigned char steps[3] = {2, 4, 2};
+
+		constexpr unsigned char steps[3] = { 2, 4, 2 };
 
 		unsigned char rest3 = (unsigned char)(prime % 3u);
 		if (rest3 == 0)
@@ -1382,8 +1529,8 @@ namespace BigNum
 	const Num<N> nextPrimeOpt35(const BigNum::Num<N>& from) noexcept
 	{
 		BigNum::Num<N> prime = from | 1u;
-		
-		constexpr unsigned char steps[3][5] = {{2, 2, 2, 4, 2}, {4, 6, 4, 4, 4}, {2, 2, 2, 6, 2}};
+
+		constexpr unsigned char steps[3][5] = { { 2, 2, 2, 4, 2 },{ 4, 6, 4, 4, 4 },{ 2, 2, 2, 6, 2 } };
 
 		unsigned char rest3 = (unsigned char)(prime % 3u), rest5 = (unsigned char)(prime % 5u);
 		if (rest3 == 0 || rest5 == 0)
@@ -1406,20 +1553,20 @@ namespace BigNum
 
 		return prime;
 	}
-	
+
 	template<int N>
 	const Num<N> nextPrimeOpt357(const BigNum::Num<N>& from) noexcept
 	{
 		BigNum::Num<N> prime = from | 1;
-		
+
 		constexpr unsigned char steps[3][5][7] = {
-			{{2, 2, 2, 2, 2, 4, 2}, {2, 2, 2, 2, 2, 8, 2}, {2, 2, 2, 2, 2, 4, 2}, {4, 4, 4, 8, 4, 4, 4}, {2, 2, 2, 2, 2, 4, 2}},
-			{{4, 4, 4, 6, 4, 4, 4}, {6, 10, 6, 6, 6, 6, 6}, {4, 4, 4, 6, 4, 4, 4}, {4, 4, 4, 6, 4, 4, 4}, {4, 4, 4, 10, 4, 4, 4}},
-			{{2, 2, 2, 2, 2, 6, 2}, {2, 2, 2, 2, 2, 6, 2}, {2, 2, 2, 2, 2, 6, 2}, {6, 8, 6, 6, 6, 6, 6}, {2, 2, 2, 2, 2, 8, 2}}
+			{ { 2, 2, 2, 2, 2, 4, 2 },{ 2, 2, 2, 2, 2, 8, 2 },{ 2, 2, 2, 2, 2, 4, 2 },{ 4, 4, 4, 8, 4, 4, 4 },{ 2, 2, 2, 2, 2, 4, 2 } },
+			{ { 4, 4, 4, 6, 4, 4, 4 },{ 6, 10, 6, 6, 6, 6, 6 },{ 4, 4, 4, 6, 4, 4, 4 },{ 4, 4, 4, 6, 4, 4, 4 },{ 4, 4, 4, 10, 4, 4, 4 } },
+			{ { 2, 2, 2, 2, 2, 6, 2 },{ 2, 2, 2, 2, 2, 6, 2 },{ 2, 2, 2, 2, 2, 6, 2 },{ 6, 8, 6, 6, 6, 6, 6 },{ 2, 2, 2, 2, 2, 8, 2 } }
 		};
 
 		unsigned char rest3 = (unsigned char)(prime % 3u), rest5 = (unsigned char)(prime % 5u), rest7 = (unsigned char)(prime % 7u);
-		
+
 		if (rest3 == 0 || rest5 == 0 || rest7 == 0)
 		{
 			const unsigned char step = steps[rest3][rest5][rest7];
@@ -1443,20 +1590,20 @@ namespace BigNum
 
 		return prime;
 	}
-	
+
 	template<int N>
 	const Num<N> nextPrimeOpt35711(const BigNum::Num<N>& from) noexcept
 	{
 		BigNum::Num<N> prime = from | 1;
-		
+
 		constexpr unsigned char steps[3][5][7][11] = {
-			{{{2, 2, 2, 2, 2, 2, 2, 2, 2, 4, 2},  {2, 2, 2, 2, 2, 2, 2, 2, 2, 4, 2},  {2, 2, 2, 2, 2, 2, 2, 2, 2, 4, 2},  {2, 2, 2, 2, 2, 2, 2, 2, 2, 8, 2},  {2, 2, 2, 2, 2, 2, 2, 2, 2, 4, 2},  {4, 4, 4, 4, 4, 4, 4, 8, 4, 4, 4},  {2, 2, 2, 2, 2, 2, 2, 2, 2, 4, 2}},  {  {2, 2, 2, 2, 2, 2, 2, 2, 2, 8, 2},  {2, 2, 2, 2, 2, 2, 2, 2, 2, 8, 2},  {2, 2, 2, 2, 2, 2, 2, 2, 2, 8, 2},  {2, 2, 2, 2, 2, 2, 2, 2, 2, 8, 2},  {2, 2, 2, 2, 2, 2, 2, 2, 2, 8, 2},  {8, 8, 8, 10, 8, 8, 8, 8, 8, 8, 8},  {2, 2, 2, 2, 2, 2, 2, 2, 2, 10, 2}},  {  {2, 2, 2, 2, 2, 2, 2, 2, 2, 4, 2},  {2, 2, 2, 2, 2, 2, 2, 2, 2, 4, 2},  {2, 2, 2, 2, 2, 2, 2, 2, 2, 4, 2},  {2, 2, 2, 2, 2, 2, 2, 2, 2, 10, 2},  {2, 2, 2, 2, 2, 2, 2, 2, 2, 4, 2},  {4, 4, 4, 4, 4, 4, 4, 10, 4, 4, 4},  {2, 2, 2, 2, 2, 2, 2, 2, 2, 4, 2}},  {  {4, 4, 4, 4, 4, 4, 4, 8, 4, 4, 4},  {4, 4, 4, 4, 4, 4, 4, 8, 4, 4, 4},  {4, 4, 4, 4, 4, 4, 4, 8, 4, 4, 4},  {8, 8, 8, 10, 8, 8, 8, 8, 8, 8, 8},  {4, 4, 4, 4, 4, 4, 4, 8, 4, 4, 4},  {4, 4, 4, 4, 4, 4, 4, 8, 4, 4, 4},  {4, 4, 4, 4, 4, 4, 4, 10, 4, 4, 4}},  {  {2, 2, 2, 2, 2, 2, 2, 2, 2, 4, 2},  {2, 2, 2, 2, 2, 2, 2, 2, 2, 4, 2},  {2, 2, 2, 2, 2, 2, 2, 2, 2, 4, 2},  {2, 2, 2, 2, 2, 2, 2, 2, 2, 8, 2},  {2, 2, 2, 2, 2, 2, 2, 2, 2, 4, 2},  {4, 4, 4, 4, 4, 4, 4, 8, 4, 4, 4},  {2, 2, 2, 2, 2, 2, 2, 2, 2, 4, 2}}},
-			{{{4, 4, 4, 4, 4, 4, 4, 6, 4, 4, 4},  {4, 4, 4, 4, 4, 4, 4, 12, 4, 4, 4},  {4, 4, 4, 4, 4, 4, 4, 6, 4, 4, 4},  {6, 6, 6, 6, 6, 12, 6, 6, 6, 6, 6},  {4, 4, 4, 4, 4, 4, 4, 6, 4, 4, 4},  {4, 4, 4, 4, 4, 4, 4, 6, 4, 4, 4},  {4, 4, 4, 4, 4, 4, 4, 6, 4, 4, 4}},  {  {6, 6, 6, 6, 6, 10, 6, 6, 6, 6, 6},  {10, 12, 10, 10, 10, 10, 10, 10, 10, 10, 10},  {6, 6, 6, 6, 6, 10, 6, 6, 6, 6, 6},  {6, 6, 6, 6, 6, 10, 6, 6, 6, 6, 6},  {6, 6, 6, 6, 6, 12, 6, 6, 6, 6, 6},  {6, 6, 6, 6, 6, 10, 6, 6, 6, 6, 6},  {6, 6, 6, 6, 6, 10, 6, 6, 6, 6, 6}},  {  {4, 4, 4, 4, 4, 4, 4, 6, 4, 4, 4},  {4, 4, 4, 4, 4, 4, 4, 10, 4, 4, 4},  {4, 4, 4, 4, 4, 4, 4, 6, 4, 4, 4},  {6, 6, 6, 6, 6, 10, 6, 6, 6, 6, 6},  {4, 4, 4, 4, 4, 4, 4, 6, 4, 4, 4},  {4, 4, 4, 4, 4, 4, 4, 6, 4, 4, 4},  {4, 4, 4, 4, 4, 4, 4, 6, 4, 4, 4}},  {  {4, 4, 4, 4, 4, 4, 4, 6, 4, 4, 4},  {4, 4, 4, 4, 4, 4, 4, 10, 4, 4, 4},  {4, 4, 4, 4, 4, 4, 4, 6, 4, 4, 4},  {6, 6, 6, 6, 6, 10, 6, 6, 6, 6, 6},  {4, 4, 4, 4, 4, 4, 4, 6, 4, 4, 4},  {4, 4, 4, 4, 4, 4, 4, 6, 4, 4, 4},  {4, 4, 4, 4, 4, 4, 4, 6, 4, 4, 4}},  {  {4, 4, 4, 4, 4, 4, 4, 10, 4, 4, 4},  {4, 4, 4, 4, 4, 4, 4, 10, 4, 4, 4},  {4, 4, 4, 4, 4, 4, 4, 10, 4, 4, 4},  {10, 12, 10, 10, 10, 10, 10, 10, 10, 10, 10},  {4, 4, 4, 4, 4, 4, 4, 12, 4, 4, 4},  {4, 4, 4, 4, 4, 4, 4, 10, 4, 4, 4},  {4, 4, 4, 4, 4, 4, 4, 10, 4, 4, 4}}},
-			{{{2, 2, 2, 2, 2, 2, 2, 2, 2, 6, 2},  {2, 2, 2, 2, 2, 2, 2, 2, 2, 8, 2},  {2, 2, 2, 2, 2, 2, 2, 2, 2, 6, 2},  {2, 2, 2, 2, 2, 2, 2, 2, 2, 6, 2},  {2, 2, 2, 2, 2, 2, 2, 2, 2, 6, 2},  {6, 6, 6, 6, 6, 8, 6, 6, 6, 6, 6},  {2, 2, 2, 2, 2, 2, 2, 2, 2, 6, 2}},  {  {2, 2, 2, 2, 2, 2, 2, 2, 2, 6, 2},  {2, 2, 2, 2, 2, 2, 2, 2, 2, 8, 2},  {2, 2, 2, 2, 2, 2, 2, 2, 2, 6, 2},  {2, 2, 2, 2, 2, 2, 2, 2, 2, 6, 2},  {2, 2, 2, 2, 2, 2, 2, 2, 2, 6, 2},  {6, 6, 6, 6, 6, 8, 6, 6, 6, 6, 6},  {2, 2, 2, 2, 2, 2, 2, 2, 2, 6, 2}},  {  {2, 2, 2, 2, 2, 2, 2, 2, 2, 6, 2},  {2, 2, 2, 2, 2, 2, 2, 2, 2, 12, 2},  {2, 2, 2, 2, 2, 2, 2, 2, 2, 6, 2},  {2, 2, 2, 2, 2, 2, 2, 2, 2, 6, 2},  {2, 2, 2, 2, 2, 2, 2, 2, 2, 6, 2},  {6, 6, 6, 6, 6, 12, 6, 6, 6, 6, 6},  {2, 2, 2, 2, 2, 2, 2, 2, 2, 6, 2}},  {  {6, 6, 6, 6, 6, 8, 6, 6, 6, 6, 6},  {8, 8, 8, 14, 8, 8, 8, 8, 8, 8, 8},  {6, 6, 6, 6, 6, 8, 6, 6, 6, 6, 6},  {6, 6, 6, 6, 6, 8, 6, 6, 6, 6, 6},  {6, 6, 6, 6, 6, 8, 6, 6, 6, 6, 6},  {6, 6, 6, 6, 6, 8, 6, 6, 6, 6, 6},  {6, 6, 6, 6, 6, 14, 6, 6, 6, 6, 6}},  {  {2, 2, 2, 2, 2, 2, 2, 2, 2, 8, 2},  {2, 2, 2, 2, 2, 2, 2, 2, 2, 8, 2},  {2, 2, 2, 2, 2, 2, 2, 2, 2, 8, 2},  {2, 2, 2, 2, 2, 2, 2, 2, 2, 8, 2},  {2, 2, 2, 2, 2, 2, 2, 2, 2, 8, 2},  {8, 8, 8, 12, 8, 8, 8, 8, 8, 8, 8},  {2, 2, 2, 2, 2, 2, 2, 2, 2, 12, 2}}}
+			{ { { 2, 2, 2, 2, 2, 2, 2, 2, 2, 4, 2 },{ 2, 2, 2, 2, 2, 2, 2, 2, 2, 4, 2 },{ 2, 2, 2, 2, 2, 2, 2, 2, 2, 4, 2 },{ 2, 2, 2, 2, 2, 2, 2, 2, 2, 8, 2 },{ 2, 2, 2, 2, 2, 2, 2, 2, 2, 4, 2 },{ 4, 4, 4, 4, 4, 4, 4, 8, 4, 4, 4 },{ 2, 2, 2, 2, 2, 2, 2, 2, 2, 4, 2 } },{ { 2, 2, 2, 2, 2, 2, 2, 2, 2, 8, 2 },{ 2, 2, 2, 2, 2, 2, 2, 2, 2, 8, 2 },{ 2, 2, 2, 2, 2, 2, 2, 2, 2, 8, 2 },{ 2, 2, 2, 2, 2, 2, 2, 2, 2, 8, 2 },{ 2, 2, 2, 2, 2, 2, 2, 2, 2, 8, 2 },{ 8, 8, 8, 10, 8, 8, 8, 8, 8, 8, 8 },{ 2, 2, 2, 2, 2, 2, 2, 2, 2, 10, 2 } },{ { 2, 2, 2, 2, 2, 2, 2, 2, 2, 4, 2 },{ 2, 2, 2, 2, 2, 2, 2, 2, 2, 4, 2 },{ 2, 2, 2, 2, 2, 2, 2, 2, 2, 4, 2 },{ 2, 2, 2, 2, 2, 2, 2, 2, 2, 10, 2 },{ 2, 2, 2, 2, 2, 2, 2, 2, 2, 4, 2 },{ 4, 4, 4, 4, 4, 4, 4, 10, 4, 4, 4 },{ 2, 2, 2, 2, 2, 2, 2, 2, 2, 4, 2 } },{ { 4, 4, 4, 4, 4, 4, 4, 8, 4, 4, 4 },{ 4, 4, 4, 4, 4, 4, 4, 8, 4, 4, 4 },{ 4, 4, 4, 4, 4, 4, 4, 8, 4, 4, 4 },{ 8, 8, 8, 10, 8, 8, 8, 8, 8, 8, 8 },{ 4, 4, 4, 4, 4, 4, 4, 8, 4, 4, 4 },{ 4, 4, 4, 4, 4, 4, 4, 8, 4, 4, 4 },{ 4, 4, 4, 4, 4, 4, 4, 10, 4, 4, 4 } },{ { 2, 2, 2, 2, 2, 2, 2, 2, 2, 4, 2 },{ 2, 2, 2, 2, 2, 2, 2, 2, 2, 4, 2 },{ 2, 2, 2, 2, 2, 2, 2, 2, 2, 4, 2 },{ 2, 2, 2, 2, 2, 2, 2, 2, 2, 8, 2 },{ 2, 2, 2, 2, 2, 2, 2, 2, 2, 4, 2 },{ 4, 4, 4, 4, 4, 4, 4, 8, 4, 4, 4 },{ 2, 2, 2, 2, 2, 2, 2, 2, 2, 4, 2 } } },
+			{ { { 4, 4, 4, 4, 4, 4, 4, 6, 4, 4, 4 },{ 4, 4, 4, 4, 4, 4, 4, 12, 4, 4, 4 },{ 4, 4, 4, 4, 4, 4, 4, 6, 4, 4, 4 },{ 6, 6, 6, 6, 6, 12, 6, 6, 6, 6, 6 },{ 4, 4, 4, 4, 4, 4, 4, 6, 4, 4, 4 },{ 4, 4, 4, 4, 4, 4, 4, 6, 4, 4, 4 },{ 4, 4, 4, 4, 4, 4, 4, 6, 4, 4, 4 } },{ { 6, 6, 6, 6, 6, 10, 6, 6, 6, 6, 6 },{ 10, 12, 10, 10, 10, 10, 10, 10, 10, 10, 10 },{ 6, 6, 6, 6, 6, 10, 6, 6, 6, 6, 6 },{ 6, 6, 6, 6, 6, 10, 6, 6, 6, 6, 6 },{ 6, 6, 6, 6, 6, 12, 6, 6, 6, 6, 6 },{ 6, 6, 6, 6, 6, 10, 6, 6, 6, 6, 6 },{ 6, 6, 6, 6, 6, 10, 6, 6, 6, 6, 6 } },{ { 4, 4, 4, 4, 4, 4, 4, 6, 4, 4, 4 },{ 4, 4, 4, 4, 4, 4, 4, 10, 4, 4, 4 },{ 4, 4, 4, 4, 4, 4, 4, 6, 4, 4, 4 },{ 6, 6, 6, 6, 6, 10, 6, 6, 6, 6, 6 },{ 4, 4, 4, 4, 4, 4, 4, 6, 4, 4, 4 },{ 4, 4, 4, 4, 4, 4, 4, 6, 4, 4, 4 },{ 4, 4, 4, 4, 4, 4, 4, 6, 4, 4, 4 } },{ { 4, 4, 4, 4, 4, 4, 4, 6, 4, 4, 4 },{ 4, 4, 4, 4, 4, 4, 4, 10, 4, 4, 4 },{ 4, 4, 4, 4, 4, 4, 4, 6, 4, 4, 4 },{ 6, 6, 6, 6, 6, 10, 6, 6, 6, 6, 6 },{ 4, 4, 4, 4, 4, 4, 4, 6, 4, 4, 4 },{ 4, 4, 4, 4, 4, 4, 4, 6, 4, 4, 4 },{ 4, 4, 4, 4, 4, 4, 4, 6, 4, 4, 4 } },{ { 4, 4, 4, 4, 4, 4, 4, 10, 4, 4, 4 },{ 4, 4, 4, 4, 4, 4, 4, 10, 4, 4, 4 },{ 4, 4, 4, 4, 4, 4, 4, 10, 4, 4, 4 },{ 10, 12, 10, 10, 10, 10, 10, 10, 10, 10, 10 },{ 4, 4, 4, 4, 4, 4, 4, 12, 4, 4, 4 },{ 4, 4, 4, 4, 4, 4, 4, 10, 4, 4, 4 },{ 4, 4, 4, 4, 4, 4, 4, 10, 4, 4, 4 } } },
+			{ { { 2, 2, 2, 2, 2, 2, 2, 2, 2, 6, 2 },{ 2, 2, 2, 2, 2, 2, 2, 2, 2, 8, 2 },{ 2, 2, 2, 2, 2, 2, 2, 2, 2, 6, 2 },{ 2, 2, 2, 2, 2, 2, 2, 2, 2, 6, 2 },{ 2, 2, 2, 2, 2, 2, 2, 2, 2, 6, 2 },{ 6, 6, 6, 6, 6, 8, 6, 6, 6, 6, 6 },{ 2, 2, 2, 2, 2, 2, 2, 2, 2, 6, 2 } },{ { 2, 2, 2, 2, 2, 2, 2, 2, 2, 6, 2 },{ 2, 2, 2, 2, 2, 2, 2, 2, 2, 8, 2 },{ 2, 2, 2, 2, 2, 2, 2, 2, 2, 6, 2 },{ 2, 2, 2, 2, 2, 2, 2, 2, 2, 6, 2 },{ 2, 2, 2, 2, 2, 2, 2, 2, 2, 6, 2 },{ 6, 6, 6, 6, 6, 8, 6, 6, 6, 6, 6 },{ 2, 2, 2, 2, 2, 2, 2, 2, 2, 6, 2 } },{ { 2, 2, 2, 2, 2, 2, 2, 2, 2, 6, 2 },{ 2, 2, 2, 2, 2, 2, 2, 2, 2, 12, 2 },{ 2, 2, 2, 2, 2, 2, 2, 2, 2, 6, 2 },{ 2, 2, 2, 2, 2, 2, 2, 2, 2, 6, 2 },{ 2, 2, 2, 2, 2, 2, 2, 2, 2, 6, 2 },{ 6, 6, 6, 6, 6, 12, 6, 6, 6, 6, 6 },{ 2, 2, 2, 2, 2, 2, 2, 2, 2, 6, 2 } },{ { 6, 6, 6, 6, 6, 8, 6, 6, 6, 6, 6 },{ 8, 8, 8, 14, 8, 8, 8, 8, 8, 8, 8 },{ 6, 6, 6, 6, 6, 8, 6, 6, 6, 6, 6 },{ 6, 6, 6, 6, 6, 8, 6, 6, 6, 6, 6 },{ 6, 6, 6, 6, 6, 8, 6, 6, 6, 6, 6 },{ 6, 6, 6, 6, 6, 8, 6, 6, 6, 6, 6 },{ 6, 6, 6, 6, 6, 14, 6, 6, 6, 6, 6 } },{ { 2, 2, 2, 2, 2, 2, 2, 2, 2, 8, 2 },{ 2, 2, 2, 2, 2, 2, 2, 2, 2, 8, 2 },{ 2, 2, 2, 2, 2, 2, 2, 2, 2, 8, 2 },{ 2, 2, 2, 2, 2, 2, 2, 2, 2, 8, 2 },{ 2, 2, 2, 2, 2, 2, 2, 2, 2, 8, 2 },{ 8, 8, 8, 12, 8, 8, 8, 8, 8, 8, 8 },{ 2, 2, 2, 2, 2, 2, 2, 2, 2, 12, 2 } } }
 		};
 
 		unsigned char rest3 = (unsigned char)(prime % 3u), rest5 = (unsigned char)(prime % 5u), rest7 = (unsigned char)(prime % 7u), rest11 = (unsigned char)(prime % 11u);
-		
+
 		if (rest3 == 0 || rest5 == 0 || rest7 == 0 || rest11 == 0)
 		{
 			const unsigned char step = steps[rest3][rest5][rest7][rest11];
@@ -1483,7 +1630,7 @@ namespace BigNum
 
 		return prime;
 	}
-	
+
 	enum class RandType
 	{
 		Simple,
@@ -1496,7 +1643,7 @@ namespace BigNum
 	{
 		static BigNum::Num<N> mask = (BigNum::Num<N>(1) | (BigNum::Num<N>(1) << (N - 1)));
 		BigNum::Num<N> num = rand<N>() | mask;
-		switch(type)
+		switch (type)
 		{
 		case RandType::FindNext:
 			return nextPrime(num);
@@ -1512,7 +1659,6 @@ namespace BigNum
 				return num;
 			}
 		}
-		//return nextPrime(num);
 	}
 
 	template<int N>
@@ -1520,10 +1666,10 @@ namespace BigNum
 	{
 		Num<N> ret(0);
 		auto it = from_begin;
-		for(unsigned int i = 0; i < Num<N>::Size; i++)
+		for (unsigned int i = 0; i < Num<N>::Size; i++)
 		{
 			Word val = 0;
-			for(unsigned int j = 0; j < sizeof(Word); j++)
+			for (unsigned int j = 0; j < sizeof(Word); j++)
 			{
 				if (it != from_end)
 				{
@@ -1540,10 +1686,10 @@ namespace BigNum
 	void i2d(const Num<N>& from, unsigned char* to_begin, unsigned char* to_end) noexcept
 	{
 		auto it = to_begin;
-		for(unsigned int i = 0; i < Num<N>::Size; i++)
+		for (unsigned int i = 0; i < Num<N>::Size; i++)
 		{
 			Word val = from[i];
-			for(unsigned int j = 0; j < sizeof(val); j++)
+			for (unsigned int j = 0; j < sizeof(val); j++)
 			{
 				if (it != to_end)
 				{
@@ -1560,7 +1706,7 @@ namespace BigNum
 		void m10add(BigNum::Num<N>& ret, const char arg) noexcept
 		{
 			assert(arg >= '0' && arg <= '9' && "Must be number");
-			ret = ret * 10u + (unsigned)(arg - '0');
+			ret = ret * 10u + (BigNum::Word(arg) - '0');
 		}
 
 		template <int N>
@@ -1587,6 +1733,6 @@ namespace BigNum
 		DECLARE_BIGNUM_OPERATOR(64)
 #undef DECLARE_BIGNUM_OPERATOR
 	}
-};
+}
 
 using namespace BigNum::operators;

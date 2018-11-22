@@ -12,7 +12,10 @@ project "BigInt"
    debugdir "bin/%{cfg.platform}_%{cfg.buildcfg}"
    files { "src/**.h", "test/**.cpp" }
    includedirs { "src/" }
-   flags { "C++11", "StaticRuntime" }
+   staticruntime "On"
+   cppdialect "C++14"
+   warnings "Extra"
+   buildoptions { "-pedantic" }
    
    filter "configurations:Debug"
       defines { "DEBUG" }

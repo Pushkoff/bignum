@@ -21,7 +21,7 @@ std::string toString(const BigNum::Num<N>& num)
 		ret.push_back(char(R + '0'));
 	}
 	std::reverse(ret.begin(), ret.end());
-	if (ret.empty()) 
+	if (ret.empty())
 		ret = "0";
 	return ret;
 }
@@ -29,7 +29,7 @@ std::string toString(const BigNum::Num<N>& num)
 template<int N>
 std::string toHex(const BigNum::Num<N>& num)
 {
-	const char Nums[] = {'0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'A', 'B', 'C', 'D', 'E', 'F'};
+	const char Nums[] = { '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'A', 'B', 'C', 'D', 'E', 'F' };
 	std::string ret;
 	BigNum::Num<N> Q = num;
 	while (Q > 0)
@@ -51,7 +51,7 @@ const BigNum::Num<N> fromString(const char* str)
 	while (*str && isdigit(*str))
 	{
 		ret = ret * 10u;
-		ret = ret + (unsigned)(*str - '0');
+		ret = ret + (BigNum::Word(*str) - '0');
 		str++;
 	}
 	return ret;
@@ -95,7 +95,7 @@ void doTest(Fn fn, const char* testName, int fileLine = 0)
 	auto elapsed = stop - start;
 	(ret ? TestsPass : TestsFailed)++;
 	printf("   %s - duration - %lld ms\n", ret ? "Ok" : "Fail", (long long)std::chrono::duration_cast<std::chrono::milliseconds>(elapsed).count());
-	
+
 	if (!ret) throw(1);
 }
 
@@ -108,19 +108,33 @@ void doTest(Fn fn, const char* testName, int fileLine = 0)
 int main()
 {
 #if PROFILING
-		test(BigNum::nextPrime<2048>(1_bn2048 << 2047) > 0 ); 
-		test(BigNum::nextPrimeOpt35711<2048>(1_bn2048 << 2047) > 0);
+	test(BigNum::nextPrime<2048>(1_bn2048 << 2047) > 0);
+	test(BigNum::nextPrimeOpt35711<2048>(1_bn2048 << 2047) > 0);
 #else
 	//srand(time(nullptr));
 	try
 	{
+		test((BigNum::Num<128>(1) << 1) == BigNum::Num<128>(2));
+		// test(BigNum::monModExp<32>(BigNum::Num<32>(4), BigNum::Num<32>(1), BigNum::Num<32>(497)) == BigNum::Num<32>(4));
+		// return 0;
 		{
 			bool passed = true;
-			BigNum::Num<64> bn(1);
-			for (unsigned int i = 0u; i < 64u; i++)
+			BigNum::Num<128> bn(1);
+			for (unsigned int i = 0u; i < 128u; i++)
 			{
-				BigNum::Num<64> testbn = bn << i;
-				passed = passed && (testbn[i / BigNum::kWordSizeBits] == (1ull << i%BigNum::kWordSizeBits));
+				BigNum::Num<128> testbn = bn << i;
+				for (unsigned int j = 0; j < BigNum::Num<128>::Size; j++)
+				{
+					if (j == i / BigNum::kWordSizeBits)
+						passed = passed && (testbn[i / BigNum::kWordSizeBits] == (1ull << (i%BigNum::kWordSizeBits)));
+					else
+						passed = passed && (testbn[j] == 0);
+				}
+				if (!passed)
+				{
+					printf("%d\n", i);
+					break;
+				}
 			}
 			test(passed == true && "Left shifts");
 		}
@@ -171,7 +185,7 @@ int main()
 				BigNum::Num<64> testbn = BigNum::Num<64>(3) << i;
 				passed = passed && (testbn == bn);
 
-				bn = bn * 2;
+				bn = bn * 2u;
 			}
 			test(passed == true && "Left shifts");
 		}
@@ -183,7 +197,7 @@ int main()
 
 		test((1_bn128 << 127) / 10_bn128 == 17014118346046923173168730371588410572_bn128);
 		test((BigNum::Num<128>(1) << 127) % BigNum::Num<128>(10) == BigNum::Num<128>(8));
-		
+
 
 		test(toString(fromString<128>("118802731")) == "118802731");
 		test(toString(BigNum::Num<128>(1) << 127) == "170141183460469231731687303715884105728");
@@ -196,6 +210,31 @@ int main()
 		test(BigNum::Num<64>(1) + BigNum::Num<64>(1) == BigNum::Num<64>(2));
 		test(BigNum::Num<64>(2) - BigNum::Num<64>(1) == BigNum::Num<64>(1));
 
+		{
+			BigNum::Num<128> x(1);
+			x += BigNum::Num<128>(1);
+			test(x == BigNum::Num<128>(2));
+			x -= BigNum::Num<128>(1);
+			test(x == BigNum::Num<128>(1));
+			x += 1;
+			test(x == BigNum::Num<128>(2));
+			x -= 1;
+			test(x == BigNum::Num<128>(1));
+		}
+
+		{
+			BigNum::Num<128> x(1);
+			x = (x << 64) - 1;
+			x += BigNum::Num<128>(1);
+			test(x == (BigNum::Num<128>(1) << 64));
+			x -= BigNum::Num<128>(1);
+			test(x == ((BigNum::Num<128>(1) << 64) - 1));
+			x += 1;
+			test(x == (BigNum::Num<128>(1) << 64));
+			x -= 1;
+			test(x == ((BigNum::Num<128>(1) << 64) - 1));
+		}
+
 		test(BigNum::Num<64>(256) - BigNum::Num<64>(1) == BigNum::Num<64>(255));
 		test(BigNum::Num<16>(255 << 8) - BigNum::Num<16>(1) == BigNum::Num<16>((255 << 8) - 1));
 
@@ -203,7 +242,7 @@ int main()
 		test(BigNum::Num<16>(255 << 8) - 1 == BigNum::Num<16>((255 << 8) - 1));
 
 		test(BigNum::Num<64>(20) * BigNum::Num<64>(45) == BigNum::Num<64>(20 * 45));
-		test(BigNum::Num<32>(0xFFFFFFFFu) * BigNum::Num<32>(0xFFFFFFFFu) == BigNum::Num<64>(0xFFFFFFFFull * 0xFFFFFFFFull));
+		test(BigNum::Num<32>(0xFFFFFFFFu) * BigNum::Num<32>(0xFFFFFFFFu) == BigNum::Num<64>(0xFFFFFFFE00000001ull));
 		test(BigNum::Num<64>(0xFFFFFFFFFFFFFFFFull) * BigNum::Num<64>(0xFFFFFFFFFFFFFFFFull) == fromHex<128>("FFFFFFFFFFFFFFFE0000000000000001"));
 
 		BigNum::Num<1024> fact(1);
@@ -215,7 +254,7 @@ int main()
 		test(toHex(fact) == "0x1B30964EC395DC24069528D54BBDA40D16E966EF9A70EB21B5B2943A321CDF10391745570CCA9420C6ECB3B72ED2EE8B02EA2735C61A000000000000000000000000");
 		test(fact == 93326215443944152681699238856266700490715968264381621468592963895217599993229915608941463976156518286253697920827223758251185210916864000000000000000000000000_bn1024);
 		test(toString(fromString<1024>("93326215443944152681699238856266700490715968264381621468592963895217599993229915608941463976156518286253697920827223758251185210916864000000000000000000000000")) == "93326215443944152681699238856266700490715968264381621468592963895217599993229915608941463976156518286253697920827223758251185210916864000000000000000000000000");
-		
+
 
 		test((BigNum::Num<64>(1) > BigNum::Num<64>(0)));
 		test((BigNum::Num<64>(1) < BigNum::Num<64>(0)) == false);
@@ -247,7 +286,7 @@ int main()
 		test((BigNum::Num<64>(13505675 >> 15) == BigNum::Num<64>(13505675) >> 15));
 		test((BigNum::Num<64>(13505675 >> 22) == BigNum::Num<64>(13505675) >> 22));
 		test(toString(89884656743115795386465259539451236680898848947115328636715040578866337902750481566354238661203768010560056939935696678829394884407208311246423715319737062188883946712432742638151109800623047059726541476042502884419075341171231440736956555270413618581675255342293149119973622969239858152417678164812112068608_bn1024) == "89884656743115795386465259539451236680898848947115328636715040578866337902750481566354238661203768010560056939935696678829394884407208311246423715319737062188883946712432742638151109800623047059726541476042502884419075341171231440736956555270413618581675255342293149119973622969239858152417678164812112068608")
-		test((BigNum::Num<1024>(1) << 1023) == 89884656743115795386465259539451236680898848947115328636715040578866337902750481566354238661203768010560056939935696678829394884407208311246423715319737062188883946712432742638151109800623047059726541476042502884419075341171231440736956555270413618581675255342293149119973622969239858152417678164812112068608_bn1024);
+			test((BigNum::Num<1024>(1) << 1023) == 89884656743115795386465259539451236680898848947115328636715040578866337902750481566354238661203768010560056939935696678829394884407208311246423715319737062188883946712432742638151109800623047059726541476042502884419075341171231440736956555270413618581675255342293149119973622969239858152417678164812112068608_bn1024);
 
 		test(((BigNum::Num<64>(1) << 63) + 1) / (BigNum::Num<64>(1) << 63) == 1);
 		test(((BigNum::Num<64>(1) << 63) + 1) % (BigNum::Num<64>(1) << 63) == 1);
@@ -286,10 +325,14 @@ int main()
 
 		//BigNum::MonMul<16> mod11(BigNum::Num<16>(121));
 		//test(mod11(BigNum::Num<16>(100), BigNum::Num<16>(100)) == BigNum::Num<16>(78));
-		test(BigNum::monModMul<32>(BigNum::Num<32>(43), BigNum::Num<32>(56), BigNum::Num<32>(97)) == BigNum::Num<32>(80));
-		test(BigNum::monModExp<32>(BigNum::Num<32>(4), BigNum::Num<32>(13), BigNum::Num<32>(497)) == BigNum::Num<32>(445));
-		test(BigNum::monModExp<32>(BigNum::Num<32>(4), BigNum::Num<32>(0), BigNum::Num<32>(497)) == BigNum::Num<32>(1));
-		test(BigNum::monModExp<32>(BigNum::Num<32>(4), BigNum::Num<32>(1), BigNum::Num<32>(497)) == BigNum::Num<32>(4));
+		test(BigNum::monModMul<64>(BigNum::Num<64>(43), BigNum::Num<64>(56), BigNum::Num<64>(97)) == BigNum::Num<64>(80));
+		//test(BigNum::monModExp<32>(BigNum::Num<32>(4), BigNum::Num<32>(13), BigNum::Num<32>(497)) == BigNum::Num<32>(445));
+		//test(BigNum::monModExp<32>(BigNum::Num<32>(4), BigNum::Num<32>(0), BigNum::Num<32>(497)) == BigNum::Num<32>(1));
+		//test(BigNum::monModExp<32>(BigNum::Num<32>(4), BigNum::Num<32>(1), BigNum::Num<32>(497)) == BigNum::Num<32>(4));
+		test(BigNum::monModExp<64>(BigNum::Num<64>(4), BigNum::Num<64>(0), BigNum::Num<64>(497)) == BigNum::Num<64>(1));
+		test(BigNum::monModExp<64>(BigNum::Num<64>(4), BigNum::Num<64>(13), BigNum::Num<64>(497)) == BigNum::Num<64>(445));
+		test(BigNum::monModExp<64>(BigNum::Num<64>(4), BigNum::Num<64>(1), BigNum::Num<64>(497)) == BigNum::Num<64>(4));
+
 		test(BigNum::modExp<64>(fromString<64>("8814054284918744181"), fromString<64>("1152921504606846977"), fromString<64>("9223372036854775817")) == fromString<64>("4724919961687496308"));
 		test(BigNum::monModExp<64>(fromString<64>("8814054284918744181"), fromString<64>("1152921504606846977"), fromString<64>("9223372036854775817")) == fromString<64>("4724919961687496308"));
 		test(BigNum::monModExp2ary<64>(fromString<64>("8814054284918744181"), fromString<64>("1152921504606846977"), fromString<64>("9223372036854775817")) == fromString<64>("4724919961687496308"));
@@ -336,7 +379,7 @@ int main()
 		test(BigNum::nextPrimeOpt357<1024>(1_bn1024 << 1023) == 89884656743115795386465259539451236680898848947115328636715040578866337902750481566354238661203768010560056939935696678829394884407208311246423715319737062188883946712432742638151109800623047059726541476042502884419075341171231440736956555270413618581675255342293149119973622969239858152417678164812112069763_bn1024);
 		test(BigNum::nextPrimeOpt35711<1024>(1_bn1024 << 1023) == 89884656743115795386465259539451236680898848947115328636715040578866337902750481566354238661203768010560056939935696678829394884407208311246423715319737062188883946712432742638151109800623047059726541476042502884419075341171231440736956555270413618581675255342293149119973622969239858152417678164812112069763_bn1024);
 
-		test(BigNum::nextPrime<2048>(1_bn2048 << 2047) > 0 ); //== 16158503035655503650357438344334975980222051334857742016065172713762327569433945446598600705761456731844358980460949009747059779575245460547544076193224141560315438683650498045875098875194826053398028819192033784138396109321309878080919047169238085235290822926018152521443787945770532904303776199561965192760957166694834171210342487393282284747428088017663161029038902829665513096354230157075129296432088558362971801859230928678799175576150822952201848806616643615613562842355410104862578550863465661734839271290328348967522998634176499319107762583194718667771801067716614802322659239302476074096777926805529798117247_bn2048);
+		test(BigNum::nextPrime<2048>(1_bn2048 << 2047) > 0); //== 16158503035655503650357438344334975980222051334857742016065172713762327569433945446598600705761456731844358980460949009747059779575245460547544076193224141560315438683650498045875098875194826053398028819192033784138396109321309878080919047169238085235290822926018152521443787945770532904303776199561965192760957166694834171210342487393282284747428088017663161029038902829665513096354230157075129296432088558362971801859230928678799175576150822952201848806616643615613562842355410104862578550863465661734839271290328348967522998634176499319107762583194718667771801067716614802322659239302476074096777926805529798117247_bn2048);
 		test(BigNum::nextPrimeOpt35711<2048>(1_bn2048 << 2047) > 0);
 
 		srand(0);
@@ -370,10 +413,10 @@ int main()
 		}
 
 		{
-			unsigned char data[128] = {0};
+			unsigned char data[128] = { 0 };
 			std::generate(&data[0], &data[128], []() {return rand() % 256; });
 			BigNum::Num<2048> packed = BigNum::d2i<2048>(&data[0], &data[128]);
-			unsigned char unpacked[128] = {0};
+			unsigned char unpacked[128] = { 0 };
 			BigNum::i2d(packed, &unpacked[0], &unpacked[128]);
 			test(memcmp(data, unpacked, 128) == 0);
 		}
@@ -406,11 +449,11 @@ int main()
 
 			std::vector<BigNum::Num<Module>> cipperdata;
 
-			constexpr unsigned int blockSize = (Module/2)/8;
+			constexpr unsigned int blockSize = (Module / 2) / 8;
 			static_assert(blockSize % sizeof(BigNum::Word) == 0, "Module have to be power of 2");
 			printf("Encrypt");
 			start = std::chrono::high_resolution_clock::now();
-			for (std::size_t block = 0; block < testdata.size(); block+=blockSize)
+			for (std::size_t block = 0; block < testdata.size(); block += blockSize)
 			{
 				BigNum::Num<Module> data = BigNum::d2i<Module>(&testdata[block], &testdata[block + blockSize]);
 				BigNum::Num<Module> cipper = BigNum::monModExp(data, e, N);
@@ -440,26 +483,24 @@ int main()
 			printf("%s\n", (ret) ? "Ok" : "Fail");
 			if (!ret)
 			{
-				for(auto i : testdata)
+				for (auto i : testdata)
 					printf("%02X ", i);
-				
+
 				printf("\n\n");
-				
-				for(auto i : decrypted)
+
+				for (auto i : decrypted)
 					printf("%02X ", i);
-				
+
 				printf("\n");
 			}
 			if (!ret) throw(1);
 		}
-		printf("Passed %d tests\nFailed %d tests\nPress any key...", TestsPass, TestsFailed);
+		printf("Passed %d tests\nFailed %d tests\n", TestsPass, TestsFailed);
 	}
 	catch (...)
 	{
 
 	}
-	int ret = getchar();
-	(void)ret;
 #endif
 	return 0;
 }
