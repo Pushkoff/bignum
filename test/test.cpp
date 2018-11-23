@@ -442,7 +442,7 @@ int main()
 			auto elapsed = stop - start;
 			printf(" duration - %lld ms\n", (long long)std::chrono::duration_cast<std::chrono::milliseconds>(elapsed).count());
 
-			std::vector<unsigned char> testdata(256);
+			unsigned char testdata[256];
 			std::generate(std::begin(testdata), std::end(testdata), []() {return rand() % 256; });
 
 			std::vector<unsigned char> decrypted;
@@ -453,7 +453,7 @@ int main()
 			static_assert(blockSize % sizeof(BigNum::Word) == 0, "Module have to be power of 2");
 			printf("Encrypt");
 			start = std::chrono::high_resolution_clock::now();
-			for (std::size_t block = 0; block < testdata.size(); block += blockSize)
+			for (std::size_t block = 0; block < (sizeof(testdata)/sizeof(*testdata)); block += blockSize)
 			{
 				BigNum::Num<Module> data = BigNum::d2i<Module>(&testdata[block], &testdata[block + blockSize]);
 				BigNum::Num<Module> cipper = BigNum::monModExp(data, e, N);
@@ -479,7 +479,7 @@ int main()
 			elapsed = stop - start;
 			printf(" duration - %lld ms\n", (long long)std::chrono::duration_cast<std::chrono::milliseconds>(elapsed).count());
 
-			bool ret = decrypted == testdata;
+			bool ret = decrypted == std::vector<unsigned char>(std::begin(testdata), std::end(testdata));
 			printf("%s\n", (ret) ? "Ok" : "Fail");
 			if (!ret)
 			{
