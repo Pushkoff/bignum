@@ -15,7 +15,6 @@ project "BigInt"
    staticruntime "On"
    cppdialect "C++14"
    warnings "Extra"
-   buildoptions { "-pedantic" }
    
    filter "configurations:Debug"
       defines { "DEBUG" }
@@ -39,5 +38,6 @@ project "BigInt"
         buildoptions 
         { 
             -- Pragma warnings caused by OpenMP support not being enabled.
-            "-Wno-unknown-pragmas"
+            "-Wno-unknown-pragmas",
+            "-pedantic"
         }

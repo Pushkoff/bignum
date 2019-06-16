@@ -3,7 +3,7 @@ if [ `which premake5 &>/dev/null` ]
 then
   premake5 "$@"
 else
-  premake_version='5.0.0-alpha13' 
+  premake_version='5.0.0-alpha14' 
   tools_folder='tools/'
   
   premake_url=
