@@ -13,28 +13,25 @@ namespace BigNum
 		template<typename T>
 		struct bitsize
 		{
-			enum : unsigned
+			enum : size_t
 			{
 				value = sizeof(T) * CHAR_BIT
 			};
 		};
 
-		template<typename T, int N>
+		template<typename T, size_t N>
 		inline void zero(T(&to)[N]) noexcept
 		{
-			for (int i = 0; i < N; i++)
+			for (size_t i = 0; i < N; i++)
 				to[i] = 0;
 		}
 
-		template<typename T, int N>
+		template<typename T, size_t N>
 		inline void one(T(&to)[N]) noexcept
 		{
 			to[0] = 1;
-			if (N > 1)
-			{
-				for (int i = 1; i < N; i++)
-					to[i] = 0;
-			}
+			for (size_t i = 1; i < N; i++)
+				to[i] = 0;
 		}
 
 		template<typename T>
@@ -43,16 +40,16 @@ namespace BigNum
 			to[0] = 1;
 		}
 
-		template<typename T, int N>
-		inline T get(const T(&from)[N], unsigned int pos) noexcept
+		template<typename T, size_t N>
+		inline T get(const T(&from)[N], size_t pos) noexcept
 		{
 			return (pos < N) ? from[pos] : T(0);
 		}
 
-		template<typename T, int N, int M>
+		template<typename T, size_t N, size_t M>
 		inline void copy(T(&to)[N], const T(&from)[M]) noexcept
 		{
-			for (int i = 0; i < N; i++)
+			for (size_t i = 0; i < N; i++)
 				to[i] = get(from, i);
 		}
 
@@ -73,14 +70,14 @@ namespace BigNum
 			return 0;
 		}
 
-		template<typename T, int N, int M>
+		template<typename T, size_t N, size_t M>
 		int cmp(const T(&v1)[N], const T(&v2)[M]) noexcept
 		{
-			constexpr int v1len = N;
-			constexpr int v2len = M;
-			constexpr int vmax = (v1len > v2len) ? v1len : v2len;
+			constexpr size_t v1len = N;
+			constexpr size_t v2len = M;
+			constexpr size_t vmax = (v1len > v2len) ? v1len : v2len;
 
-			for (int i = vmax; i-- > 0;)
+			for (size_t i = vmax; i-- > 0;)
 			{
 				const T v1v = get(v1, i);
 				const T v2v = get(v2, i);
@@ -90,7 +87,7 @@ namespace BigNum
 			return 0;
 		}
 
-		template<typename T, int N>
+		template<typename T, size_t N>
 		int cmp(const T(&v1)[N], const T v2) noexcept
 		{
 			const T v2arr[] = { v2 };
@@ -104,7 +101,7 @@ namespace BigNum
 			return (ret < a) ? 1 : 0;
 		}
 
-		unsigned long long int adc(unsigned long long int& ret, const unsigned long long int v1, const unsigned long long int v2, const unsigned long long int carry) noexcept
+		inline unsigned long long int adc(unsigned long long int& ret, const unsigned long long int v1, const unsigned long long int v2, const unsigned long long int carry) noexcept
 		{
 			unsigned long long int retCarry = adc(ret, v1, v2);
 			retCarry = adc(ret, ret, carry) + retCarry;
@@ -140,11 +137,11 @@ namespace BigNum
 			return carry;
 		}
 
-		template<typename T, int N, int M, int K>
+		template<typename T, size_t N, size_t M, size_t K>
 		T add(T(&rez)[N], const T(&v1)[M], const T(&v2)[K]) noexcept
 		{
 			T carry = 0;
-			for (int i = 0; i < N; i++)
+			for (size_t i = 0; i < N; i++)
 			{
 				const T v1v = (i < M) ? v1[i] : 0;
 				const T v2v = (i < K) ? v2[i] : 0;
@@ -153,13 +150,13 @@ namespace BigNum
 			return carry;
 		}
 
-		template<typename T, int N, int K>
+		template<typename T, size_t N, size_t K>
 		T add(T(&rez)[N], const T(&v2)[K]) noexcept
 		{
 			return add(rez, rez, v2);
 		}
 
-		template<typename T, int N>
+		template<typename T, size_t N>
 		T add(T(&rez)[N], T v2) noexcept
 		{
 			const T v2arr[1] = { v2 };
@@ -188,7 +185,7 @@ namespace BigNum
 			return (ret > a) ? 1 : 0;
 		}
 
-		unsigned long long int sbc(unsigned long long int& ret, const unsigned long long int v1, const unsigned long long int v2, const unsigned long long int carry) noexcept
+		inline unsigned long long int sbc(unsigned long long int& ret, const unsigned long long int v1, const unsigned long long int v2, const unsigned long long int carry) noexcept
 		{
 			unsigned long long int retCarry = sbc(ret, v1, v2);
 			retCarry = sbc(ret, ret, carry) + retCarry;
@@ -224,11 +221,11 @@ namespace BigNum
 			return carry;
 		}
 
-		template<typename T, int N, int M, int K>
+		template<typename T, size_t N, size_t M, size_t K>
 		T sub(T(&rez)[N], const T(&v1)[M], const T(&v2)[K]) noexcept
 		{
 			T carry = 0;
-			for (int i = 0; i < N; i++)
+			for (size_t i = 0; i < N; i++)
 			{
 				const T v1v = (i < M) ? v1[i] : 0;
 				const T v2v = (i < K) ? v2[i] : 0;
@@ -237,13 +234,13 @@ namespace BigNum
 			return carry;
 		}
 
-		template<typename T, int N, int K>
+		template<typename T, size_t N, size_t K>
 		T sub(T(&rez)[N], const T(&v2)[K]) noexcept
 		{
 			return sub(rez, rez, v2);
 		}
 
-		template<typename T, int N>
+		template<typename T, size_t N>
 		T sub(T(&rez)[N], const T v2) noexcept
 		{
 			const T v2arr[] = { v2 };
@@ -265,24 +262,24 @@ namespace BigNum
 			return carry;
 		}
 
-		unsigned long long int _mulhi(unsigned long long int& ret, const unsigned long long int v1, const unsigned long long int v2)
+		inline unsigned long long int _mulhi(unsigned long long int& ret, const unsigned long long int v1, const unsigned long long int v2)
 		{
 			constexpr unsigned int kWordSizeBits = bitsize<unsigned long long int>::value;
 			constexpr unsigned int kHalfWordSizeBits = kWordSizeBits / 2;
 			constexpr unsigned long long int kHalfWordMaskBits = (1ull << (kHalfWordSizeBits)) - 1ull;
 
-			unsigned long long int v1l = v1 & kHalfWordMaskBits;
-			unsigned long long int v1h = v1 >> kHalfWordSizeBits;
-			unsigned long long int v2l = v2 & kHalfWordMaskBits;
-			unsigned long long int v2h = v2 >> kHalfWordSizeBits;
+			const unsigned long long int v1l = v1 & kHalfWordMaskBits;
+			const unsigned long long int v1h = v1 >> kHalfWordSizeBits;
+			const unsigned long long int v2l = v2 & kHalfWordMaskBits;
+			const unsigned long long int v2h = v2 >> kHalfWordSizeBits;
 
-			unsigned long long int z0 = v1l * v2l;
-			unsigned long long int z1 = v1l * v2h;
-			unsigned long long int z2 = v1h * v2l;
-			unsigned long long int z3 = v1h * v2h;
+			const unsigned long long int z0 = v1l * v2l;
+			const unsigned long long int z1 = v1l * v2h;
+			const unsigned long long int z2 = v1h * v2l;
+			const unsigned long long int z3 = v1h * v2h;
 
-			unsigned long long int carry1 = adc(ret, z0, z1 << kHalfWordSizeBits);
-			unsigned long long int carry2 = adc(ret, ret, z2 << kHalfWordSizeBits);
+			const unsigned long long int carry1 = adc(ret, z0, z1 << kHalfWordSizeBits);
+			const unsigned long long int carry2 = adc(ret, ret, z2 << kHalfWordSizeBits);
 			unsigned long long int hi = 0;
 			adc(hi, z1 >> kHalfWordSizeBits, z2 >> kHalfWordSizeBits, carry1);
 			adc(hi, hi, z3, carry2);
@@ -333,17 +330,17 @@ namespace BigNum
 			rez[0] = T(v1[0] * v2[0]);
 		}
 
-		template<typename T, int N, int M, int K>
+		template<typename T, size_t N, size_t M, size_t K>
 		void mul(T(&rez)[N], const T(&v1)[M], const T(&v2)[K]) noexcept
 		{
 			assert(std::any_of(std::begin(rez), std::end(rez), [&](T w) { return w != 0; }) == false);
 
-			if (N >= M + K)
+			if constexpr (N >= M + K)
 			{
-				for (int v1it = 0; v1it < M; ++v1it)
+				for (size_t v1it = 0; v1it < M; ++v1it)
 				{
 					T carry = 0;
-					for (int v2it = 0; v2it < K; ++v2it)
+					for (size_t v2it = 0; v2it < K; ++v2it)
 						carry = madd(rez[v1it + v2it], v1[v1it], v2[v2it], carry);
 					rez[v1it + K] = carry;
 				}
@@ -365,43 +362,43 @@ namespace BigNum
 			}
 		}
 
-		template<typename T, unsigned int N, unsigned int M>
-		void shl(T(&rez)[N], const T(&v)[M], unsigned int count) noexcept
+		template<typename T, size_t N, size_t M>
+		void shl(T(&rez)[N], const T(&v)[M], size_t count) noexcept
 		{
 			// assert(count < N*kWordSizeBits);
-			const unsigned int bytes = count / bitsize<T>::value;
-			const unsigned int bits = count % bitsize<T>::value;
+			const size_t bytes = count / bitsize<T>::value;
+			const size_t bits = count % bitsize<T>::value;
 			if (bits == 0)
 			{
-				for (unsigned int i = 0; i < N; i++)
+				for (size_t i = 0; i < N; i++)
 					rez[i] = get(v, i - bytes); // unsigned - unsigned -> unsigned 
 			}
 			else
 			{
-				for (unsigned int i = 0; i < N; i++)
+				for (size_t i = 0; i < N; i++)
 					rez[i] = (get(v, i - bytes) << (bits)) | (get(v, i - bytes - 1) >> (bitsize<T>::value - bits));
 			}
 		}
 
-		template<typename T, unsigned int N, unsigned int M>
-		void shr(T(&rez)[N], const T(&v)[M], unsigned int count) noexcept
+		template<typename T, size_t N, size_t M>
+		void shr(T(&rez)[N], const T(&v)[M], size_t count) noexcept
 		{
 			// assert(count < N*kWordSizeBits);
-			const unsigned int bytes = count / bitsize<T>::value;
-			const unsigned int bits = count % bitsize<T>::value;
+			const size_t bytes = count / bitsize<T>::value;
+			const size_t bits = count % bitsize<T>::value;
 			if (bits == 0)
 			{
-				for (unsigned int i = 0; i < N; i++)
+				for (size_t i = 0; i < N; i++)
 					rez[i] = get(v, i + bytes);
 			}
 			else
 			{
-				for (unsigned int i = 0; i < N; i++)
+				for (size_t i = 0; i < N; i++)
 					rez[i] = (get(v, i + bytes + 1) << (bitsize<T>::value - bits)) | (get(v, i + bytes) >> bits);
 			}
 		}
 
-		template<typename T, int N, int M>
+		template<typename T, size_t N, size_t M>
 		void div(T(&q)[N], T(&n)[N], const T(&d)[M]) noexcept
 		{
 			if (cmp(n, d) < 0)
@@ -413,13 +410,13 @@ namespace BigNum
 			T* rbeg = std::end(n);
 			T* rend = std::end(n);
 
-			for (int i = N; i-- > 0;)
+			for (size_t i = N; i-- > 0;)
 			{
 				rbeg--;
 				T val = 0;
 				if (Core::cmp(rbeg, rend, std::begin(d), std::end(d)) >= 0)
 				{
-					for (int j = bitsize<T>::value; j-- > 0;)
+					for (size_t j = bitsize<T>::value; j-- > 0;)
 					{
 						T shiftedD[M + 1] = { 0 };
 						shl(shiftedD, d, j);
@@ -434,13 +431,13 @@ namespace BigNum
 			}
 		}
 
-		template<typename T, int N>
+		template<typename T, size_t N>
 		void div(T(&q)[N], T(&n)[N], const T d, typename std::enable_if<(sizeof(unsigned long long int) > sizeof(T))>::type* = 0) noexcept
 		{
 			static_assert(sizeof(unsigned long long) > sizeof(T), "T have to be smaller size than unsigned long long");
 
 			unsigned long long rest = 0;
-			for (int i = N; i-- > 0;)
+			for (size_t i = N; i-- > 0;)
 			{
 				rest = rest << bitsize<T>::value;
 				rest += n[i];
@@ -451,25 +448,25 @@ namespace BigNum
 			n[0] = (T)rest;
 		}
 
-		template<typename T, int N>
+		template<typename T, size_t N>
 		void div(T(&q)[N], T(&n)[N], const T d, typename std::enable_if<(sizeof(unsigned long long int) == sizeof(T))>::type* = 0) noexcept
 		{
 			const T converted_d[] = { d };
 			div(q, n, converted_d);
 		}
 
-		template<typename T, int N, int M>
+		template<typename T, size_t N, size_t M>
 		void mod(T(&n)[N], const T(&d)[M]) noexcept
 		{
 			T* rbeg = std::end(n);
 			T* rend = std::end(n);
 
-			for (int i = N; i-- > 0;)
+			for (size_t i = N; i-- > 0;)
 			{
 				rbeg--;
 				if (Core::cmp(rbeg, rend, std::begin(d), std::end(d)) >= 0)
 				{
-					for (int j = bitsize<T>::value; j-- > 0;)
+					for (size_t j = bitsize<T>::value; j-- > 0;)
 					{
 						T shiftedD[M + 1] = { 0 };
 						shl(shiftedD, d, j);
@@ -480,12 +477,12 @@ namespace BigNum
 			}
 		}
 
-		template<typename T, int N>
+		template<typename T, size_t N>
 		T mod(const T(&n)[N], const T d, typename std::enable_if<(sizeof(unsigned long long int) > sizeof(T))>::type* = 0) noexcept
 		{
 			static_assert(sizeof(unsigned long long) > sizeof(T), "T have to be smaller size than unsigned long long");
 			unsigned long long rest = 0;
-			for (int i = N; i-- > 0;)
+			for (size_t i = N; i-- > 0;)
 			{
 				rest = rest << bitsize<T>::value;
 				rest += n[i];
@@ -494,7 +491,7 @@ namespace BigNum
 			return (T)rest;
 		}
 
-		template<typename T, int N>
+		template<typename T, size_t N>
 		T mod(const T(&n)[N], const T d, typename std::enable_if<(sizeof(unsigned long long int) == sizeof(T))>::type* = 0) noexcept
 		{
 			const T tmp_d[] = { d };
@@ -504,7 +501,7 @@ namespace BigNum
 			return tmp_n[0];
 		}
 
-		template<typename T, int N>
+		template<typename T, size_t N>
 		void gcd(T(&rez)[N], const T(&v1)[N], const T(&v2)[N]) noexcept
 		{
 			int cmprez = cmp(v1, v2);
@@ -533,7 +530,7 @@ namespace BigNum
 			}
 		}
 
-		template<typename T, int N>
+		template<typename T, size_t N>
 		void lcm(T(&rez)[2 * N], const T(&v1)[N], const T(&v2)[N]) noexcept
 		{
 			T m[2 * N];
@@ -570,7 +567,7 @@ namespace BigNum
 			return t;
 		}
 
-		template<typename T, int M, int N>
+		template<typename T, size_t M, size_t N>
 		void modInv(T(&rez)[M], const T(&a)[N], const T(&n)[N]) noexcept
 		{
 			T t[N] = { 0 }, newt[N];
@@ -620,21 +617,21 @@ namespace BigNum
 			assert(cmp(t, rez) == 0);
 		}
 
-		template<typename T, int N, int M, unsigned int K>
+		template<typename T, size_t N, size_t M, size_t K>
 		void modExp(T(&result)[N], const T(&base)[N], const T(&exp)[K], const T(&modulo)[M]) noexcept
 		{
 			one(result);
 			if (cmp(modulo, T(1)) == 0)
 				return;
 
-			unsigned int realExpSize = K;
+			size_t realExpSize = K;
 			// skip leading zeros
 			while (realExpSize > 0 && exp[realExpSize - 1] == 0)
 				realExpSize--;
 
-			for (unsigned int i = realExpSize; i-- > 0;)
+			for (size_t i = realExpSize; i-- > 0;)
 			{
-				for (unsigned int j = (bitsize<T>::value); j-- > 0;)
+				for (size_t j = (bitsize<T>::value); j-- > 0;)
 				{
 					T tmp[2 * N] = { 0 }, q[2 * N] = { 0 };
 					mul(tmp, result, result);
@@ -652,10 +649,10 @@ namespace BigNum
 			}
 		}
 
-		template<typename T, int N>
+		template<typename T, size_t N>
 		struct MonMul
 		{
-			static constexpr int Len = N;
+			static constexpr size_t Len = N;
 			T n[Len];
 			T ninv[Len];
 
@@ -743,7 +740,7 @@ namespace BigNum
 			}
 		};
 
-		template<typename T, int N>
+		template<typename T, size_t N>
 		void monModMul(T(&ret)[N], const T(&a)[N], const T(&b)[N], const T(&mod)[N]) noexcept
 		{
 			MonMul<T, N> monMod(mod);
@@ -752,7 +749,7 @@ namespace BigNum
 			monMod.Mul(ret, xa, b);
 		}
 
-		template<typename T, int N, int M, int K>
+		template<typename T, size_t N, size_t M, size_t K>
 		void monModExp(T(&ret)[N], const T(&base)[K], const T(&exp)[M], const T(&mod)[N]) noexcept
 		{
 			MonMul<T, N> monMod(mod);
@@ -762,13 +759,13 @@ namespace BigNum
 			monMod.In(tmp, val1);
 			monMod.In(power, base);
 
-			int realExpSize = M;
+			size_t realExpSize = M;
 			while (realExpSize > 0 && exp[realExpSize - 1] == 0)
 				realExpSize--;
 
-			for (auto i = realExpSize; i-- > 0;)
+			for (size_t i = realExpSize; i-- > 0;)
 			{
-				for (unsigned j = bitsize<T>::value; j-- > 0;)
+				for (size_t j = bitsize<T>::value; j-- > 0;)
 				{
 					monMod.Mul(tmp, tmp, tmp);
 					if (T(exp[i] >> j) & T(1))
@@ -778,7 +775,7 @@ namespace BigNum
 			monMod.Out(ret, tmp);
 		}
 
-		template<typename T, int N, int M, int K>
+		template<typename T, size_t N, size_t M, size_t K>
 		void monModExp2ary(T(&ret)[N], const T(&base)[K], const T(&exp)[M], const T(&mod)[N]) noexcept
 		{
 			MonMul<T, N> monMod(mod);
@@ -790,13 +787,13 @@ namespace BigNum
 			monMod.Mul(power[1], power[0], power[0]);
 			monMod.Mul(power[2], power[1], power[0]);
 
-			int realExpSize = M;
+			size_t realExpSize = M;
 			while (realExpSize > 0 && exp[realExpSize - 1] == 0)
 				realExpSize--;
 
-			for (auto i = realExpSize; i-- > 0;)
+			for (size_t i = realExpSize; i-- > 0;)
 			{
-				for (unsigned j = bitsize<T>::value; j > 0; j -= 2)
+				for (size_t j = bitsize<T>::value; j > 0; j -= 2)
 				{
 					monMod.Mul(tmp, tmp, tmp);
 					monMod.Mul(tmp, tmp, tmp);
@@ -813,11 +810,11 @@ namespace BigNum
 	typedef unsigned long long int Word;
 	constexpr unsigned int kWordSizeBits = bitsize<Word>::value;
 
-	template<int N>
+	template<size_t N>
 	class Num
 	{
 	public:
-		enum {
+		enum: size_t {
 			Size = (N + (kWordSizeBits)-1) / (kWordSizeBits)
 		};
 
@@ -825,9 +822,9 @@ namespace BigNum
 
 		Num(unsigned long long int num = 0) noexcept
 		{
-			if (bitsize<unsigned long long int>::value > bitsize<Word>::value)
+			if constexpr (bitsize<unsigned long long int>::value > bitsize<Word>::value)
 			{
-				for (unsigned int i = 0; i < Size; i++)
+				for (size_t i = 0; i < Size; i++)
 				{
 					data[i] = Word(num);
 					num >>= bitsize<Word>::value;
@@ -839,13 +836,13 @@ namespace BigNum
 			}
 		}
 
-		template<int M>
+		template<size_t M>
 		Num(const Num<M>& other) noexcept
 		{
 			*this = other;
 		}
 
-		template<int M>
+		template<size_t M>
 		Num(Num<M>&& other) noexcept
 		{
 			*this = other;
@@ -858,24 +855,24 @@ namespace BigNum
 			return *this;
 		}
 
-		template<int M>
+		template<size_t M>
 		Num<N>& operator = (const Num<M>& other) noexcept
 		{
 			Core::copy(this->data, other.data);
 			return *this;
 		}
 
-		Word& operator[](unsigned int i) noexcept { return data[i]; }
-		const Word& operator[](unsigned int i) const noexcept { return data[i]; }
+		Word& operator[](size_t i) noexcept { return data[i]; }
+		const Word& operator[](size_t i) const noexcept { return data[i]; }
 
-		bool bit(unsigned int i) const noexcept
+		bool bit(size_t i) const noexcept
 		{
 			assert(i >= 0 && i < N);
 			bool ret = false;
 			if (i >= 0 && i < N)
 			{
-				const unsigned int byte = i / kWordSizeBits;
-				const unsigned int bit = i % kWordSizeBits;
+				const size_t byte = i / kWordSizeBits;
+				const size_t bit = i % kWordSizeBits;
 				ret = ((*this)[byte] & (Word(1) << bit)) != 0;
 			}
 			return ret;
@@ -888,7 +885,7 @@ namespace BigNum
 		const Word* end() const noexcept { return &data[Size]; }
 	};
 
-	template<int N, int M>
+	template<size_t N, size_t M>
 	const Num<N> operator + (const Num<N>& v1, const Num<M>& v2) noexcept
 	{
 		Num<N> ret;
@@ -896,14 +893,14 @@ namespace BigNum
 		return ret;
 	}
 
-	template<int N, int M>
+	template<size_t N, size_t M>
 	const Num<N> operator += (Num<N>& ret, const Num<M>& v2) noexcept
 	{
 		Core::add(ret.data, v2.data);
 		return ret;
 	}
 
-	template<int N>
+	template<size_t N>
 	const Num<N> operator + (const Num<N>& v1, Word v2) noexcept
 	{
 		Num<N> ret;
@@ -912,7 +909,7 @@ namespace BigNum
 		return ret;
 	}
 
-	template<int N>
+	template<size_t N>
 	const Num<N> operator += (Num<N>& ret, Word v2) noexcept
 	{
 		const Word a2[] = { v2 };
@@ -920,13 +917,13 @@ namespace BigNum
 		return ret;
 	}
 
-	template<int N>
+	template<size_t N>
 	const Num<N> operator - (const Num<N>& v) noexcept
 	{
 		return Num<N>(0) - v;
 	}
 
-	template<int N, int M>
+	template<size_t N, size_t M>
 	const Num<N> operator - (const Num<N>& v1, const Num<M>& v2) noexcept
 	{
 		Num<N> ret;
@@ -934,14 +931,14 @@ namespace BigNum
 		return ret;
 	}
 
-	template<int N, int M>
+	template<size_t N, size_t M>
 	const Num<N> operator -= (Num<N>& ret, const Num<M>& v2) noexcept
 	{
 		Core::sub(ret.data, v2.data);
 		return ret;
 	}
 
-	template<int N>
+	template<size_t N>
 	const Num<N> operator - (const Num<N>& v1, Word v2) noexcept
 	{
 		Num<N> ret;
@@ -950,7 +947,7 @@ namespace BigNum
 		return ret;
 	}
 
-	template<int N>
+	template<size_t N>
 	const Num<N> operator -= (Num<N>& ret, Word v2) noexcept
 	{
 		const Word a2[] = { v2 };
@@ -958,7 +955,7 @@ namespace BigNum
 		return ret;
 	}
 
-	template<int N, int M>
+	template<size_t N, size_t M>
 	const Num<N + M> operator * (const Num<N>& v1, const Num<M>& v2) noexcept
 	{
 		Num<N + M> rez(0);
@@ -966,7 +963,7 @@ namespace BigNum
 		return rez;
 	}
 
-	template<int N>
+	template<size_t N>
 	const Num<N + kWordSizeBits> operator * (const Num<N>& v1, Word v2) noexcept
 	{
 		Num<N + kWordSizeBits> rez(0);
@@ -975,85 +972,85 @@ namespace BigNum
 		return rez;
 	}
 
-	template<int N, int M>
+	template<size_t N, size_t M>
 	bool operator == (const Num<N>& v1, const Num<M>& v2) noexcept
 	{
 		return Core::cmp(v1.data, v2.data) == 0;
 	}
 
-	template<int N>
+	template<size_t N>
 	bool operator == (const Num<N>& v1, Word v2) noexcept
 	{
 		const Word a2[] = { v2 };
 		return Core::cmp(v1.data, a2) == 0;
 	}
 
-	template<int N, int M>
+	template<size_t N, size_t M>
 	bool operator != (const Num<N>& v1, const Num<M>& v2) noexcept
 	{
 		return !(v1 == v2);
 	}
 
-	template<int N>
+	template<size_t N>
 	bool operator != (const Num<N>& v1, Word v2) noexcept
 	{
 		return !(v1 == v2);
 	}
 
-	template<int N, int M>
+	template<size_t N, size_t M>
 	bool operator > (const Num<N>& v1, const Num<M>& v2) noexcept
 	{
 		return Core::cmp(v1.data, v2.data) > 0;
 	}
 
-	template<int N>
+	template<size_t N>
 	bool operator > (const Num<N>& v1, Word v2) noexcept
 	{
 		const Word a2[] = { v2 };
 		return Core::cmp(v1.data, a2) > 0;
 	}
 
-	template<int N, int M>
+	template<size_t N, size_t M>
 	bool operator >= (const Num<N>& v1, const Num<M>& v2) noexcept
 	{
 		return Core::cmp(v1.data, v2.data) >= 0;
 	}
 
-	template<int N>
+	template<size_t N>
 	bool operator >= (const Num<N>& v1, Word v2) noexcept
 	{
 		const Word a2[] = { v2 };
 		return Core::cmp(v1.data, a2) >= 0;
 	}
 
-	template<int N, int M>
+	template<size_t N, size_t M>
 	bool operator < (const Num<N>& v1, const Num<M>& v2) noexcept
 	{
 		return Core::cmp(v1.data, v2.data) < 0;
 	}
 
-	template<int N>
+	template<size_t N>
 	bool operator < (const Num<N>& v1, Word v2) noexcept
 	{
 		const Word a2[] = { v2 };
 		return Core::cmp(v1.data, a2) < 0;
 	}
 
-	template<int N, int M>
+	template<size_t N, size_t M>
 	bool operator <= (const Num<N>& v1, const Num<M>& v2) noexcept
 	{
 		return Core::cmp(v1.data, v2.data) <= 0;
 	}
 
-	template<int N>
+	template<size_t N>
 	bool operator <= (const Num<N>& v1, Word v2) noexcept
 	{
 		const Word a2[] = { v2 };
 		return Core::cmp(v1.data, a2) <= 0;
 	}
 
-	template<int N>
-	const Num<N> operator << (const Num<N>& v1, unsigned int bits) noexcept
+	template<size_t N>
+	const Num<N> operator << (const Num<N>& v1, size_t bits) noexcept
 	{
 		Num<N> ret;
 		if (bits < N)
@@ -1061,8 +1058,8 @@ namespace BigNum
 		return ret;
 	}
 
-	template<int N>
-	const Num<N> operator >> (const Num<N>& v1, unsigned int bits) noexcept
+	template<size_t N>
+	const Num<N> operator >> (const Num<N>& v1, size_t bits) noexcept
 	{
 		Num<N> ret;
 		if (bits < N)
@@ -1070,7 +1067,7 @@ namespace BigNum
 		return ret;
 	}
 
-	template<int N, int M>
+	template<size_t N, size_t M>
 	const Num<N> operator / (const Num<N>& v1, const Num<M>& v2) noexcept
 	{
 		if (v1 < v2)
@@ -1081,7 +1078,7 @@ namespace BigNum
 		return q;
 	}
 
-	template<int N>
+	template<size_t N>
 	const Num<N> operator / (const Num<N>& v1, const Word v2) noexcept
 	{
 		Num<N> q, r = v1;
@@ -1089,7 +1086,7 @@ namespace BigNum
 		return q;
 	}
 
-	template<int N, int M>
+	template<size_t N, size_t M>
 	const Num<M> operator % (const Num<N>& v1, const Num<M>& v2) noexcept
 	{
 		if (v1 < v2)
@@ -1100,18 +1097,18 @@ namespace BigNum
 		return r;
 	}
 
-	template<int N>
+	template<size_t N>
 	Word operator % (const Num<N>& v1, const Word v2) noexcept
 	{
 		return Core::mod(v1.data, v2);
 	}
 
-	template<int N, int M>
+	template<size_t N, size_t M>
 	const Num<N> operator & (const Num<N>& v1, const Num<M>& v2) noexcept
 	{
 		Num<N> rez(0);
 
-		for (int i = 0; i < Num<N>::Size; i++)
+		for (size_t i = 0; i < Num<N>::Size; i++)
 		{
 			rez[i] = v1[i] & ((i < M) ? v2[i] : 0);
 		}
@@ -1119,12 +1116,12 @@ namespace BigNum
 		return rez;
 	}
 
-	template<int N, int M>
+	template<size_t N, size_t M>
 	const Num<N> operator & (const Num<N>& v1, Num<M>&& v2) noexcept
 	{
 		Num<N> rez(0);
 
-		for (int i = 0; i < Num<N>::Size; i++)
+		for (size_t i = 0; i < Num<N>::Size; i++)
 		{
 			rez[i] = v1[i] & ((i < M) ? v2[i] : 0);
 		}
@@ -1132,19 +1129,19 @@ namespace BigNum
 		return rez;
 	}
 
-	template<int N>
+	template<size_t N>
 	const Num<N> operator & (const Num<N>& v1, const Word v2) noexcept
 	{
 		Num<N> rez(v1[0] & v2);
 		return rez;
 	}
 
-	template<int N>
+	template<size_t N>
 	const Num<N> operator | (const Num<N>& v1, const Num<N>& v2) noexcept
 	{
 		Num<N> rez;
 
-		for (unsigned int i = 0; i < Num<N>::Size; i++)
+		for (size_t i = 0; i < Num<N>::Size; i++)
 		{
 			rez[i] = v1[i] | v2[i];
 		}
@@ -1152,7 +1149,7 @@ namespace BigNum
 		return rez;
 	}
 
-	template<int N>
+	template<size_t N>
 	const Num<N> operator | (const Num<N>& v1, const Word v2) noexcept
 	{
 		Num<N> rez = v1;
@@ -1160,12 +1157,12 @@ namespace BigNum
 		return rez;
 	}
 
-	template<int N>
+	template<size_t N>
 	const Num<N> operator ~ (const Num<N>& v) noexcept
 	{
 		Num<N> rez;
 
-		for (unsigned int i = 0; i < Num<N>::Size; i++)
+		for (size_t i = 0; i < Num<N>::Size; i++)
 		{
 			rez[i] = ~v[i];
 		}
@@ -1173,25 +1170,25 @@ namespace BigNum
 		return rez;
 	}
 
-	template<int N, int M>
+	template<size_t N, size_t M>
 	bool operator && (const Num<N>& v1, const Num<M>& v2) noexcept
 	{
 		return v1 != 0 && v2 != 0;
 	}
 
-	template<int N, int M>
+	template<size_t N, size_t M>
 	bool operator || (const Num<N>& v1, const Num<M>& v2) noexcept
 	{
 		return v1 != 0 || v2 != 0;
 	}
 
-	template<int N>
+	template<size_t N>
 	bool operator !(const Num<N>& v) noexcept
 	{
 		return v == 0;
 	}
 
-	template<int N>
+	template<size_t N>
 	const Num<N> gcd(const Num<N>& v1, const Num<N>& v2) noexcept
 	{
 		Num<N> ret;
@@ -1199,7 +1196,7 @@ namespace BigNum
 		return ret;
 	}
 
-	template<int N>
+	template<size_t N>
 	const Num<2 * N> lcm(const Num<N>& v1, const Num<N>& v2) noexcept
 	{
 		Num<2 * N> ret;
@@ -1207,7 +1204,7 @@ namespace BigNum
 		return ret;
 	}
 
-	template<int N>
+	template<size_t N>
 	const Num<N> modInv(const Num<N>& a, const Num<N>& n) noexcept
 	{
 		Num<N> rez;
@@ -1221,7 +1218,7 @@ namespace BigNum
 		return Core::modInv(a, n);
 	}
 
-	template<int N>
+	template<size_t N>
 	const Num<N> modExp(const Num<N>& base, const Num<N>& exp, const Num<N>& modulo) noexcept
 	{
 		Num<N> result;
@@ -1229,7 +1226,7 @@ namespace BigNum
 		return result;
 	}
 
-	template<int N>
+	template<size_t N>
 	struct MonMul
 	{
 		const Num<N> n;
@@ -1258,7 +1255,7 @@ namespace BigNum
 			return ret % n;
 		}
 
-		template<int M>
+		template<size_t M>
 		const Num<N> In(const Num<M>& x) const noexcept
 		{
 			Num<N + M> ret(x);
@@ -1289,7 +1286,7 @@ namespace BigNum
 		}
 	};
 
-	template<int N>
+	template<size_t N>
 	const Num<N> monModMul(const Num<N>& a, const Num<N>& b, const Num<N>& mod) noexcept
 	{
 		Num<N> ret;
@@ -1297,7 +1294,7 @@ namespace BigNum
 		return ret;
 	}
 
-	template<int N, int M, int K>
+	template<size_t N, size_t M, size_t K>
 	const Num<N> monModExp(const Num<K>& base, const Num<M>& exp, const Num<N>& mod) noexcept
 	{
 		Num<N> ret;
@@ -1305,7 +1302,7 @@ namespace BigNum
 		return ret;
 	}
 
-	template<int N, int M, int K>
+	template<size_t N, size_t M, size_t K>
 	const Num<N> monModExp2ary(const Num<K>& base, const Num<M>& exp, const Num<N>& mod) noexcept
 	{
 		Num<N> ret;
@@ -1313,7 +1310,7 @@ namespace BigNum
 		return ret;
 	}
 
-	template<int N>
+	template<size_t N>
 	void CRT_init(const Num<N>& p, const Num<N>& q, const Num<2 * N>& d, Num<N>& dp, Num<N>& dq, Num<N>& qinvp)
 	{
 		qinvp = modInv(q, p);
@@ -1321,20 +1318,20 @@ namespace BigNum
 		dq = d % (q - 1);
 	}
 
-	template<int N>
+	template<size_t N>
 	const Num<2 * N> CRT(const Num<2 * N>& m, const Num<N>& p, const Num<N>& q, const Num<N>& dp, const Num<N>& dq, const Num<N>& qinvp) noexcept
 	{
-		BigNum::Num<N> mp = BigNum::monModExp2ary(m, dp, p);
-		BigNum::Num<N> mq = BigNum::monModExp2ary(m, dq, q);
+		Num<N> mp = monModExp2ary(m, dp, p);
+		Num<N> mq = monModExp2ary(m, dq, q);
 
-		return BigNum::Num<2 * N>(mq) + (((mp - mq) * qinvp) % p) * q;
+		return Num<2 * N>(mq) + (((mp - mq) * qinvp) % p) * q;
 	}
 
-	template<int N>
+	template<size_t N>
 	const Num<N> rand() noexcept
 	{
-		BigNum::Num<N> ret;
-		for (auto i = 0u; i < BigNum::Num<N>::Size; ++i)
+		Num<N> ret;
+		for (size_t i = 0; i < Num<N>::Size; ++i)
 		{
 			ret[i] = (unsigned)(std::rand() % 256u);
 		}
@@ -1343,22 +1340,22 @@ namespace BigNum
 
 	// http://en.literateprograms.org/index.php?title=Special:DownloadCode/Miller-Rabin_primality_test_(C)&oldid=18973
 
-	template<int N>
-	bool millerRabinPass(const BigNum::Num<N>& num, const BigNum::Num<N>& a) noexcept
+	template<size_t N>
+	bool millerRabinPass(const Num<N>& num, const Num<N>& a) noexcept
 	{
-		BigNum::Num<N> d = num - 1;
+		Num<N> d = num - 1;
 
-		unsigned int s = 0u;
+		size_t s = 0u;
 		while (d.bit(s) == false)
 			s++;
 
 		d = d >> s;
-		BigNum::Num<N> a_to_power = BigNum::monModExp2ary<N>(a, d, num);
+		Num<N> a_to_power = monModExp2ary<N>(a, d, num);
 
 		if (a_to_power == 1)
 			return true;
 
-		for (unsigned int i = 0; i < s - 1; i++)
+		for (size_t i = 0; i < s - 1; i++)
 		{
 			if (a_to_power == num - 1)
 				return true;
@@ -1373,7 +1370,7 @@ namespace BigNum
 	}
 
 	//numbers from HAC table 4.3
-	int millerRabinProbes(int N) noexcept
+	int millerRabinProbes(size_t N) noexcept
 	{
 		if (N >= 600) return 2;
 		if (N >= 550) return 4;
@@ -1388,13 +1385,13 @@ namespace BigNum
 		return 40;
 	}
 
-	template<int N>
-	bool millerRabinTest(const BigNum::Num<N>& num) noexcept
+	template<size_t N>
+	bool millerRabinTest(const Num<N>& num) noexcept
 	{
 		int times = millerRabinProbes(N);
 		for (int i = 0; i < times; i++)
 		{
-			BigNum::Num<N> a = (rand<N>() % (num - 2)) + 2;
+			Num<N> a = (rand<N>() % (num - 2)) + 2;
 			if (millerRabinPass(num, a) == false)
 				return false;
 		}
@@ -1470,17 +1467,17 @@ namespace BigNum
 		4943,   4951,   4957,   4967,   4969,   4973,   4987,   4993,   4999,   5003,*/
 	};
 
-	constexpr unsigned int primesCount = sizeof(primes) / sizeof(primes[0]);
+	constexpr size_t primesCount = sizeof(primes) / sizeof(primes[0]);
 
-	constexpr unsigned int simplechecks(unsigned int size) noexcept
+	constexpr size_t simplechecks(size_t size) noexcept
 	{
 		return ((size / 16) < primesCount) ? (size / 16) : primesCount;
 	}
 
-	template<int N>
-	bool simpleTest(const BigNum::Num<N>& num, unsigned skip = 0) noexcept
+	template<size_t N>
+	bool simpleTest(const Num<N>& num, size_t skip = 0) noexcept
 	{
-		for (unsigned int i = skip; i < simplechecks(N); i++)
+		for (size_t i = skip; i < simplechecks(N); i++)
 		{
 			if (num % primes[i] == 0)
 				return false;
@@ -1488,10 +1485,10 @@ namespace BigNum
 		return true;
 	}
 
-	template<int N>
-	const Num<N> nextPrime(const BigNum::Num<N>& from) noexcept
+	template<size_t N>
+	const Num<N> nextPrime(const Num<N>& from) noexcept
 	{
-		BigNum::Num<N> prime = from | 1u;
+		Num<N> prime = from | 1u;
 
 		while (!(simpleTest(prime) && millerRabinTest(prime)))
 			prime = prime + 2u;
@@ -1499,10 +1496,10 @@ namespace BigNum
 		return prime;
 	}
 
-	template<int N>
-	const Num<N> nextPrimeOpt3(const BigNum::Num<N>& from) noexcept
+	template<size_t N>
+	const Num<N> nextPrimeOpt3(const Num<N>& from) noexcept
 	{
-		BigNum::Num<N> prime = from | 1u;
+		Num<N> prime = from | 1u;
 
 		constexpr unsigned char steps[3] = { 2, 4, 2 };
 
@@ -1525,10 +1522,10 @@ namespace BigNum
 		return prime;
 	}
 
-	template<int N>
-	const Num<N> nextPrimeOpt35(const BigNum::Num<N>& from) noexcept
+	template<size_t N>
+	const Num<N> nextPrimeOpt35(const Num<N>& from) noexcept
 	{
-		BigNum::Num<N> prime = from | 1u;
+		Num<N> prime = from | 1u;
 
 		constexpr unsigned char steps[3][5] = { { 2, 2, 2, 4, 2 },{ 4, 6, 4, 4, 4 },{ 2, 2, 2, 6, 2 } };
 
@@ -1554,10 +1551,10 @@ namespace BigNum
 		return prime;
 	}
 
-	template<int N>
-	const Num<N> nextPrimeOpt357(const BigNum::Num<N>& from) noexcept
+	template<size_t N>
+	const Num<N> nextPrimeOpt357(const Num<N>& from) noexcept
 	{
-		BigNum::Num<N> prime = from | 1;
+		Num<N> prime = from | 1;
 
 		constexpr unsigned char steps[3][5][7] = {
 			{ { 2, 2, 2, 2, 2, 4, 2 },{ 2, 2, 2, 2, 2, 8, 2 },{ 2, 2, 2, 2, 2, 4, 2 },{ 4, 4, 4, 8, 4, 4, 4 },{ 2, 2, 2, 2, 2, 4, 2 } },
@@ -1591,10 +1588,10 @@ namespace BigNum
 		return prime;
 	}
 
-	template<int N>
-	const Num<N> nextPrimeOpt35711(const BigNum::Num<N>& from) noexcept
+	template<size_t N>
+	const Num<N> nextPrimeOpt35711(const Num<N>& from) noexcept
 	{
-		BigNum::Num<N> prime = from | 1;
+		Num<N> prime = from | 1;
 
 		constexpr unsigned char steps[3][5][7][11] = {
 			{ { { 2, 2, 2, 2, 2, 2, 2, 2, 2, 4, 2 },{ 2, 2, 2, 2, 2, 2, 2, 2, 2, 4, 2 },{ 2, 2, 2, 2, 2, 2, 2, 2, 2, 4, 2 },{ 2, 2, 2, 2, 2, 2, 2, 2, 2, 8, 2 },{ 2, 2, 2, 2, 2, 2, 2, 2, 2, 4, 2 },{ 4, 4, 4, 4, 4, 4, 4, 8, 4, 4, 4 },{ 2, 2, 2, 2, 2, 2, 2, 2, 2, 4, 2 } },{ { 2, 2, 2, 2, 2, 2, 2, 2, 2, 8, 2 },{ 2, 2, 2, 2, 2, 2, 2, 2, 2, 8, 2 },{ 2, 2, 2, 2, 2, 2, 2, 2, 2, 8, 2 },{ 2, 2, 2, 2, 2, 2, 2, 2, 2, 8, 2 },{ 2, 2, 2, 2, 2, 2, 2, 2, 2, 8, 2 },{ 8, 8, 8, 10, 8, 8, 8, 8, 8, 8, 8 },{ 2, 2, 2, 2, 2, 2, 2, 2, 2, 10, 2 } },{ { 2, 2, 2, 2, 2, 2, 2, 2, 2, 4, 2 },{ 2, 2, 2, 2, 2, 2, 2, 2, 2, 4, 2 },{ 2, 2, 2, 2, 2, 2, 2, 2, 2, 4, 2 },{ 2, 2, 2, 2, 2, 2, 2, 2, 2, 10, 2 },{ 2, 2, 2, 2, 2, 2, 2, 2, 2, 4, 2 },{ 4, 4, 4, 4, 4, 4, 4, 10, 4, 4, 4 },{ 2, 2, 2, 2, 2, 2, 2, 2, 2, 4, 2 } },{ { 4, 4, 4, 4, 4, 4, 4, 8, 4, 4, 4 },{ 4, 4, 4, 4, 4, 4, 4, 8, 4, 4, 4 },{ 4, 4, 4, 4, 4, 4, 4, 8, 4, 4, 4 },{ 8, 8, 8, 10, 8, 8, 8, 8, 8, 8, 8 },{ 4, 4, 4, 4, 4, 4, 4, 8, 4, 4, 4 },{ 4, 4, 4, 4, 4, 4, 4, 8, 4, 4, 4 },{ 4, 4, 4, 4, 4, 4, 4, 10, 4, 4, 4 } },{ { 2, 2, 2, 2, 2, 2, 2, 2, 2, 4, 2 },{ 2, 2, 2, 2, 2, 2, 2, 2, 2, 4, 2 },{ 2, 2, 2, 2, 2, 2, 2, 2, 2, 4, 2 },{ 2, 2, 2, 2, 2, 2, 2, 2, 2, 8, 2 },{ 2, 2, 2, 2, 2, 2, 2, 2, 2, 4, 2 },{ 4, 4, 4, 4, 4, 4, 4, 8, 4, 4, 4 },{ 2, 2, 2, 2, 2, 2, 2, 2, 2, 4, 2 } } },
@@ -1638,11 +1635,11 @@ namespace BigNum
 		FindNextOpt,
 	};
 
-	template<int N>
+	template<size_t N>
 	const Num<N> randPrime(RandType type = RandType::FindNextOpt) noexcept
 	{
-		static BigNum::Num<N> mask = (BigNum::Num<N>(1) | (BigNum::Num<N>(1) << (N - 1)));
-		BigNum::Num<N> num = rand<N>() | mask;
+		static Num<N> mask = (Num<N>(1) | (Num<N>(1) << (N - 1)));
+		Num<N> num = rand<N>() | mask;
 		switch (type)
 		{
 		case RandType::FindNext:
@@ -1661,15 +1658,15 @@ namespace BigNum
 		}
 	}
 
-	template<int N>
+	template<size_t N>
 	const Num<N> d2i(const unsigned char* from_begin, const unsigned char* from_end) noexcept
 	{
 		Num<N> ret(0);
 		auto it = from_begin;
-		for (unsigned int i = 0; i < Num<N>::Size; i++)
+		for (size_t i = 0; i < Num<N>::Size; i++)
 		{
 			Word val = 0;
-			for (unsigned int j = 0; j < sizeof(Word); j++)
+			for (size_t j = 0; j < sizeof(Word); j++)
 			{
 				if (it != from_end)
 				{
@@ -1682,14 +1679,14 @@ namespace BigNum
 		return ret;
 	}
 
-	template<int N>
+	template<size_t N>
 	void i2d(const Num<N>& from, unsigned char* to_begin, unsigned char* to_end) noexcept
 	{
 		auto it = to_begin;
-		for (unsigned int i = 0; i < Num<N>::Size; i++)
+		for (size_t i = 0; i < Num<N>::Size; i++)
 		{
 			Word val = from[i];
-			for (unsigned int j = 0; j < sizeof(val); j++)
+			for (size_t j = 0; j < sizeof(val); j++)
 			{
 				if (it != to_end)
 				{
@@ -1702,21 +1699,21 @@ namespace BigNum
 
 	namespace operators
 	{
-		template <int N>
-		void m10add(BigNum::Num<N>& ret, const char arg) noexcept
+		template <size_t N>
+		void m10add(Num<N>& ret, const char arg) noexcept
 		{
 			assert(arg >= '0' && arg <= '9' && "Must be number");
-			ret = ret * 10u + (BigNum::Word(arg) - '0');
+			ret = ret * 10u + (Word(arg) - '0');
 		}
 
-		template <int N>
-		void num_traverse(BigNum::Num<N>& ret, const char arg) noexcept
+		template <size_t N>
+		void num_traverse(Num<N>& ret, const char arg) noexcept
 		{
 			m10add(ret, arg);
 		}
 
-		template <int N, class ... Args>
-		void num_traverse(BigNum::Num<N>& ret, const char arg, Args... args) noexcept
+		template <size_t N, class ... Args>
+		void num_traverse(Num<N>& ret, const char arg, Args... args) noexcept
 		{
 			m10add(ret, arg);
 			num_traverse(ret, args...);

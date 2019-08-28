@@ -13,7 +13,7 @@ project "BigInt"
    files { "src/**.h", "test/**.cpp" }
    includedirs { "src/" }
    staticruntime "On"
-   cppdialect "C++14"
+   cppdialect "C++17"
    warnings "Extra"
    
    filter "configurations:Debug"
@@ -39,5 +39,6 @@ project "BigInt"
         { 
             -- Pragma warnings caused by OpenMP support not being enabled.
             "-Wno-unknown-pragmas",
-            "-pedantic"
+            "-pedantic",
+            "-fstrict-aliasing"
         }

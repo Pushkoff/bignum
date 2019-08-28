@@ -108,8 +108,8 @@ void doTest(Fn fn, const char* testName, int fileLine = 0)
 int main()
 {
 #if PROFILING
-	test(BigNum::nextPrime<2048>(1_bn2048 << 2047) > 0);
-	test(BigNum::nextPrimeOpt35711<2048>(1_bn2048 << 2047) > 0);
+	//test(BigNum::nextPrime<2048>(1_bn2048 << 2047) > 0);
+	//test(BigNum::nextPrimeOpt35711<2048>(1_bn2048 << 2047) > 0);
 #else
 	//srand(time(nullptr));
 	try
@@ -414,7 +414,7 @@ int main()
 
 		{
 			unsigned char data[128] = { 0 };
-			std::generate(&data[0], &data[128], []() {return rand() % 256; });
+			std::generate(&data[0], &data[128], []() { return (unsigned char)(rand() % 256u); });
 			BigNum::Num<2048> packed = BigNum::d2i<2048>(&data[0], &data[128]);
 			unsigned char unpacked[128] = { 0 };
 			BigNum::i2d(packed, &unpacked[0], &unpacked[128]);
@@ -443,7 +443,7 @@ int main()
 			printf(" duration - %lld ms\n", (long long)std::chrono::duration_cast<std::chrono::milliseconds>(elapsed).count());
 
 			unsigned char testdata[256];
-			std::generate(std::begin(testdata), std::end(testdata), []() {return rand() % 256; });
+			std::generate(std::begin(testdata), std::end(testdata), []() { return (unsigned char)(rand() % 256); });
 
 			std::vector<unsigned char> decrypted;
 
