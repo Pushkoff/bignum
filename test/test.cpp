@@ -7,17 +7,16 @@
 #include <time.h>
 #include "BigNum.h"
 
-template<int N>
-std::string toString(const BigNum::Num<N>& num)
+template<size_t N>
+std::string toString(BigNum::Num<N> num)
 {
 	std::string ret;
-	BigNum::Num<N> Q = num;
 
-	while (Q > 0)
+	while (num > 0)
 	{
-		auto R = Q % 10;
+		auto R = num % 10;
 		assert(R < 10);
-		Q = Q / 10;
+		num = num / 10;
 		ret.push_back(char(R + '0'));
 	}
 	std::reverse(ret.begin(), ret.end());
@@ -26,17 +25,16 @@ std::string toString(const BigNum::Num<N>& num)
 	return ret;
 }
 
-template<int N>
-std::string toHex(const BigNum::Num<N>& num)
+template<size_t N>
+std::string toHex(BigNum::Num<N> num)
 {
 	const char Nums[] = { '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'A', 'B', 'C', 'D', 'E', 'F' };
 	std::string ret;
-	BigNum::Num<N> Q = num;
-	while (Q > 0)
+	while (num > 0)
 	{
-		BigNum::Word R = Q[0] & 0xF;
+		BigNum::Word R = num[0] & 0xF;
 		ret.push_back(Nums[R]);
-		Q = Q >> 4;
+		num = num >> 4;
 	}
 	ret.push_back('x');
 	ret.push_back('0');
@@ -44,8 +42,8 @@ std::string toHex(const BigNum::Num<N>& num)
 	return ret;
 }
 
-template<int N>
-const BigNum::Num<N> fromString(const char* str)
+template<size_t N>
+BigNum::Num<N> fromString(const char* str)
 {
 	BigNum::Num<N> ret;
 	while (*str && isdigit(*str))
@@ -57,8 +55,8 @@ const BigNum::Num<N> fromString(const char* str)
 	return ret;
 }
 
-template<int N>
-const BigNum::Num<N> fromHex(const char* str)
+template<size_t N>
+BigNum::Num<N> fromHex(const char* str)
 {
 	auto hexToNum = [=](const char a)->int
 	{
@@ -108,7 +106,7 @@ void doTest(Fn fn, const char* testName, int fileLine = 0)
 int main()
 {
 #if PROFILING
-	//test(BigNum::nextPrime<2048>(1_bn2048 << 2047) > 0);
+	test(BigNum::nextPrime<2048>(1_bn2048 << 2047) > 0);
 	//test(BigNum::nextPrimeOpt35711<2048>(1_bn2048 << 2047) > 0);
 #else
 	//srand(time(nullptr));
@@ -471,7 +469,7 @@ int main()
 			{
 				BigNum::Num<Module> data = BigNum::CRT(cipperdata[block], p, q, dp, dq, qinvp);
 				unsigned char decrypted_data[blockSize];
-				BigNum::i2d(data, &decrypted_data[0], &decrypted_data[blockSize]);
+				BigNum::i2d(data, std::begin(decrypted_data), std::end(decrypted_data));
 				decrypted.insert(decrypted.end(), &decrypted_data[0], &decrypted_data[blockSize]);
 			}
 

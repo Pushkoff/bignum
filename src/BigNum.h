@@ -5,6 +5,38 @@
 #include <type_traits>
 #include <cstddef>
 #include <climits>
+#include <stdint.h>
+
+#define COMPILER_UNKNOWN 0
+#define COMPILER_MSVC 1
+#define COMPILER_GCC 2
+#define COMPILER_ICC 4
+#define COMPILER_CLANG 8
+
+#define COMPILER COMPILER_UNKNOWN
+
+#ifndef COMPILER
+	#if defined(__clang__)
+	#define COMPILER COMPILER_CLANG
+	#elif defined(__ICC) || defined(__INTEL_COMPILER)
+	#define COMPILER COMPILER_ICC
+	#elif defined(__GNUC__) || defined(__GNUG__)
+	#define COMPILER COMPILER_GCC
+	#elif defined(_MSC_VER)
+	#define COMPILER COMPILER_MSVC
+	#else
+	#define COMPILER COMPILER_UNKNOWN
+	#endif
+#endif
+
+#if COMPILER & COMPILER_MSVC
+#include <intrin.h>
+#pragma intrinsic(_umul128)
+#elif COMPILER & COMPILER_GCC
+#include <x86intrin.h>
+#include <immintrin.h>
+#endif
+
 
 namespace BigNum
 {
@@ -13,10 +45,7 @@ namespace BigNum
 		template<typename T>
 		struct bitsize
 		{
-			enum : size_t
-			{
-				value = sizeof(T) * CHAR_BIT
-			};
+			static constexpr size_t value = sizeof(T) * CHAR_BIT;
 		};
 
 		template<typename T, size_t N>
@@ -101,21 +130,26 @@ namespace BigNum
 			return (ret < a) ? 1 : 0;
 		}
 
-		inline unsigned long long int adc(unsigned long long int& ret, const unsigned long long int v1, const unsigned long long int v2, const unsigned long long int carry) noexcept
+		inline uint64_t adc(uint64_t& ret, const uint64_t v1, const uint64_t v2, const uint64_t carry) noexcept
 		{
-			unsigned long long int retCarry = adc(ret, v1, v2);
+			assert(carry == 0 || carry == 1);
+#if COMPILER & (COMPILER_MSVC | COMPILER_GCC)
+			return uint64_t(_addcarry_u64((unsigned char)carry, (unsigned long long)v1, (unsigned long long)v2, (unsigned long long*)&ret));
+#else
+			uint64_t retCarry = adc(ret, v1, v2);
 			retCarry = adc(ret, ret, carry) + retCarry;
 			return retCarry;
+#endif
 		}
 
 		template <typename T>
-		T adc(T& ret, const T v1, const T v2, const T carry, typename std::enable_if<(sizeof(unsigned long long int) > sizeof(T))>::type* = 0) noexcept
+		T adc(T& ret, const T v1, const T v2, const T carry, typename std::enable_if<(sizeof(uint64_t) > sizeof(T))>::type* = 0) noexcept
 		{
-			constexpr unsigned int kWordSizeBits = sizeof(T) * 8;
-			constexpr unsigned long long int kWordMaskBits = (1ull << (kWordSizeBits)) - 1ull;
-			static_assert(sizeof(unsigned long long int) > sizeof(T), "cant detect overflow");
+			constexpr size_t kWordSizeBits = bitsize<T>::value;
+			constexpr uint64_t kWordMaskBits = (uint64_t(1) << (kWordSizeBits)) - 1;
+			static_assert(sizeof(uint64_t) > sizeof(T), "cant detect overflow");
 
-			const unsigned long long int sum = (unsigned long long int)(v1) + v2 + carry;
+			const uint64_t sum = uint64_t(v1) + v2 + carry;
 			ret = sum & kWordMaskBits;
 			return T(sum >> kWordSizeBits);
 		}
@@ -185,21 +219,26 @@ namespace BigNum
 			return (ret > a) ? 1 : 0;
 		}
 
-		inline unsigned long long int sbc(unsigned long long int& ret, const unsigned long long int v1, const unsigned long long int v2, const unsigned long long int carry) noexcept
+		inline uint64_t sbc(uint64_t& ret, const uint64_t v1, const uint64_t v2, const uint64_t carry) noexcept
 		{
-			unsigned long long int retCarry = sbc(ret, v1, v2);
+			assert(carry == 0 || carry == 1);
+#if COMPILER == COMPILER_MSVC
+			return uint64_t(_subborrow_u64((unsigned char)carry, (unsigned long long)v1, (unsigned long long)v2, (unsigned long long*)&ret));
+#else
+			uint64_t retCarry = sbc(ret, v1, v2);
 			retCarry = sbc(ret, ret, carry) + retCarry;
 			return retCarry;
+#endif
 		}
 
 		template<typename T>
-		T sbc(T& ret, const T v1, const T v2, const T carry, typename std::enable_if<(sizeof(unsigned long long int) > sizeof(T))>::type* = 0) noexcept
+		T sbc(T& ret, const T v1, const T v2, const T carry, typename std::enable_if<(sizeof(uint64_t) > sizeof(T))>::type* = 0) noexcept
 		{
-			constexpr unsigned int kWordSizeBits = bitsize<T>::value;
-			constexpr unsigned long long int kWordMaskBits = (1ull << (kWordSizeBits)) - 1ull;
-			static_assert(sizeof(unsigned long long int) > sizeof(T), "cant detect overflow");
+			constexpr size_t kWordSizeBits = bitsize<T>::value;
+			constexpr uint64_t kWordMaskBits = (1ull << (kWordSizeBits)) - 1ull;
+			static_assert(sizeof(uint64_t) > sizeof(T), "cant detect overflow");
 
-			const unsigned long long int sum = (unsigned long long int)(v1) - v2 - carry;
+			const uint64_t sum = uint64_t(v1) - v2 - carry;
 			ret = sum & kWordMaskBits;
 			return (sum >> kWordSizeBits) ? 1u : 0u;
 		}
@@ -262,43 +301,53 @@ namespace BigNum
 			return carry;
 		}
 
-		inline unsigned long long int _mulhi(unsigned long long int& ret, const unsigned long long int v1, const unsigned long long int v2)
+		inline uint64_t mul128(uint64_t& retLo, const uint64_t v1, const uint64_t v2) noexcept
 		{
-			constexpr unsigned int kWordSizeBits = bitsize<unsigned long long int>::value;
-			constexpr unsigned int kHalfWordSizeBits = kWordSizeBits / 2;
-			constexpr unsigned long long int kHalfWordMaskBits = (1ull << (kHalfWordSizeBits)) - 1ull;
+#if COMPILER == COMPILER_MSVC
+			uint64_t mh = 0;
+			retLo = _umul128(v1, v2, &mh);
+			return mh;
+#elif COMPILER == COMPILER_GCC
+			const uint128_t r = static_cast<uint128_t>(a) * b;
+			retLo = uint64_t(r);
+			return uint64_t(r >> 64);
+#else
+			constexpr size_t kWordSizeBits = bitsize<uint64_t>::value;
+			constexpr size_t kHalfWordSizeBits = kWordSizeBits / 2;
+			constexpr uint64_t kHalfWordMaskBits = (uint64_t(1) << (kHalfWordSizeBits)) - 1;
 
-			const unsigned long long int v1l = v1 & kHalfWordMaskBits;
-			const unsigned long long int v1h = v1 >> kHalfWordSizeBits;
-			const unsigned long long int v2l = v2 & kHalfWordMaskBits;
-			const unsigned long long int v2h = v2 >> kHalfWordSizeBits;
+			const uint64_t v1l = v1 & kHalfWordMaskBits;
+			const uint64_t v1h = v1 >> kHalfWordSizeBits;
+			const uint64_t v2l = v2 & kHalfWordMaskBits;
+			const uint64_t v2h = v2 >> kHalfWordSizeBits;
 
-			const unsigned long long int z0 = v1l * v2l;
-			const unsigned long long int z1 = v1l * v2h;
-			const unsigned long long int z2 = v1h * v2l;
-			const unsigned long long int z3 = v1h * v2h;
+			const uint64_t z0 = v1l * v2l;
+			const uint64_t z1 = v1l * v2h;
+			const uint64_t z2 = v1h * v2l;
+			const uint64_t z3 = v1h * v2h;
 
-			const unsigned long long int carry1 = adc(ret, z0, z1 << kHalfWordSizeBits);
-			const unsigned long long int carry2 = adc(ret, ret, z2 << kHalfWordSizeBits);
-			unsigned long long int hi = 0;
+			const uint64_t carry1 = adc(retLo, z0, z1 << kHalfWordSizeBits);
+			const uint64_t carry2 = adc(retLo, retLo, z2 << kHalfWordSizeBits);
+			uint64_t hi = 0;
 			adc(hi, z1 >> kHalfWordSizeBits, z2 >> kHalfWordSizeBits, carry1);
 			adc(hi, hi, z3, carry2);
 			return hi;
+#endif
 		}
 
-		inline unsigned long long int madd(unsigned long long int& ret, const unsigned long long int v1, const unsigned long long int v2, const unsigned long long int carry) noexcept
+		inline uint64_t madd(uint64_t& ret, const uint64_t v1, const uint64_t v2, const uint64_t carry) noexcept
 		{
-			unsigned long long int ml = 0;
-			unsigned long long int mh = _mulhi(ml, v1, v2);
-			unsigned long long int mc = adc(ret, ret, ml);
+			uint64_t ml = 0;
+			uint64_t mh = mul128(ml, v1, v2);
+			uint64_t mc = adc(ret, ret, ml);
 			mc += adc(ret, ret, carry);
 			return mh + mc;
 		}
 
 		template<typename T>
-		inline T madd(T& ret, const T v1, const T v2, const T carry, typename std::enable_if<(sizeof(unsigned long long int) > sizeof(T))>::type* = 0)
+		T madd(T& ret, const T v1, const T v2, const T carry, typename std::enable_if<(sizeof(unsigned long long int) > sizeof(T))>::type* = 0) noexcept
 		{
-			unsigned long long int m = (unsigned long long int)(ret) + (unsigned long long int)(v1) * (unsigned long long int)(v2) + carry;
+			uint64_t m = uint64_t(ret) + uint64_t(v1) * uint64_t(v2) + carry;
 			ret = T(m);
 			return T(m >> bitsize<T>::value);
 		}
@@ -432,11 +481,11 @@ namespace BigNum
 		}
 
 		template<typename T, size_t N>
-		void div(T(&q)[N], T(&n)[N], const T d, typename std::enable_if<(sizeof(unsigned long long int) > sizeof(T))>::type* = 0) noexcept
+		void div(T(&q)[N], T(&n)[N], const T d, typename std::enable_if<(sizeof(uint64_t) > sizeof(T))>::type* = 0) noexcept
 		{
-			static_assert(sizeof(unsigned long long) > sizeof(T), "T have to be smaller size than unsigned long long");
+			static_assert(sizeof(uint64_t) > sizeof(T), "T have to be smaller size than unsigned long long");
 
-			unsigned long long rest = 0;
+			uint64_t rest = 0;
 			for (size_t i = N; i-- > 0;)
 			{
 				rest = rest << bitsize<T>::value;
@@ -449,7 +498,7 @@ namespace BigNum
 		}
 
 		template<typename T, size_t N>
-		void div(T(&q)[N], T(&n)[N], const T d, typename std::enable_if<(sizeof(unsigned long long int) == sizeof(T))>::type* = 0) noexcept
+		void div(T(&q)[N], T(&n)[N], const T d, typename std::enable_if<(sizeof(uint64_t) == sizeof(T))>::type* = 0) noexcept
 		{
 			const T converted_d[] = { d };
 			div(q, n, converted_d);
@@ -470,8 +519,8 @@ namespace BigNum
 					{
 						T shiftedD[M + 1] = { 0 };
 						shl(shiftedD, d, j);
-						if (Core::cmp(rbeg, rend, std::begin(shiftedD), std::end(shiftedD)) >= 0)
-							Core::sub(rbeg, rend, std::begin(shiftedD), std::end(shiftedD));
+						if (Core::cmp(rbeg, rend, std::cbegin(shiftedD), std::cend(shiftedD)) >= 0)
+							Core::sub(rbeg, rend, std::cbegin(shiftedD), std::cend(shiftedD));
 					}
 				}
 			}
@@ -807,8 +856,8 @@ namespace BigNum
 	}
 
 	using Core::bitsize;
-	typedef unsigned long long int Word;
-	constexpr unsigned int kWordSizeBits = bitsize<Word>::value;
+	typedef uint64_t Word;
+	constexpr size_t kWordSizeBits = bitsize<Word>::value;
 
 	template<size_t N>
 	class Num
@@ -1471,7 +1520,7 @@ namespace BigNum
 
 	constexpr size_t simplechecks(size_t size) noexcept
 	{
-		return ((size / 16) < primesCount) ? (size / 16) : primesCount;
+		return std::min(std::max(size/64, size_t(4)), primesCount);
 	}
 
 	template<size_t N>
@@ -1658,8 +1707,8 @@ namespace BigNum
 		}
 	}
 
-	template<size_t N>
-	const Num<N> d2i(const unsigned char* from_begin, const unsigned char* from_end) noexcept
+	template<size_t N, typename Iter>
+	const Num<N> d2i(Iter from_begin, Iter from_end) noexcept
 	{
 		Num<N> ret(0);
 		auto it = from_begin;
@@ -1679,8 +1728,8 @@ namespace BigNum
 		return ret;
 	}
 
-	template<size_t N>
-	void i2d(const Num<N>& from, unsigned char* to_begin, unsigned char* to_end) noexcept
+	template<size_t N, typename Iter>
+	void i2d(const Num<N>& from, Iter to_begin, Iter to_end) noexcept
 	{
 		auto it = to_begin;
 		for (size_t i = 0; i < Num<N>::Size; i++)
