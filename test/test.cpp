@@ -43,6 +43,23 @@ std::string toHex(BigNum::Num<N> num)
 }
 
 template<size_t N>
+std::string toRaw(BigNum::Num<N> num)
+{
+	std::string ret = "{ ";
+	for (size_t i = 0; i < BigNum::Num<N>::Size; ++i)
+	{
+		if (i != 0)
+			ret += ", ";
+
+		char buf[32] = {0};
+		snprintf(buf, sizeof(buf), "%lluull", num[i]);
+		ret += buf;
+	}
+	ret += " }";
+	return ret;
+}
+
+template<size_t N>
 BigNum::Num<N> fromString(const char* str)
 {
 	BigNum::Num<N> ret;
@@ -97,6 +114,24 @@ void doTest(Fn fn, const char* testName, int fileLine = 0)
 	if (!ret) throw(1);
 }
 
+template<size_t N>
+BigNum::Num<N> biggestPrimeProduct() noexcept
+{
+	BigNum::Num<N + BigNum::kWordSizeBits> mask = 1;
+	mask = mask << N;
+	BigNum::Num<N + BigNum::kWordSizeBits> test = 1;
+	BigNum::Num<N> ret = 0;
+
+	for (size_t i = 0; i < BigNum::primesCount; ++i)
+	{
+		test = test * BigNum::primes[i];
+		if (test < mask)
+			ret = test;
+		else
+			break;
+	}
+	return ret;
+}
 
 
 #define test(a) do{  doTest([&](){ return (a); }, #a, __LINE__); }while(false);
@@ -109,6 +144,13 @@ int main()
 	test(BigNum::nextPrime<2048>(1_bn2048 << 2047) > 0);
 	//test(BigNum::nextPrimeOpt35711<2048>(1_bn2048 << 2047) > 0);
 #else
+	//printf("biggestPrimeProduct<64>() = %s\n", toRaw(biggestPrimeProduct<64>()).c_str());
+	//printf("biggestPrimeProduct<128>() = %s\n", toRaw(biggestPrimeProduct<128>()).c_str());
+	//printf("biggestPrimeProduct<256>() = %s\n", toRaw(biggestPrimeProduct<256>()).c_str());
+	//printf("biggestPrimeProduct<512>() = %s\n", toRaw(biggestPrimeProduct<512>()).c_str());
+	//printf("biggestPrimeProduct<1024>() = %s\n", toRaw(biggestPrimeProduct<1024>()).c_str());
+	//printf("biggestPrimeProduct<2048>() = %s\n", toRaw(biggestPrimeProduct<2048>()).c_str());
+
 	//srand(time(nullptr));
 	try
 	{
@@ -379,6 +421,9 @@ int main()
 
 		test(BigNum::nextPrime<2048>(1_bn2048 << 2047) > 0); //== 16158503035655503650357438344334975980222051334857742016065172713762327569433945446598600705761456731844358980460949009747059779575245460547544076193224141560315438683650498045875098875194826053398028819192033784138396109321309878080919047169238085235290822926018152521443787945770532904303776199561965192760957166694834171210342487393282284747428088017663161029038902829665513096354230157075129296432088558362971801859230928678799175576150822952201848806616643615613562842355410104862578550863465661734839271290328348967522998634176499319107762583194718667771801067716614802322659239302476074096777926805529798117247_bn2048);
 		test(BigNum::nextPrimeOpt35711<2048>(1_bn2048 << 2047) > 0);
+
+		printf("biggestPrimeProduct<128>() = %s\n", toString(biggestPrimeProduct<128>()).c_str());
+		printf("biggestPrimeProduct<256>() = %s\n", toString(biggestPrimeProduct<256>()).c_str());
 
 		srand(0);
 		{

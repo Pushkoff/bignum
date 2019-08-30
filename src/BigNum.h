@@ -49,14 +49,14 @@ namespace BigNum
 		};
 
 		template<typename T, size_t N>
-		inline void zero(T(&to)[N]) noexcept
+		void zero(T(&to)[N]) noexcept
 		{
 			for (size_t i = 0; i < N; i++)
 				to[i] = 0;
 		}
 
 		template<typename T, size_t N>
-		inline void one(T(&to)[N]) noexcept
+		void one(T(&to)[N]) noexcept
 		{
 			to[0] = 1;
 			for (size_t i = 1; i < N; i++)
@@ -64,22 +64,29 @@ namespace BigNum
 		}
 
 		template<typename T>
-		inline void one(T(&to)[1]) noexcept
+		void one(T(&to)[1]) noexcept
 		{
 			to[0] = 1;
 		}
 
 		template<typename T, size_t N>
-		inline T get(const T(&from)[N], size_t pos) noexcept
+		T get(const T(&from)[N], size_t pos) noexcept
 		{
 			return (pos < N) ? from[pos] : T(0);
 		}
 
 		template<typename T, size_t N, size_t M>
-		inline void copy(T(&to)[N], const T(&from)[M]) noexcept
+		void copy(T(&to)[N], const T(&from)[M]) noexcept
 		{
 			for (size_t i = 0; i < N; i++)
 				to[i] = get(from, i);
+		}
+
+		template<typename T, size_t N>
+		void swap(T(&v1)[N], T(&v2)[N]) noexcept
+		{
+			for (size_t i = 0; i < N; i++)
+				std::swap(v1[i], v2[i]);
 		}
 
 		template<typename T>
@@ -415,36 +422,106 @@ namespace BigNum
 		void shl(T(&rez)[N], const T(&v)[M], size_t count) noexcept
 		{
 			// assert(count < N*kWordSizeBits);
-			const size_t bytes = count / bitsize<T>::value;
+			const size_t words = count / bitsize<T>::value;
 			const size_t bits = count % bitsize<T>::value;
 			if (bits == 0)
 			{
 				for (size_t i = 0; i < N; i++)
-					rez[i] = get(v, i - bytes); // unsigned - unsigned -> unsigned 
+					rez[i] = get(v, i - words); // unsigned - unsigned -> unsigned 
 			}
 			else
 			{
 				for (size_t i = 0; i < N; i++)
-					rez[i] = (get(v, i - bytes) << (bits)) | (get(v, i - bytes - 1) >> (bitsize<T>::value - bits));
+					rez[i] = (get(v, i - words) << (bits)) | (get(v, i - words - 1) >> (bitsize<T>::value - bits));
 			}
+		}
+
+		template<typename T>
+		void shl(T* rezbegin, T* rezend, const T* vbegin, const T* vend, size_t count) noexcept
+		{
+			const size_t vcount = vend - vbegin;
+			const size_t words = count / bitsize<T>::value;
+			const size_t bits = count % bitsize<T>::value;
+			if (bits == 0)
+			{
+				for (T* rezIt = rezbegin; rezIt != rezend; ++rezIt)
+				{
+					const size_t offset = (rezIt - rezbegin) - words;
+					*rezIt = (offset >= 0 && offset < vcount) ? *(vbegin + offset) : 0;
+				}
+			}
+			else
+			{
+				for (T* rezIt = rezbegin; rezIt != rezend; ++rezIt)
+				{
+					const size_t offset1 = (rezIt - rezbegin) - words;
+					const size_t offset2 = offset1 - 1;
+					const T w1 = (offset1 >= 0 && offset1 < vcount) ? *(vbegin + offset1) : 0;
+					const T w2 = (offset2 >= 0 && offset2 < vcount) ? *(vbegin + offset2) : 0;
+					*rezIt = (w1 << bits) | (w2 >> (bitsize<T>::value - bits));
+				}
+			}
+		}
+
+		template<typename T, size_t N>
+		void shl(T(&rez)[N], size_t count) noexcept
+		{
+			T tmp[N];
+			copy(tmp, rez);
+			shl(std::begin(rez), std::end(rez), std::cbegin(tmp), std::cend(tmp), count);
 		}
 
 		template<typename T, size_t N, size_t M>
 		void shr(T(&rez)[N], const T(&v)[M], size_t count) noexcept
 		{
 			// assert(count < N*kWordSizeBits);
-			const size_t bytes = count / bitsize<T>::value;
+			const size_t words = count / bitsize<T>::value;
 			const size_t bits = count % bitsize<T>::value;
 			if (bits == 0)
 			{
 				for (size_t i = 0; i < N; i++)
-					rez[i] = get(v, i + bytes);
+					rez[i] = get(v, i + words);
 			}
 			else
 			{
 				for (size_t i = 0; i < N; i++)
-					rez[i] = (get(v, i + bytes + 1) << (bitsize<T>::value - bits)) | (get(v, i + bytes) >> bits);
+					rez[i] = (get(v, i + words + 1) << (bitsize<T>::value - bits)) | (get(v, i + words) >> bits);
 			}
+		}
+
+		template<typename T>
+		void shr(T* rezbegin, T* rezend, const T* vbegin, const T* vend, size_t count) noexcept
+		{
+			const size_t vcount = vend - vbegin;
+			const size_t words = count / bitsize<T>::value;
+			const size_t bits = count % bitsize<T>::value;
+			if (bits == 0)
+			{
+				for (T* rezIt = rezbegin; rezIt != rezend; ++rezIt)
+				{
+					const size_t offset = (rezIt - rezbegin) + words;
+					*rezIt = (offset >= 0 && offset < vcount) ? *(vbegin + offset) : 0;
+				}
+			}
+			else
+			{
+				for (T* rezIt = rezbegin; rezIt != rezend; ++rezIt)
+				{
+					const size_t offset1 = (rezIt - rezbegin) + words;
+					const size_t offset2 = offset1 + 1;
+					const T w1 = (offset1 >= 0 && offset1 < vcount) ? *(vbegin + offset1) : 0;
+					const T w2 = (offset2 >= 0 && offset2 < vcount) ? *(vbegin + offset2) : 0;
+					*rezIt = (w1 >> bits) | (w2 << (bitsize<T>::value - bits));
+				}
+			}
+		}
+
+		template<typename T, size_t N>
+		void shr(T(&rez)[N], size_t count) noexcept
+		{
+			T tmp[N];
+			copy(tmp, rez);
+			shr(std::begin(rez), std::end(rez), std::cbegin(tmp), std::cend(tmp), count);
 		}
 
 		template<typename T, size_t N, size_t M>
@@ -551,32 +628,45 @@ namespace BigNum
 		}
 
 		template<typename T, size_t N>
+		size_t zeroBitsCount(const T(&v)[N]) noexcept
+		{
+			size_t ret = 0;
+			size_t i = 0;
+			for (; v[i] == 0 && i < N; ++i)
+				ret += bitsize<T>::value;
+			
+			if (i < N)
+			{
+				T tmp = v[i];
+				while ((tmp & T(1)) == 0)
+				{
+					ret++;
+					tmp >>= 1;
+				}
+			}
+			return ret;
+		}
+
+		template<typename T, size_t N>
 		void gcd(T(&rez)[N], const T(&v1)[N], const T(&v2)[N]) noexcept
 		{
-			int cmprez = cmp(v1, v2);
-			if (cmprez > 0)
-				copy(rez, v1);
-			else
-				copy(rez, v2);
+			size_t v1shift = zeroBitsCount(v1);
+			size_t v2shift = zeroBitsCount(v2);
+			const size_t rezShift = std::min(v1shift, v2shift);
 
-			if (cmprez == 0)
-				return;
+			T v1t[N], v2t[N];
+			shr(v1t, v1, v1shift);
+			shr(v2t, v2, v2shift);
 
-			T b[N];
-			if (cmprez > 0)
-				copy(b, v2);
-			else
-				copy(b, v1);
-
-			while (cmp(b, T(0)))
+			while (int cmpRez = cmp(v1t, v2t))
 			{
-				T t[N], m[N];
-				copy(t, b);
-				copy(m, rez);
-				mod(m, b);
-				copy(b, m);
-				copy(rez, t);
+				if (cmpRez < 0)
+					swap(v1t, v2t);
+				
+				sub(v1t, v2t);
+				shr(v1t, zeroBitsCount(v1t));
 			}
+			shl(rez, v1t, rezShift);
 		}
 
 		template<typename T, size_t N>
@@ -869,7 +959,7 @@ namespace BigNum
 
 		Word data[Size] = { 0 };
 
-		Num(unsigned long long int num = 0) noexcept
+		constexpr Num(unsigned long long int num = 0) noexcept
 		{
 			if constexpr (bitsize<unsigned long long int>::value > bitsize<Word>::value)
 			{
@@ -882,6 +972,16 @@ namespace BigNum
 			else
 			{
 				data[0] = Word(num);
+			}
+		}
+
+		constexpr Num(std::initializer_list<Word> arg) noexcept
+		{
+			auto it = std::cbegin(arg), it_end = std::cend(arg);
+			for (size_t i = 0; it != it_end && i < Size; ++i)
+			{
+				data[i] = *it;
+				++it;
 			}
 		}
 
@@ -1246,6 +1346,15 @@ namespace BigNum
 	}
 
 	template<size_t N>
+	const Num<N> gcd(const Num<N>& v1, Word v2) noexcept
+	{
+		Num<N> ret;
+		Num<N> v2a = v2;
+		Core::gcd(ret.data, v1.data, v2a.data);
+		return ret;
+	}
+
+	template<size_t N>
 	const Num<2 * N> lcm(const Num<N>& v1, const Num<N>& v2) noexcept
 	{
 		Num<2 * N> ret;
@@ -1464,7 +1573,7 @@ namespace BigNum
 		811,    821,    823,    827,    829,    839,    853,    857,    859,    863,
 		877,    881,    883,    887,    907,    911,    919,    929,    937,    941,
 		947,    953,    967,    971,    977,    983,    991,    997,   1009,   1013,
-		1019,   1021,   /*1031,   1033,   1039,   1049,   1051,   1061,   1063,   1069,
+		1019,   1021,   1031,   1033,   1039,   1049,   1051,   1061,   1063,   1069,
 		1087,   1091,   1093,   1097,   1103,   1109,   1117,   1123,   1129,   1151,
 		1153,   1163,   1171,   1181,   1187,   1193,   1201,   1213,   1217,   1223,
 		1229,   1231,   1237,   1249,   1259,   1277,   1279,   1283,   1289,   1291,
@@ -1513,7 +1622,7 @@ namespace BigNum
 		4663,   4673,   4679,   4691,   4703,   4721,   4723,   4729,   4733,   4751,
 		4759,   4783,   4787,   4789,   4793,   4799,   4801,   4813,   4817,   4831,
 		4861,   4871,   4877,   4889,   4903,   4909,   4919,   4931,   4933,   4937,
-		4943,   4951,   4957,   4967,   4969,   4973,   4987,   4993,   4999,   5003,*/
+		4943,   4951,   4957,   4967,   4969,   4973,   4987,   4993,   4999,   5003,
 	};
 
 	constexpr size_t primesCount = sizeof(primes) / sizeof(primes[0]);
@@ -1528,10 +1637,43 @@ namespace BigNum
 	{
 		for (size_t i = skip; i < simplechecks(N); i++)
 		{
-			if (num % primes[i] == 0)
+			if (gcd(num, Word(primes[i])) != 1)
 				return false;
 		}
 		return true;
+	}
+
+	template<size_t N>
+	constexpr Num<N> primesProduct() noexcept
+	{
+		if constexpr (N >= 2048)
+			return Num<N>{ 10408628748038725759ull, 1915073011592289563ull, 8763774421824524631ull, 2011063807001048133ull, 1031707741487195015ull, 10556206784421030708ull, 5144671606306936534ull,
+			6265034155426823908ull, 6436778927562491100ull, 2992101046236765559ull, 6886016094704050588ull, 4836091997350331295ull, 11192339607704847528ull, 18185458679113843091ull,
+			2237090061021923320ull, 6966528701537520681ull, 13676727934563798704ull, 35440123139362773ull, 1030616290511923130ull, 2598059789510833357ull, 11358731858419258879ull,
+			17141514317551676213ull, 15674928412557522658ull, 5788948221837802822ull, 12584695127497503830ull, 6903558455145820541ull, 3240358321303087788ull, 12411608971331568287ull,
+			11938157545863749836ull, 9434899357668762554ull, 11386550743579174540ull, 2622686790435282460ull };
+		else if constexpr (N >= 1024)
+			return Num<N>{ 439843546635370873ull, 5874615937175795343ull, 15114307389686269710ull, 3871889402991114301ull, 7173936838642267339ull, 9722714508587535958ull, 1930269961649009581ull,
+			12607511240871844615ull, 10714462625239494289ull, 17992178854007237495ull, 12035886451572866178ull, 2022252832547602063ull, 9058264411918715906ull, 13274342168057743064ull,
+			1108643872522681714ull, 200515704069442536ull };
+		else if constexpr (N >= 512)
+			return Num<N>{ 1003437303243261071ull, 11492846679185067928ull, 7993966689410686436ull, 2539380480667780101ull, 13958398667001434503ull, 540084209558748057ull, 12718512968486482079ull,
+			1182944749624425070ull };
+		else if constexpr (N >= 256)
+			return Num<N>{ 13860834134742107767ull, 11463165765559708970ull, 17664302261596423816ull, 15848267622464664512ull };
+		else if constexpr (N >= 128)
+			return Num<N>{15507271189205528447ull, 6311747033189848393ull};
+		else if constexpr (N >= 64)
+			return Num<N>{16294579238595022365ull};
+		else
+			return Num<N>{ 2 * 3 * 5 * 7 };
+	}
+
+	template<size_t N>
+	bool gcdTest(const Num<N>& num) noexcept
+	{
+		//return simpleTest(num);
+		return gcd(num, primesProduct<N>()) == 1;
 	}
 
 	template<size_t N>
@@ -1539,7 +1681,7 @@ namespace BigNum
 	{
 		Num<N> prime = from | 1u;
 
-		while (!(simpleTest(prime) && millerRabinTest(prime)))
+		while (!(gcdTest(prime) && millerRabinTest(prime)))
 			prime = prime + 2u;
 
 		return prime;
@@ -1560,7 +1702,7 @@ namespace BigNum
 			prime = prime + step;
 		}
 
-		while (!(simpleTest(prime, 1) && millerRabinTest(prime)))
+		while (!(gcdTest(prime) && millerRabinTest(prime)))
 		{
 			assert(prime % 3u != 0);
 			const unsigned char step = steps[rest3];
@@ -1587,7 +1729,7 @@ namespace BigNum
 			prime = prime + step;
 		}
 
-		while (!(simpleTest(prime, 2) && millerRabinTest(prime)))
+		while (!(gcdTest(prime) && millerRabinTest(prime)))
 		{
 			assert(prime % 3u != 0);
 			assert(prime % 5u != 0);
@@ -1622,7 +1764,7 @@ namespace BigNum
 			prime = prime + step;
 		}
 
-		while (!(simpleTest(prime, 3) && millerRabinTest(prime)))
+		while (!(gcdTest(prime) && millerRabinTest(prime)))
 		{
 			assert(prime % 3u != 0);
 			assert(prime % 5u != 0);
@@ -1660,7 +1802,7 @@ namespace BigNum
 			prime = prime + step;
 		}
 
-		while (!(simpleTest(prime, 4u) && millerRabinTest(prime)))
+		while (!(gcdTest(prime) && millerRabinTest(prime)))
 		{
 			assert(prime % 3u != 0);
 			assert(prime % 5u != 0);
@@ -1698,7 +1840,7 @@ namespace BigNum
 		case RandType::Simple:
 		default:
 			{
-				while (!(simpleTest(num) && millerRabinTest(num)))
+				while (!(gcdTest(num) && millerRabinTest(num)))
 				{
 					num = rand<N>() | mask;
 				}
