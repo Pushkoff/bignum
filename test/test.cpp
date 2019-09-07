@@ -5,6 +5,7 @@
 #include <chrono>
 #include <vector>
 #include <time.h>
+#include <stdint.h>
 #include "BigNum.h"
 
 template<size_t N>
@@ -160,10 +161,10 @@ int main()
 		{
 			bool passed = true;
 			BigNum::Num<128> bn(1);
-			for (unsigned int i = 0u; i < 128u; i++)
+			for (size_t i = 0u; i < 128u; i++)
 			{
 				BigNum::Num<128> testbn = bn << i;
-				for (unsigned int j = 0; j < BigNum::Num<128>::Size; j++)
+				for (size_t j = 0; j < BigNum::Num<128>::Size; j++)
 				{
 					if (j == i / BigNum::kWordSizeBits)
 						passed = passed && (testbn[i / BigNum::kWordSizeBits] == (1ull << (i%BigNum::kWordSizeBits)));
@@ -172,7 +173,7 @@ int main()
 				}
 				if (!passed)
 				{
-					printf("%d\n", i);
+					printf("%zd\n", i);
 					break;
 				}
 			}
@@ -186,6 +187,30 @@ int main()
 			{
 				BigNum::Num<64> testbn = bn >> i;
 				passed = passed && (testbn[(63 - i) / BigNum::kWordSizeBits] == (1ull << ((BigNum::kWordSizeBits - 1) - i%BigNum::kWordSizeBits)));
+				assert(passed);
+			}
+			test(passed == true && "Rignt shift");
+		}
+
+		{
+			bool passed = true;
+			BigNum::Num<256> bn(1);
+			for (unsigned int i = 1u; i < 256; i++)
+			{
+				bn <<= 1;
+				passed = passed && (bn[(i) / BigNum::kWordSizeBits] == (1ull << (i % BigNum::kWordSizeBits)));
+				assert(passed);
+			}
+			test(passed == true && "Left shift");
+		}
+
+		{
+			bool passed = true;
+			BigNum::Num<256> bn = BigNum::Num<256>(1) << 255u;
+			for (unsigned int i = 1u; i < 256; i++)
+			{
+				bn >>= 1;
+				passed = passed && (bn[(255 - i) / BigNum::kWordSizeBits] == (1ull << ((BigNum::kWordSizeBits - 1) - i % BigNum::kWordSizeBits)));
 				assert(passed);
 			}
 			test(passed == true && "Rignt shift");
@@ -326,7 +351,7 @@ int main()
 		test((BigNum::Num<64>(13505675 >> 15) == BigNum::Num<64>(13505675) >> 15));
 		test((BigNum::Num<64>(13505675 >> 22) == BigNum::Num<64>(13505675) >> 22));
 		test(toString(89884656743115795386465259539451236680898848947115328636715040578866337902750481566354238661203768010560056939935696678829394884407208311246423715319737062188883946712432742638151109800623047059726541476042502884419075341171231440736956555270413618581675255342293149119973622969239858152417678164812112068608_bn1024) == "89884656743115795386465259539451236680898848947115328636715040578866337902750481566354238661203768010560056939935696678829394884407208311246423715319737062188883946712432742638151109800623047059726541476042502884419075341171231440736956555270413618581675255342293149119973622969239858152417678164812112068608")
-			test((BigNum::Num<1024>(1) << 1023) == 89884656743115795386465259539451236680898848947115328636715040578866337902750481566354238661203768010560056939935696678829394884407208311246423715319737062188883946712432742638151109800623047059726541476042502884419075341171231440736956555270413618581675255342293149119973622969239858152417678164812112068608_bn1024);
+		test((BigNum::Num<1024>(1) << 1023) == 89884656743115795386465259539451236680898848947115328636715040578866337902750481566354238661203768010560056939935696678829394884407208311246423715319737062188883946712432742638151109800623047059726541476042502884419075341171231440736956555270413618581675255342293149119973622969239858152417678164812112068608_bn1024);
 
 		test(((BigNum::Num<64>(1) << 63) + 1) / (BigNum::Num<64>(1) << 63) == 1);
 		test(((BigNum::Num<64>(1) << 63) + 1) % (BigNum::Num<64>(1) << 63) == 1);

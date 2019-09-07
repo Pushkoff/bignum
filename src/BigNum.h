@@ -466,9 +466,30 @@ namespace BigNum
 		template<typename T, size_t N>
 		void shl(T(&rez)[N], size_t count) noexcept
 		{
-			T tmp[N];
-			copy(tmp, rez);
-			shl(std::begin(rez), std::end(rez), std::cbegin(tmp), std::cend(tmp), count);
+			if (count == 0) return;
+			//T tmp[N];
+			//copy(tmp, rez);
+			//shl(std::begin(rez), std::end(rez), std::cbegin(tmp), std::cend(tmp), count);
+
+			if (count == 0) return;
+
+			const size_t words = count / bitsize<T>::value;
+			const size_t bits = count % bitsize<T>::value;
+			if (bits == 0)
+			{
+				for (size_t i = 0; i < N; ++i)
+					rez[i] = get(rez, i - words);
+			}
+			else
+			{
+				T carry = 0;
+				for (size_t i = 0; i < N; ++i)
+				{
+					T v = get(rez, i - words);
+					rez[i] = (v << bits) | carry;
+					carry = v >> (bitsize<T>::value - bits);
+				}
+			}
 		}
 
 		template<typename T, size_t N, size_t M>
@@ -519,9 +540,25 @@ namespace BigNum
 		template<typename T, size_t N>
 		void shr(T(&rez)[N], size_t count) noexcept
 		{
-			T tmp[N];
-			copy(tmp, rez);
-			shr(std::begin(rez), std::end(rez), std::cbegin(tmp), std::cend(tmp), count);
+			if (count == 0) return;
+
+			const size_t words = count / bitsize<T>::value;
+			const size_t bits = count % bitsize<T>::value;
+			if (bits == 0)
+			{
+				for (size_t i = N; i-- >0;)
+					rez[i] = get(rez, i + words);
+			}
+			else
+			{
+				T carry = 0;
+				for (size_t i = N; i-- > 0;)
+				{
+					T v = get(rez, i + words);
+					rez[i] = (v >> bits) | carry;
+					carry = v << (bitsize<T>::value - bits);
+				}
+			}
 		}
 
 		template<typename T, size_t N, size_t M>
@@ -632,7 +669,7 @@ namespace BigNum
 		{
 			size_t ret = 0;
 			size_t i = 0;
-			for (; v[i] == 0 && i < N; ++i)
+			for (; i < N && v[i] == 0; ++i)
 				ret += bitsize<T>::value;
 			
 			if (i < N)
@@ -672,8 +709,8 @@ namespace BigNum
 		template<typename T, size_t N>
 		void lcm(T(&rez)[2 * N], const T(&v1)[N], const T(&v2)[N]) noexcept
 		{
-			T m[2 * N];
-			zero(m);
+			T m[2 * N] = { 0 };
+			//zero(m);
 			mul(m, v1, v2);
 			T g[N];
 			gcd(g, v1, v2);
@@ -1201,19 +1238,35 @@ namespace BigNum
 	template<size_t N>
 	const Num<N> operator << (const Num<N>& v1, size_t bits) noexcept
 	{
-		Num<N> ret;
+		Num<N> ret(0);
 		if (bits < N)
 			Core::shl(ret.data, v1.data, bits);
 		return ret;
 	}
 
 	template<size_t N>
+	Num<N>& operator <<= (Num<N>& v1, size_t bits) noexcept
+	{
+		if (bits < N)
+			Core::shl(v1.data, bits);
+		return v1;
+	}
+
+	template<size_t N>
 	const Num<N> operator >> (const Num<N>& v1, size_t bits) noexcept
 	{
-		Num<N> ret;
+		Num<N> ret(0);
 		if (bits < N)
 			Core::shr(ret.data, v1.data, bits);
 		return ret;
+	}
+
+	template<size_t N>
+	Num<N>& operator >>= (Num<N>& v1, size_t bits) noexcept
+	{
+		if (bits < N)
+			Core::shr(v1.data, bits);
+		return v1;
 	}
 
 	template<size_t N, size_t M>
