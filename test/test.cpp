@@ -142,8 +142,9 @@ BigNum::Num<N> biggestPrimeProduct() noexcept
 int main()
 {
 #if PROFILING
+	test(BigNum::nextPrimeOpt357<2048>(1_bn2048 << 2047) > 0);
 	test(BigNum::nextPrime<2048>(1_bn2048 << 2047) > 0);
-	//test(BigNum::nextPrimeOpt35711<2048>(1_bn2048 << 2047) > 0);
+	test(BigNum::nextPrimeOpt357<2048>(1_bn2048 << 2047) > 0);
 #else
 	//printf("biggestPrimeProduct<64>() = %s\n", toRaw(biggestPrimeProduct<64>()).c_str());
 	//printf("biggestPrimeProduct<128>() = %s\n", toRaw(biggestPrimeProduct<128>()).c_str());
@@ -156,8 +157,53 @@ int main()
 	try
 	{
 		test((BigNum::Num<128>(1) << 1) == BigNum::Num<128>(2));
-		// test(BigNum::monModExp<32>(BigNum::Num<32>(4), BigNum::Num<32>(1), BigNum::Num<32>(497)) == BigNum::Num<32>(4));
-		// return 0;
+
+		{
+			bool passed = true;
+			BigNum::Num<128> bn(1);
+			bn <<= 64;
+			for (size_t j = 0; j < BigNum::Num<128>::Size; j++)
+			{
+				if (j == 64 / BigNum::kWordSizeBits)
+					passed = passed && (bn[j] == 1);
+				else
+					passed = passed && (bn[j] == 0);
+			}
+			test(passed == true && "Left shifts");
+		}
+
+		{
+			bool passed = true;
+			BigNum::Num<128> bn(BigNum::Word(1) << (BigNum::kWordSizeBits - 1));
+			bn <<= 1;
+			for (size_t j = 0; j < BigNum::Num<128>::Size; j++)
+			{
+				if (j == 64 / BigNum::kWordSizeBits)
+					passed = passed && (bn[j] == 1);
+				else
+					passed = passed && (bn[j] == 0);
+			}
+			test(passed == true && "Left shifts");
+		}
+
+		{
+			BigNum::Num<256> bn = 1_bn256 << 192;
+			bn <<= 1;
+			test(bn == (1_bn256 << 193));
+		}
+
+		{
+			BigNum::Num<256> bn = 1_bn256 << 64;
+			bn >>= 1;
+			test(bn == (1_bn256 << 63));
+		}
+
+		{
+			BigNum::Num<256> bn = 1_bn256 << 63;
+			bn >>= 1;
+			test(bn == (1_bn256 << 62));
+		}
+
 		{
 			bool passed = true;
 			BigNum::Num<128> bn(1);
@@ -167,7 +213,7 @@ int main()
 				for (size_t j = 0; j < BigNum::Num<128>::Size; j++)
 				{
 					if (j == i / BigNum::kWordSizeBits)
-						passed = passed && (testbn[i / BigNum::kWordSizeBits] == (1ull << (i%BigNum::kWordSizeBits)));
+						passed = passed && (testbn[j] == (1ull << (i%BigNum::kWordSizeBits)));
 					else
 						passed = passed && (testbn[j] == 0);
 				}
@@ -178,6 +224,31 @@ int main()
 				}
 			}
 			test(passed == true && "Left shifts");
+		}
+
+		{
+			bool passed = true;
+			BigNum::Num<128> bn(0);
+			bn[BigNum::Num<128>::Size - 1] = (BigNum::Word(1) << (BigNum::kWordSizeBits - 1));
+
+			for (size_t i = 0u; i < 128u; i++)
+			{
+				BigNum::Num<128> testbn = bn;
+				testbn >>= i;
+				for (size_t j = BigNum::Num<128>::Size; j --> 0; )
+				{
+					if (j == (BigNum::Num<128>::Size - 1 - i / BigNum::kWordSizeBits))
+						passed = passed && (testbn[j] == (1ull << (BigNum::kWordSizeBits - 1 - i % BigNum::kWordSizeBits)));
+					else
+						passed = passed && (testbn[j] == 0);
+				}
+				if (!passed)
+				{
+					printf("%zd\n", i);
+					break;
+				}
+			}
+			test(passed == true && "Right shifts");
 		}
 
 		{

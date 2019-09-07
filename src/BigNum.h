@@ -467,27 +467,22 @@ namespace BigNum
 		void shl(T(&rez)[N], size_t count) noexcept
 		{
 			if (count == 0) return;
-			//T tmp[N];
-			//copy(tmp, rez);
-			//shl(std::begin(rez), std::end(rez), std::cbegin(tmp), std::cend(tmp), count);
-
-			if (count == 0) return;
 
 			const size_t words = count / bitsize<T>::value;
 			const size_t bits = count % bitsize<T>::value;
 			if (bits == 0)
 			{
-				for (size_t i = 0; i < N; ++i)
+				for (size_t i = N; i --> 0;)
 					rez[i] = get(rez, i - words);
 			}
 			else
 			{
-				T carry = 0;
-				for (size_t i = 0; i < N; ++i)
+				T carry = get(rez, N - words - 1) << (bits);
+				for (size_t i = N; i --> 0;)
 				{
-					T v = get(rez, i - words);
-					rez[i] = (v << bits) | carry;
-					carry = v >> (bitsize<T>::value - bits);
+					T v = get(rez, i - words - 1);
+					rez[i] = (v >> (bitsize<T>::value - bits)) | carry;
+					carry = v << (bits);
 				}
 			}
 		}
@@ -546,17 +541,17 @@ namespace BigNum
 			const size_t bits = count % bitsize<T>::value;
 			if (bits == 0)
 			{
-				for (size_t i = N; i-- >0;)
+				for (size_t i = 0; i< N; ++i)
 					rez[i] = get(rez, i + words);
 			}
 			else
 			{
-				T carry = 0;
-				for (size_t i = N; i-- > 0;)
+				T carry = get(rez, words) >> (bits);
+				for (size_t i = 0; i < N; ++i)
 				{
-					T v = get(rez, i + words);
-					rez[i] = (v >> bits) | carry;
-					carry = v << (bitsize<T>::value - bits);
+					T v = get(rez, i + words + 1);
+					rez[i] = (v << (bitsize<T>::value - bits)) | carry;
+					carry = v >> bits ;
 				}
 			}
 		}
@@ -641,21 +636,34 @@ namespace BigNum
 		}
 
 		template<typename T, size_t N>
-		T mod(const T(&n)[N], const T d, typename std::enable_if<(sizeof(unsigned long long int) > sizeof(T))>::type* = 0) noexcept
+		T mod(const T(&n)[N], const T d, typename std::enable_if<(sizeof(uint64_t) > sizeof(T))>::type* = 0) noexcept
 		{
-			static_assert(sizeof(unsigned long long) > sizeof(T), "T have to be smaller size than unsigned long long");
-			unsigned long long rest = 0;
+			static_assert(sizeof(uint64_t) > sizeof(T), "T have to be smaller size than unsigned long long");
+			uint64_t rest = 0;
 			for (size_t i = N; i-- > 0;)
-			{
-				rest = rest << bitsize<T>::value;
-				rest += n[i];
-				rest = rest % d;
-			}
+				rest = (rest << bitsize<T>::value + n[i]) % d;
 			return (T)rest;
 		}
 
+		template<typename T, typename R, size_t N>
+		R mod(const T(&n)[N], const R d, typename std::enable_if<(sizeof(T) > sizeof(R))>::type* = 0) noexcept
+		{
+			static_assert(bitsize<T>::value % bitsize<R>::value == 0);
+
+			constexpr size_t kRestSizeBits = bitsize<T>::value / 2;
+			constexpr T kRestMaskBits = (T(1) << (kRestSizeBits)) - 1;
+
+			T rest = 0;
+			for (size_t i = N; i-- > 0;)
+			{
+				rest = ((rest << kRestSizeBits) + (n[i] >> kRestSizeBits)) % d;
+				rest = ((rest << kRestSizeBits) + (n[i] & kRestMaskBits)) % d;
+			}
+			return (R)rest;
+		}
+
 		template<typename T, size_t N>
-		T mod(const T(&n)[N], const T d, typename std::enable_if<(sizeof(unsigned long long int) == sizeof(T))>::type* = 0) noexcept
+		T mod(const T(&n)[N], const T d, typename std::enable_if<(sizeof(uint64_t) == sizeof(T))>::type* = 0) noexcept
 		{
 			const T tmp_d[] = { d };
 			T tmp_n[N];
@@ -684,8 +692,8 @@ namespace BigNum
 			return ret;
 		}
 
-		template<typename T, size_t N>
-		void gcd(T(&rez)[N], const T(&v1)[N], const T(&v2)[N]) noexcept
+		template<typename T, size_t N, size_t M>
+		void gcd(T(&rez)[N], const T(&v1)[N], const T(&v2)[M], typename std::enable_if<(M <= N)>::type* = 0) noexcept
 		{
 			size_t v1shift = zeroBitsCount(v1);
 			size_t v2shift = zeroBitsCount(v2);
@@ -1402,8 +1410,8 @@ namespace BigNum
 	const Num<N> gcd(const Num<N>& v1, Word v2) noexcept
 	{
 		Num<N> ret;
-		Num<N> v2a = v2;
-		Core::gcd(ret.data, v1.data, v2a.data);
+		Word v2a[] = { v2 };
+		Core::gcd(ret.data, v1.data, v2a);
 		return ret;
 	}
 
@@ -1599,7 +1607,7 @@ namespace BigNum
 	template<size_t N>
 	bool millerRabinTest(const Num<N>& num) noexcept
 	{
-		int times = millerRabinProbes(N);
+		const int times = millerRabinProbes(N);
 		for (int i = 0; i < times; i++)
 		{
 			Num<N> a = (rand<N>() % (num - 2)) + 2;
@@ -1690,7 +1698,11 @@ namespace BigNum
 	{
 		for (size_t i = skip; i < simplechecks(N); i++)
 		{
-			if (gcd(num, Word(primes[i])) != 1)
+			assert((num % Word(primes[i]) == 0) == (Core::mod(num.data, primes[i]) == 0));
+			assert((num % Word(primes[i]) == 0) == (gcd(num, Word(primes[i])) != 1));
+			//if (num % Word(primes[i]) == 0)
+			if (Core::mod(num.data, primes[i]) == 0)
+			//if (gcd(num, Word(primes[i])) != 1)
 				return false;
 		}
 		return true;
