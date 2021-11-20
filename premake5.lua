@@ -28,7 +28,7 @@ project "BigInt"
       
       
     -- GCC specific build options.
-   configuration "gmake"
+   filter "configurations:gmake"
         -- Needed on 64-bit platforms to be able
         -- to link static libraries to shared libraries.
         buildoptions { "-fPIC" }
